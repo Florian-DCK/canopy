@@ -46,6 +46,10 @@ const EYES = [
   { x: 1124, y: 948 }
 ]
 const MOUTH = { x: 1026, y: 1028 }
+// Bouche : sourire et largeur au repos selon l'état (au repos, presque un point, comme sur le dessin).
+const SMILE: Record<MarkState, number> = { rest: 0, intro: 4, listen: 6, think: -3, speak: 3 }
+const MOUTH_W: Record<MarkState, number> = { rest: 4, intro: 10, listen: 13, think: 8, speak: 11 }
+const TONGUE = '#A84A33'
 const LEAF = 'M0 -26C22 -22 34 0 26 22C4 22 -14 6 0 -26Z'
 
 type Pose = {
@@ -54,7 +58,6 @@ type Pose = {
   bob: number
   eyeOpen: number
   eyeSize: number
-  mouth: number
   armL: number
   armR: number
   perk: number
@@ -65,11 +68,11 @@ type Pose = {
 }
 
 const POSES: Record<MarkState, Pose> = {
-  rest: { lean: 2, squash: 0.975, bob: 8, eyeOpen: 0, eyeSize: 1, mouth: 0, armL: 22, armR: -16, perk: 0.97, canY: 14, leaf: 0, gazeX: 0, gazeY: 6 },
-  intro: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1, mouth: 0, armL: 25, armR: -18, perk: 1, canY: 0, leaf: 0, gazeX: 0, gazeY: 0 },
-  listen: { lean: -4, squash: 1.015, bob: -6, eyeOpen: 1, eyeSize: 1.22, mouth: 0, armL: 30, armR: -26, perk: 1.05, canY: -8, leaf: 0, gazeX: -4, gazeY: 2 },
-  think: { lean: 3, squash: 1, bob: 0, eyeOpen: 0.9, eyeSize: 1, mouth: 0, armL: 14, armR: -10, perk: 1.02, canY: 0, leaf: 1, gazeX: 14, gazeY: -18 },
-  speak: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1.08, mouth: 0, armL: 26, armR: -22, perk: 1.03, canY: 0, leaf: 0, gazeX: 0, gazeY: 0 }
+  rest: { lean: 2, squash: 0.975, bob: 8, eyeOpen: 0, eyeSize: 1, armL: 22, armR: -16, perk: 0.97, canY: 14, leaf: 0, gazeX: 0, gazeY: 6 },
+  intro: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1, armL: 25, armR: -18, perk: 1, canY: 0, leaf: 0, gazeX: 0, gazeY: 0 },
+  listen: { lean: -4, squash: 1.015, bob: -6, eyeOpen: 1, eyeSize: 1.22, armL: 30, armR: -26, perk: 1.05, canY: -8, leaf: 0, gazeX: -4, gazeY: 2 },
+  think: { lean: 3, squash: 1, bob: 0, eyeOpen: 0.9, eyeSize: 1, armL: 14, armR: -10, perk: 1.02, canY: 0, leaf: 1, gazeX: 14, gazeY: -18 },
+  speak: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1.08, armL: 26, armR: -22, perk: 1.03, canY: 0, leaf: 0, gazeX: 0, gazeY: 0 }
 }
 const KEYS = Object.keys(POSES.rest) as (keyof Pose)[]
 // Raideur et amortissement par réglage : le corps avec un léger dépassement, le regard vif, les bras souples.
@@ -110,6 +113,7 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
       pupils: all('.e-pupil'),
       shut: all('.e-shut'),
       mouth: all('.e-mouth'),
+      tongue: all('.e-tongue'),
       leaf: all('.e-leaf')
     }
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -130,6 +134,14 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
     let gestureAt = last + rnd(900, 1800)
     let gesture: { arm: 'L' | 'R'; until: number; angle: number } | null = null
     let voice = 0
+    // Débit de parole inventé quand on n'a pas le volume réel : syllabes de longueur et de forme variées, petites pauses.
+    const nextSyllable = (at: number) => {
+      const pause = Math.random() < 0.12
+      return { start: at, end: at + (pause ? rnd(180, 420) : rnd(120, 240)), pause, open: rnd(0.35, 1), wide: rnd(-0.6, 0.9) }
+    }
+    let syl = nextSyllable(last)
+    let accentAt = 0
+    const mouth = { open: spring(0), wide: spring(0), smile: spring(SMILE[first]), base: spring(MOUTH_W[first]) }
     let raf = 0
 
     const tick = (now: number) => {
@@ -155,14 +167,33 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
         gestureAt = now + rnd(700, 1500)
       }
 
-      // Voix : volume réel s'il arrive, sinon un rythme de syllabes plausible (bulle du compagnon).
-      let v = 0
+      // Voix : l'énergie ouvre la bouche, le timbre lui donne sa forme (graves : ronde, aigus : étirée).
+      // Sans volume réel (bulle du compagnon), le débit inventé : attaque nette, tenue, relâchement.
+      let say = 0
+      let wide = 0
       if (st === 'speak') {
         const lv = levelsRef.current?.(8)
-        if (lv && lv.length) v = Math.min(1, (lv.reduce((a, b) => a + b, 0) / lv.length) * 2.4)
-        else v = Math.max(0, Math.sin(s * 10.5) * 0.55 + Math.sin(s * 6.1 + 1) * 0.35 + Math.sin(s * 1.7) * 0.25)
+        if (lv && lv.length === 8) {
+          const low = (lv[3] + lv[4]) / 2
+          const mid = (lv[2] + lv[5]) / 2
+          const high = (lv[0] + lv[1] + lv[6] + lv[7]) / 4
+          say = Math.max(0, Math.min(1, ((low + mid + high) / 3 - 0.06) * 2.8))
+          wide = Math.max(-0.7, Math.min(1, (high * 1.4 + mid * 0.4) / (low + 0.05) - 0.9))
+        } else {
+          if (now > syl.end) syl = nextSyllable(now)
+          const k = (now - syl.start) / (syl.end - syl.start)
+          const env = syl.pause ? 0 : k < 0.25 ? k / 0.25 : 1 - Math.max(0, (k - 0.55) / 0.45) * 0.85
+          say = syl.open * env
+          wide = syl.wide
+        }
       }
-      voice += (v - voice) * Math.min(1, dt * (v > voice ? 28 : 12))
+      // Une syllabe qui part fort : la tête l'accompagne d'un petit coup.
+      if (say - voice > 0.35 && now > accentAt) {
+        p.bob.vel -= 160 * say
+        p.lean.vel += rnd(-14, 14)
+        accentAt = now + 180
+      }
+      voice += (say - voice) * Math.min(1, dt * (say > voice ? 30 : 14))
 
       // Cibles du moment : la pose de l'état, plus la vie propre de l'état.
       const t: Pose = { ...POSES[st] }
@@ -188,7 +219,6 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
       if (st === 'speak') {
         t.squash += voice * 0.05
         t.bob -= voice * 18
-        t.mouth = voice
         t.lean += Math.sin(s * 1.3) * 2.5
         if (!gesture && now > gestureAt) {
           const arm = Math.random() < 0.55 ? 'R' : 'L'
@@ -299,10 +329,26 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
       })
       el.pupils.forEach((g) => g.setAttribute('transform', `translate(${P.gazeX * 0.4} ${P.gazeY * 0.4})`))
       el.shut.forEach((g) => g.setAttribute('opacity', String(Math.max(0, Math.min(1, 1 - open * 6)))))
-      const m = Math.max(0, P.mouth)
-      el.mouth.forEach((g) =>
-        g.setAttribute('transform', `translate(${MOUTH.x} ${MOUTH.y}) scale(${1 + m * 0.5} ${1 + m * 2.6}) translate(${-MOUTH.x} ${-MOUTH.y})`)
-      )
+      // Bouche dessinée : deux lèvres entre deux commissures. Le contour épais et arrondi en fait un point au repos.
+      stepSpring(mouth.open, say, 900, 46, dt)
+      stepSpring(mouth.wide, wide, 350, 32, dt)
+      stepSpring(mouth.smile, SMILE[st], 200, 22, dt)
+      stepSpring(mouth.base, MOUTH_W[st], 200, 22, dt)
+      const o = Math.max(0, Math.min(1.1, mouth.open.v))
+      const wd = mouth.wide.v
+      const mw = mouth.base.v + o * (20 + wd * 14)
+      const mh = o * (40 - wd * 10)
+      const c = mouth.smile.v * (1 - o * 0.6)
+      const uy = c * 0.6 - mh * 0.3
+      const ly = c * 0.6 + mh * 1.15
+      const md = `M${-mw} ${-c}C${-mw * 0.55} ${uy} ${mw * 0.55} ${uy} ${mw} ${-c}C${mw * 0.7} ${ly} ${-mw * 0.7} ${ly} ${-mw} ${-c}Z`
+      el.mouth.forEach((g) => g.setAttribute('d', md))
+      el.tongue.forEach((g) => {
+        g.setAttribute('cy', String(c * 0.6 + mh * 0.8))
+        g.setAttribute('rx', String(mw * 0.6))
+        g.setAttribute('ry', String(mh * 0.4))
+        g.setAttribute('opacity', mh > 14 ? '1' : '0')
+      })
 
       // Feuille de réflexion : elle se détache de la canopée, tombe en se balançant, s'efface, recommence.
       const lf = Math.max(0, Math.min(1, P.leaf))
@@ -343,6 +389,9 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
   return (
     <svg ref={root} className="ch ch-esprit" viewBox="140 110 1650 1650" width={size} height={size} aria-hidden="true">
       <defs>
+        <clipPath id={`${id}m`}>
+          <path className="e-mouth" />
+        </clipPath>
         <mask id={`${id}b`} maskUnits="userSpaceOnUse" {...box}>
           <rect {...box} fill="white" />
           <g className="e-can" fill="black">{lobeShapes(gap)}</g>
@@ -378,7 +427,10 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
                 <path className="e-shut" d={`M${e.x - 40} ${e.y - 4}Q${e.x} ${e.y + 30} ${e.x + 40} ${e.y - 4}`} stroke={INK} strokeWidth={14} fill="none" strokeLinecap="round" opacity="0" />
               </g>
             ))}
-            <ellipse className="e-mouth" cx={MOUTH.x} cy={MOUTH.y} rx={11} ry={9} fill={INK} />
+            <g transform={`translate(${MOUTH.x} ${MOUTH.y})`}>
+              <path className="e-mouth" fill={INK} stroke={INK} strokeWidth={13} strokeLinejoin="round" />
+              <ellipse className="e-tongue" cx={0} cy={0} rx={0} ry={0} fill={TONGUE} clipPath={`url(#${id}m)`} opacity="0" />
+            </g>
           </g>
         </g>
         <g mask={`url(#${id}a)`}>{arms(COLOR)}</g>
