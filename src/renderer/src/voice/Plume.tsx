@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
+import { syllableFollower } from './syllables'
 
 // Plume, la petite chouette : une boule bleu nuit au ventre clair, construite pièce par pièce pour être animée.
 // Pièces : un corps (chemin déformable), un ventre, deux aigrettes de trois plumes chacune, deux ailes articulées
@@ -643,6 +644,8 @@ export function Plume({ state, size, levels }: { state: PlumeState; size: number
       return { start: at, end: at + (pause ? rnd(180, 420) : rnd(120, 240)), pause, open: rnd(0.35, 1), wide: rnd(-0.6, 0.9) }
     }
     let syl = nextSyllable(last)
+    // Vraie voix : ouvre sur chaque syllabe, referme entre deux (voir syllables.ts).
+    const follow = syllableFollower()
     let accentAt = 0
     const mouth = { open: spring(0), wide: spring(0), smile: spring(SMILE[first]), base: spring(MOUTH_W[first]) }
     let raf = 0
@@ -733,7 +736,7 @@ export function Plume({ state, size, levels }: { state: PlumeState; size: number
           const low = (lv[3] + lv[4]) / 2
           const mid = (lv[2] + lv[5]) / 2
           const high = (lv[0] + lv[1] + lv[6] + lv[7]) / 4
-          say = Math.max(0, Math.min(1, ((low + mid + high) / 3 - 0.06) * 2.8))
+          say = follow((low + mid + high) / 3, dt)
           wide = Math.max(-0.7, Math.min(1, (high * 1.4 + mid * 0.4) / (low + 0.05) - 0.9))
         } else {
           if (now > syl.end) syl = nextSyllable(now)

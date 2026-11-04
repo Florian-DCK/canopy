@@ -643,7 +643,7 @@ export async function startVoice() {
   playCtx = new AudioContext()
   analyser = playCtx.createAnalyser()
   analyser.fftSize = 256
-  analyser.smoothingTimeConstant = 0.6
+  analyser.smoothingTimeConstant = 0.35 // assez vif pour suivre les syllabes (bouches des personnages)
   analyser.connect(playCtx.destination)
   bins = new Uint8Array(analyser.frequencyBinCount)
   const sock = new WebSocket(`ws://127.0.0.1:${info.port}/?t=${info.token}`)
