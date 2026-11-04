@@ -1,6 +1,6 @@
 import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, Menu, type MenuItemConstructorOptions, nativeImage, session, shell } from 'electron'
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, rmSync, writeFileSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { BROWSER_PARTITION, type BrowserResult } from '../shared/browser'
 import type { UiResult } from '../shared/ui'
@@ -154,7 +154,24 @@ ipcMain.on('win:show', () => {
   win.focus()
 })
 
+// Reprise du mode compagnon : un fichier témoin existe tant que le compagnon est actif. Fermer Canopy soi-même
+// l'efface ; un redémarrage automatique (code modifié, plantage) le laisse, et le compagnon reprend au lancement.
+const resumeFile = () => join(app.getPath('userData'), 'companion-resume')
+let resumeOn: boolean | null = null
+const setResume = (on: boolean) => {
+  resumeOn ??= existsSync(resumeFile())
+  if (on === resumeOn) return
+  resumeOn = on
+  try {
+    if (on) writeFileSync(resumeFile(), '1')
+    else rmSync(resumeFile(), { force: true })
+  } catch {
+    /* disque indisponible : pas de reprise */
+  }
+}
+ipcMain.handle('companion:resume', () => existsSync(resumeFile()))
 ipcMain.on('companion:set', (_e, state: CompanionState | null) => {
+  setResume(!!state)
   const entering = !!state && !toasts.companionOn
   const leaving = !state && toasts.companionOn
   toasts.setCompanion(state)
@@ -340,6 +357,8 @@ function createWindow() {
       backgroundThrottling: false
     }
   })
+  // Fermée par toi : la prochaine fois, Canopy repart sans compagnon.
+  win.on('close', () => setResume(false))
   win.on('closed', () => app.quit())
   // Mode compagnon : Canopy au premier plan, la bulle s'efface (tu as le mode voix sous les yeux) ;
   // dès que tu passes à autre chose (Alt+Tab, réduite), elle revient. Le mode compagnon, lui, continue.

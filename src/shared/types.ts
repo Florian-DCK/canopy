@@ -387,6 +387,8 @@ export type AtelierApi = {
   uiResult(id: string, r: import('./ui').UiResult): void
   /** Mode compagnon : état de la bulle (null = quitter) et gestes renvoyés par la bulle. */
   companionSet(state: import('./companion').CompanionState | null): void
+  /** Le mode compagnon était actif quand Canopy s'est arrêté sans que tu le fermes (redémarrage automatique) : le reprendre. */
+  companionResume(): Promise<boolean>
   /** « Stop » : Claude n'agit plus sur l'écran (quelques secondes), sa main disparaît. */
   actStop(): void
   /** Baisser (ou remettre) le son des autres applications pendant que Claude parle. */

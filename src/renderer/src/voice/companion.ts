@@ -150,7 +150,13 @@ api.onCompanionCommand((c) => {
 })
 
 // Rechargement en plein mode compagnon : on relance la voix et on renvoie l'état tout de suite.
+// Redémarrage automatique de Canopy (code modifié) : le processus principal dit s'il faut reprendre.
 if (saved) setTimeout(() => setCompanion(true), 0)
+else
+  void api
+    .companionResume()
+    .then((on) => on && setCompanion(true))
+    .catch(() => {})
 
 // L'apparence change dans les Paramètres : la bulle suit.
 useVoicePrefs.subscribe(push)

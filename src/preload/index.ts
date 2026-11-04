@@ -97,6 +97,7 @@ const api: AtelierApi = {
   uiResult: (id, r) => ipcRenderer.send('ui:result', id, r),
   voiceStart: (voice) => ipcRenderer.invoke('voice:start', voice),
   companionSet: (state) => ipcRenderer.send('companion:set', state),
+  companionResume: () => ipcRenderer.invoke('companion:resume'),
   showWindow: () => ipcRenderer.send('win:show'),
   actStop: () => ipcRenderer.send('act:stop'),
   voiceDuck: (on, factor) => ipcRenderer.send('voice:duck', on, factor),
