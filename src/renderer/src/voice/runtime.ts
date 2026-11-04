@@ -387,6 +387,8 @@ function collectChanges(items: Item[], since: number, add: StageEntry[]) {
   const by = new Map<string, { path: string; added: number; removed: number; lines: string[] }>()
   for (const it of items) {
     if (it.at < since || it.kind !== 'tool' || !it.diff) continue
+    // Seulement les fichiers du projet (chemin relatif) : pas les fichiers de travail temporaires.
+    if (/^([A-Za-z]:|[\\/])/.test(it.diff.path)) continue
     const f = by.get(it.diff.path) ?? { path: it.diff.path, added: 0, removed: 0, lines: [] }
     f.added += it.diff.added
     f.removed += it.diff.removed
@@ -401,7 +403,11 @@ function collectChanges(items: Item[], since: number, add: StageEntry[]) {
   if (prev?.kind === 'changes') {
     if (JSON.stringify(prev.files.map((f) => [f.path, f.added, f.removed])) === JSON.stringify(files.map((f) => [f.path, f.added, f.removed]))) return
     set((v) => ({ stage: v.stage.map((e) => (e.id === id ? { id, kind: 'changes', files } : e)) }))
-  } else add.push({ id, kind: 'changes', files })
+  } else {
+    // Un seul récap à l'écran : celui du tour en cours remplace les anciens.
+    if (useVoice.getState().stage.some((e) => e.kind === 'changes')) set((v) => ({ stage: v.stage.filter((e) => e.kind !== 'changes') }))
+    add.push({ id, kind: 'changes', files })
+  }
   // Les phrases arrivent quand les modifications se calment (3 s sans nouveau changement).
   if (recapTimer) clearTimeout(recapTimer)
   recapTimer = setTimeout(() => {
@@ -412,7 +418,8 @@ function collectChanges(items: Item[], since: number, add: StageEntry[]) {
       .then((got) =>
         set((v) => ({ stage: v.stage.map((e) => (e.id === id && e.kind === 'changes' ? { ...e, files: e.files.map((f) => ({ ...f, note: f.note ?? got[f.path] })) } : e)) }))
       )
-      .catch(() => {})
+      // Résumé indisponible (moteur pas à jour, hors ligne) : pas de « Je résume… » sans fin.
+      .catch(() => set((v) => ({ stage: v.stage.map((e) => (e.id === id && e.kind === 'changes' ? { ...e, files: e.files.map((f) => ({ ...f, note: f.note ?? '' })) } : e)) })))
   }, 3000)
 }
 

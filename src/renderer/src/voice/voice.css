@@ -229,7 +229,7 @@
 /* Commandes en icônes (barre du mode voix, cadre de ce que Claude montre) : nom en bulle au survol. */
 .v-tools { display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(240, 238, 230, 0.06); border: 0.5px solid rgba(240, 238, 230, 0.1); }
 .v-tools.small { padding: 3px; gap: 2px; }
-.v-tools-sep { width: 0.5px; height: 20px; margin: 0 3px; background: rgba(240, 238, 230, 0.16); }
+.v-tools-sep { width: 1px; height: 22px; margin: 0 6px; border-radius: 1px; background: rgba(240, 238, 230, 0.22); }
 .v-bar .v-ibtn, .v-ibtn { position: relative; width: 36px; height: 36px; padding: 0; border-radius: 50%; border: none; background: transparent; color: #D1CFC5; display: grid; place-items: center; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .v-tools.small .v-ibtn { width: 30px; height: 30px; }
 .v-bar .v-ibtn:hover, .v-ibtn:hover { background: rgba(240, 238, 230, 0.1); color: #F5F4EE; }

@@ -249,7 +249,7 @@ export function Changes({ files, compact }: { files: ChangedFile[]; compact?: bo
             <i className="add" style={{ flex: Math.max(f.added, 0.0001) }} />
             <i className="del" style={{ flex: f.removed }} />
           </span>
-          <span className={f.note ? '' : 'sc-muted'}>{f.note ?? 'Je résume…'}</span>
+          <span className={f.note ? '' : 'sc-muted'}>{f.note || (f.note === '' ? f.path.replace(/[\\/][^\\/]+$/, '') || '·' : 'Je résume…')}</span>
         </div>
       ))}
     </div>

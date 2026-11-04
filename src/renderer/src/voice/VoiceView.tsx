@@ -229,7 +229,7 @@ function Stage({ entries, cur, sessionId }: { entries: StageEntry[]; cur: StageE
       </div>
       {/* Avant · après : le récap des fichiers se glisse juste dessous. */}
       {cur.kind === 'ba' && (() => {
-        const ch = entries.find((x) => x.kind === 'changes')
+        const ch = [...entries].reverse().find((x) => x.kind === 'changes')
         return ch?.kind === 'changes' ? <Changes files={ch.files} compact /> : null
       })()}
       <div className="v-stage-info">
