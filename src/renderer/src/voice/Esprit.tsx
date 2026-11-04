@@ -64,6 +64,10 @@ const MOUTH = { x: 1026, y: 1028 }
 const SMILE: Record<MarkState, number> = { rest: 0, intro: 4, listen: 6, think: -3, speak: 3 }
 const MOUTH_W: Record<MarkState, number> = { rest: 4, intro: 10, listen: 13, think: 8, speak: 11 }
 const TONGUE = '#A84A33'
+// Carnet du travail : une ardoise sombre tenue devant le ventre ; des lignes s'y écrivent au rythme de la frappe.
+const TOOL = { x: 1010, y: 1330, w: 300, h: 180 }
+const TOOL_LINES = 4
+const LINE_MAX = 210
 const LEAF = 'M0 -26C22 -22 34 0 26 22C4 22 -14 6 0 -26Z'
 
 type Pose = {
@@ -82,14 +86,18 @@ type Pose = {
   tilt: number
   footL: number
   footR: number
+  /** Langue tirée de concentration (0 à 1). */
+  tongue: number
+  /** Travail : le carnet tenu devant lui (0 à 1). */
+  tool: number
 }
 
 const POSES: Record<MarkState, Pose> = {
-  rest: { lean: 2, squash: 0.975, bob: 8, eyeOpen: 0, eyeSize: 1, armL: 22, armR: -16, perk: 0.97, canY: 14, leaf: 0, gazeX: 0, gazeY: 6, tilt: 0, footL: 0, footR: 0 },
-  intro: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1, armL: 25, armR: -18, perk: 1, canY: 0, leaf: 0, gazeX: 0, gazeY: 0, tilt: 0, footL: 0, footR: 0 },
-  listen: { lean: -4, squash: 1.015, bob: -6, eyeOpen: 1, eyeSize: 1.22, armL: 30, armR: -26, perk: 1.05, canY: -8, leaf: 0, gazeX: -4, gazeY: 2, tilt: 0, footL: 0, footR: 0 },
-  think: { lean: 3, squash: 1, bob: 0, eyeOpen: 0.9, eyeSize: 1, armL: 14, armR: -10, perk: 1.02, canY: 0, leaf: 1, gazeX: 14, gazeY: -18, tilt: 0, footL: 0, footR: 0 },
-  speak: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1.08, armL: 26, armR: -22, perk: 1.03, canY: 0, leaf: 0, gazeX: 0, gazeY: 0, tilt: 0, footL: 0, footR: 0 }
+  rest: { lean: 2, squash: 0.975, bob: 8, eyeOpen: 0, eyeSize: 1, armL: 22, armR: -16, perk: 0.97, canY: 14, leaf: 0, gazeX: 0, gazeY: 6, tilt: 0, footL: 0, footR: 0, tongue: 0, tool: 0 },
+  intro: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1, armL: 25, armR: -18, perk: 1, canY: 0, leaf: 0, gazeX: 0, gazeY: 0, tilt: 0, footL: 0, footR: 0, tongue: 0, tool: 0 },
+  listen: { lean: -4, squash: 1.015, bob: -6, eyeOpen: 1, eyeSize: 1.22, armL: 30, armR: -26, perk: 1.05, canY: -8, leaf: 0, gazeX: -4, gazeY: 2, tilt: 0, footL: 0, footR: 0, tongue: 0, tool: 0 },
+  think: { lean: -2, squash: 0.99, bob: 2, eyeOpen: 0.85, eyeSize: 0.96, armL: -58, armR: 58, perk: 1.02, canY: 4, leaf: 1, gazeX: 0, gazeY: 16, tilt: 0, footL: 0, footR: 0, tongue: 0, tool: 1 },
+  speak: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1.08, armL: 26, armR: -22, perk: 1.03, canY: 0, leaf: 0, gazeX: 0, gazeY: 0, tilt: 0, footL: 0, footR: 0, tongue: 0, tool: 0 }
 }
 const KEYS = Object.keys(POSES.rest) as (keyof Pose)[]
 // Raideur et amortissement par réglage : le corps avec un léger dépassement, le regard vif, les bras souples.
@@ -110,6 +118,8 @@ type Fx = {
   push: (k: keyof Pose, v: number) => void
   /** Côté tiré au hasard au début du geste (-1 ou 1) : pencher, saluer d'un côté ou de l'autre. */
   side: number
+  /** Travail : intensité de la frappe des mains (0 : mains posées, 1 : normal, plus : rafale). */
+  typing: number
 }
 type Act = { name: string; dur: number; run: (k: number, t: Pose, fx: Fx) => void }
 const ss = (x: number) => {
@@ -221,44 +231,96 @@ const ACTS: Partial<Record<MarkState, Act[]>> = {
       }
     }
   ],
+  // Travail : il est affairé (frappe, relit, écrit, s'essuie le front), plus qu'il ne rêvasse.
   think: [
+    {
+      name: 'rafale',
+      dur: 2200,
+      run: (k, t, fx) => {
+        const e = env(k, 0.15, 0.25)
+        fx.typing = 1 + 0.9 * e
+        t.tongue = e
+        t.lean -= 2 * e
+        t.eyeOpen -= 0.15 * e
+      }
+    },
+    {
+      name: 'relit',
+      dur: 2800,
+      run: (k, t, fx) => {
+        const e = env(k, 0.12, 0.2)
+        fx.typing = 1 - e
+        fx.gaze = true
+        // Trois lignes lues de gauche à droite, puis un petit hochement satisfait.
+        const line = Math.min(2, Math.floor(k * 3.3))
+        const x = ((k * 3.3) % 1) * 34 - 17
+        t.gazeX = mix(t.gazeX, k < 0.9 ? x : 0, e)
+        t.gazeY = mix(t.gazeY, 8 + line * 5, e)
+        t.lean += 2 * e
+        if (k > 0.86 && fx.once(1)) fx.push('bob', 230)
+      }
+    },
+    {
+      name: 'écrit',
+      dur: 2600,
+      run: (k, t, fx) => {
+        const e = env(k, 0.2, 0.2)
+        fx.typing = 1 - e
+        t.armR = mix(t.armR, 64 + Math.sin(k * 90) * 7 + Math.cos(k * 57) * 5, e)
+        t.armL = mix(t.armL, -48, e)
+        fx.gaze = true
+        t.gazeX = mix(t.gazeX, 9 + Math.sin(k * 20) * 3, e)
+        t.gazeY = mix(t.gazeY, 18, e)
+        t.tilt += 4 * e
+        t.tongue = e
+      }
+    },
+    {
+      name: 's’essuie le front',
+      dur: 1900,
+      run: (k, t, fx) => {
+        fx.typing = 1 - env(k, 0.1, 0.15)
+        const up = env(k, 0.2, 0.35)
+        t.armR = mix(t.armR, 150 + Math.sin(k * 28) * 10 * up, up)
+        t.eyeOpen -= 0.5 * up
+        t.lean += 2 * up
+        // Puis il souffle : il se tasse un peu.
+        if (k > 0.65 && fx.once(1)) fx.push('squash', -0.8)
+        fx.mouth = k > 0.62 && k < 0.85 ? { open: 0.3, wide: -0.7 } : null
+      }
+    },
+    {
+      name: 'se frotte les mains',
+      dur: 1300,
+      run: (k, t, fx) => {
+        const e = env(k, 0.2, 0.25)
+        fx.typing = 1 - e
+        t.armL = mix(t.armL, -78 + Math.sin(k * 70) * 6, e)
+        t.armR = mix(t.armR, 78 + Math.sin(k * 70) * 6, e)
+        t.eyeSize += 0.12 * e
+        t.gazeY -= 10 * e
+        t.lean -= 2 * e
+      }
+    },
     {
       name: 'se gratte la canopée',
       dur: 2400,
       run: (k, t, fx) => {
         const e = env(k, 0.2, 0.25)
+        fx.typing = 1 - e
         t.armR = mix(t.armR, -172 + Math.sin(k * 60) * 9, e)
         t.tilt -= 6 * e
         t.eyeOpen -= 0.25 * e
-        fx.rustle = 0.5 * e
-      }
-    },
-    {
-      name: 'main au menton',
-      dur: 2600,
-      run: (k, t) => {
-        const e = env(k, 0.2, 0.25)
-        t.armL = mix(t.armL, -128 + Math.sin(k * 28) * 5, e)
-        t.tilt += 5 * e
-        t.gazeY -= 4 * e
-      }
-    },
-    {
-      name: 'regarde autour',
-      dur: 2800,
-      run: (k, t, fx) => {
-        const e = env(k, 0.15, 0.2)
-        const gx = Math.sin(k * Math.PI * 2) * 24 * fx.side
         fx.gaze = true
-        t.gazeX = mix(t.gazeX, gx, e)
-        t.gazeY = mix(t.gazeY, -14, e)
-        t.tilt += gx * 0.2 * e
+        t.gazeY = mix(t.gazeY, -12, e)
+        fx.rustle = 0.5 * e
       }
     },
     {
       name: 'eurêka',
       dur: 1500,
       run: (k, t, fx) => {
+        fx.typing = 0
         if (fx.once(1)) {
           fx.push('eyeSize', 5)
           fx.push('squash', -1.2)
@@ -272,28 +334,6 @@ const ACTS: Partial<Record<MarkState, Act[]>> = {
         t.gazeX = mix(t.gazeX, 0, e)
         t.gazeY = mix(t.gazeY, -4, e)
         fx.mouth = { open: 0.5 * e, wide: -0.6 }
-      }
-    },
-    {
-      name: 'suit la feuille',
-      dur: 3200,
-      run: (k, t, fx) => {
-        const e = env(k, 0.15, 0.2)
-        fx.gaze = true
-        t.gazeX = mix(t.gazeX, 12 + 14 * k, e)
-        t.gazeY = mix(t.gazeY, -22 + 50 * k, e)
-        t.tilt += 6 * k * e
-      }
-    },
-    {
-      name: 'se dandine',
-      dur: 2600,
-      run: (k, t) => {
-        const e = env(k, 0.15, 0.2)
-        const w = Math.sin(k * Math.PI * 2)
-        t.lean += 5 * w * e
-        t.footL += Math.max(0, w) * 16 * e
-        t.footR += Math.max(0, -w) * 16 * e
       }
     }
   ],
@@ -360,7 +400,7 @@ const ACTS: Partial<Record<MarkState, Act[]>> = {
   ]
 }
 /** Temps entre deux gestes, selon l'état (ms). */
-const GAP: Record<MarkState, [number, number]> = { rest: [3500, 8000], intro: [99999, 99999], listen: [2200, 5000], think: [1600, 3800], speak: [800, 2400] }
+const GAP: Record<MarkState, [number, number]> = { rest: [3500, 8000], intro: [99999, 99999], listen: [2200, 5000], think: [700, 2200], speak: [800, 2400] }
 
 type Spring = { v: number; vel: number }
 const spring = (v: number): Spring => ({ v, vel: 0 })
@@ -406,6 +446,9 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
       shut: all('.e-shut'),
       mouth: all('.e-mouth'),
       tongue: all('.e-tongue'),
+      tongueOut: all('.e-tout'),
+      tool: all('.e-tool'),
+      lines: Array.from({ length: TOOL_LINES }, (_, i) => all(`.e-line${i}`)),
       leaf: all('.e-leaf')
     }
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -429,6 +472,8 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
     let actAt = last + rnd(1200, 2400)
     let lastAct = ''
     let voice = 0
+    // Lignes du carnet : la dernière s'allonge en tapant ; pleine, tout remonte d'un cran.
+    const lines = [170, 110, 190, 20]
     // Débit de parole inventé quand on n'a pas le volume réel : syllabes de longueur et de forme variées, petites pauses.
     const nextSyllable = (at: number) => {
       const pause = Math.random() < 0.12
@@ -471,15 +516,10 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
         t.squash += Math.sin(s * 3.2) * 0.008
       }
       if (st === 'listen') t.lean += Math.sin(s * 0.8) * 1.5
-      if (st === 'think') {
-        t.lean += Math.sin(s * 0.9) * 3
-        t.armL += Math.sin(s * 0.9) * 6 // les bras suivent le balancement
-        t.armR += Math.sin(s * 0.9) * 6
-      }
       if (st === 'speak') t.lean += Math.sin(s * 1.3) * 2.5
 
       // Geste en cours, ou tirage du suivant.
-      const fx: Fx = { gaze: false, mouth: null, rustle: 0, once: () => false, push: () => {}, side: 1 }
+      const fx: Fx = { gaze: false, mouth: null, rustle: 0, once: () => false, push: () => {}, side: 1, typing: 1 }
       const list = reduce ? undefined : ACTS[st]
       if (!act && list && now > actAt) {
         const pool = list.filter((x) => x.name !== lastAct)
@@ -501,6 +541,20 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
             p[key].vel += v
           }
           cur.a.run(k, t, fx)
+        }
+      }
+      // Travail : les mains tapent en alternance (avec de petites pauses irrégulières), le corps suit la cadence.
+      if (st === 'think' && !reduce) {
+        const hz = 13 + fx.typing * 4
+        const burst = 0.55 + 0.45 * Math.max(0, Math.sin(s * 1.7) * Math.sin(s * 0.63 + 1))
+        const a = 9 * fx.typing * burst
+        t.armL += Math.sin(s * hz) * a
+        t.armR += Math.sin(s * hz + Math.PI) * a
+        t.bob += Math.abs(Math.sin(s * hz)) * 3 * fx.typing * burst
+        lines[TOOL_LINES - 1] += dt * 95 * fx.typing * burst
+        if (lines[TOOL_LINES - 1] > LINE_MAX * (0.55 + 0.45 * Math.abs(Math.sin(s * 7.3)))) {
+          lines.shift()
+          lines.push(0)
         }
       }
 
@@ -542,8 +596,8 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
       // Regard : petits sauts (saccades) autour de la direction de l'état, sauf yeux fermés.
       if (now > saccadeAt) {
         const amp = st === 'think' ? 1 : st === 'listen' ? 0.4 : 0.6
-        sacc = st === 'think' ? { x: (Math.random() < 0.5 ? -1 : 1) * rnd(10, 26), y: rnd(-6, 4) } : { x: rnd(-10, 10) * amp, y: rnd(-6, 6) * amp }
-        saccadeAt = now + (st === 'think' ? rnd(900, 1800) : rnd(1400, 3600))
+        sacc = st === 'think' ? { x: rnd(-9, 9), y: rnd(-3, 4) } : { x: rnd(-10, 10) * amp, y: rnd(-6, 6) * amp }
+        saccadeAt = now + (st === 'think' ? rnd(450, 1100) : rnd(1400, 3600))
       }
       if (st !== 'rest' && !fx.gaze) {
         t.gazeX += sacc.x
@@ -628,6 +682,13 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
 
       el.footL.forEach((g) => g.setAttribute('transform', `translate(0 ${-Math.max(0, P.footL)})`))
       el.footR.forEach((g) => g.setAttribute('transform', `translate(0 ${-Math.max(0, P.footR)})`))
+      const DT = warp(TOOL.x, TOOL.y)
+      const tl = Math.max(0, Math.min(1.1, P.tool))
+      el.tool.forEach((g) => {
+        g.setAttribute('opacity', tl < 0.03 ? '0' : String(Math.min(1, tl * 1.5)))
+        g.setAttribute('transform', `translate(${DT.x} ${DT.y}) rotate(${slope(TOOL.y) * 0.6} ${TOOL.x} ${TOOL.y}) translate(${TOOL.x} ${TOOL.y + TOOL.h / 2}) scale(${0.6 + 0.4 * tl} ${tl}) translate(${-TOOL.x} ${-TOOL.y - TOOL.h / 2})`)
+      })
+      el.lines.forEach((ls, i) => ls.forEach((g) => g.setAttribute('width', String(Math.max(0, lines[i])))))
       const DL = warp(ARM_L.x, ARM_L.y)
       const DR = warp(ARM_R.x, ARM_R.y)
       el.armL.forEach((g) => g.setAttribute('transform', `translate(${ARM_L.x + DL.x} ${ARM_L.y + DL.y}) rotate(${P.armL + slope(ARM_L.y)})`))
@@ -667,6 +728,11 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
       stepSpring(mouth.wide, wide, 350, 32, dt)
       stepSpring(mouth.smile, SMILE[st], 200, 22, dt)
       stepSpring(mouth.base, MOUTH_W[st], 200, 22, dt)
+      const to = Math.max(0, Math.min(1, P.tongue))
+      el.tongueOut.forEach((g) => {
+        g.setAttribute('opacity', to < 0.05 ? '0' : '1')
+        g.setAttribute('transform', `translate(13 2) scale(${to}) translate(-13 -2)`)
+      })
       const o = Math.max(0, Math.min(1.1, mouth.open.v))
       const wd = mouth.wide.v
       const mw = mouth.base.v + o * (20 + wd * 14)
@@ -761,10 +827,17 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
               </g>
             ))}
             <g transform={`translate(${MOUTH.x} ${MOUTH.y})`}>
+              <ellipse className="e-tout" cx={13} cy={14} rx={10} ry={11} fill={TONGUE} stroke={INK} strokeWidth={5} opacity="0" />
               <path className="e-mouth" fill={INK} stroke={INK} strokeWidth={13} strokeLinejoin="round" />
               <ellipse className="e-tongue" cx={0} cy={0} rx={0} ry={0} fill={TONGUE} clipPath={`url(#${id}m)`} opacity="0" />
             </g>
           </g>
+        </g>
+        <g className="e-tool" opacity="0">
+          <rect x={TOOL.x - TOOL.w / 2} y={TOOL.y - TOOL.h / 2} width={TOOL.w} height={TOOL.h} rx={28} fill="#2A211D" />
+          {Array.from({ length: TOOL_LINES }, (_, i) => (
+            <rect key={i} className={`e-line${i}`} x={TOOL.x - TOOL.w / 2 + 40} y={TOOL.y - TOOL.h / 2 + 34 + i * 34} width={0} height={14} rx={7} fill="#F3D2C1" opacity={i === TOOL_LINES - 1 ? 0.95 : 0.55} />
+          ))}
         </g>
         <g mask={`url(#${id}a)`}>{arms(COLOR)}</g>
         <g className="e-can" fill={COLOR}>{lobeShapes()}</g>
