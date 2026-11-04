@@ -67,7 +67,7 @@ function VoiceSection() {
     <>
       <Card title="Voix de Claude">
         <Row title="Apparence" desc="Le soleil Canopée, ou un petit personnage qui écoute, réfléchit et parle avec toi.">
-          <Seg<Avatar> label="Apparence" value={p.avatar} options={[['canopy', 'Canopée'], ['esprit', 'Esprit de la forêt'], ['gland', 'Gland']] as const} onChange={(avatar) => p.set({ avatar })} />
+          <Seg<Avatar> label="Apparence" value={p.avatar} options={[['canopy', 'Canopée'], ['esprit', 'Esprit de la forêt'], ['chouette', 'Chouette'], ['gland', 'Gland']] as const} onChange={(avatar) => p.set({ avatar })} />
         </Row>
         <Row title="Voix" desc="Les deux voix clonées. Le changement s'applique à la phrase suivante.">
           <span className="st-voices">

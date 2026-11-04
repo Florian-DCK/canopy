@@ -3,7 +3,7 @@ import { create } from 'zustand'
 // Réglages de la voix (page Paramètres) : gardés dans le navigateur de Canopy et envoyés au service voix.
 
 export type EndMode = 'fast' | 'normal' | 'patient'
-export type Avatar = 'canopy' | 'esprit' | 'gland'
+export type Avatar = 'canopy' | 'esprit' | 'chouette' | 'gland'
 type Prefs = {
   /** 0 = très sensible, 1 = très tolérant aux bruits. */
   tolerance: number
