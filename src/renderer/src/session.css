@@ -364,7 +364,7 @@ kbd { font-family: var(--mono); font-size: 10.5px; padding: 1px 5px; border-radi
 .s-tab-v.err { color: var(--st-err); }
 
 /* Fil d'un sous-agent de fond (lecture seule, en direct) */
-.tt-wrap { position: fixed; inset: 0; z-index: 60; display: flex; justify-content: flex-end; background: rgba(20, 20, 19, 0.18); }
+.tt-wrap { position: fixed; inset: 0; z-index: 300; display: flex; justify-content: flex-end; background: rgba(20, 20, 19, 0.18); }
 .tt { width: min(620px, 92vw); height: 100%; display: flex; flex-direction: column; background: var(--head); border-left: 0.5px solid var(--line); box-shadow: -18px 0 50px rgba(0, 0, 0, 0.18); }
 .tt-h { height: 48px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px 0 16px; border-bottom: 0.5px solid var(--line); font-size: 13.5px; }
 .tt-h b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
