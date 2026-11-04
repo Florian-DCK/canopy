@@ -49,11 +49,12 @@ const bodyPath = (w: Warp) => {
   for (let i = 2; i + 5 < BODY_PTS.length; i += 6) d += `C${q(i)} ${q(i + 2)} ${q(i + 4)}`
   return d + 'Z'
 }
-const ARM = 'M-32 0C-36 60-46 118-42 150A42 42 0 0 0 42 150C46 118 34 60 32 0Z'
+// Épaule arrondie : même si elle dépasse un peu du corps quand il se courbe, on ne voit jamais de coupe nette.
+const ARM = 'M-32 0C-36 60-46 118-42 150A42 42 0 0 0 42 150C46 118 34 60 32 0A32 32 0 0 0 -32 0Z'
 // Le trait de séparation ne longe que le bas du bras : à l'épaule, bras et corps se fondent.
 const ARM_GAP = 'M-40 70C-44 110-46 130-42 150A42 42 0 0 0 42 150C46 130 44 110 40 70Z'
 const ARM_L = { x: 738, y: 1250 }
-const ARM_R = { x: 1305, y: 1215 }
+const ARM_R = { x: 1282, y: 1222 }
 const EYES = [
   { x: 922, y: 962 },
   { x: 1124, y: 948 }
