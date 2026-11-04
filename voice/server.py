@@ -41,7 +41,13 @@ clients = 0
 last_seen = time.time()
 MIN_SPEECH = float(os.environ.get("CANOPY_VOICE_MIN", "0.45"))  # en dessous : un bruit, pas une phrase
 SHORT_GHOSTS = re.compile(r"^\W*(merci( beaucoup)?|au revoir|bonjour|ok|euh+|hm+|ah|oh|\.+)\W*$", re.I)
-END_SILENCE = float(os.environ.get("CANOPY_VOICE_END", "1.4"))  # fin du tour, en secondes de silence
+END_SILENCE = float(os.environ.get("CANOPY_VOICE_END", "1.0"))  # fin du tour : silence minimal (phrase qui se termine)
+END_MAX = float(os.environ.get("CANOPY_VOICE_END_MAX", "2.6"))  # silence maximal quand la phrase semble inachevée
+# Fin de phrase qui annonce une suite (hésitation, mot de liaison, article…) : on attend plus longtemps.
+UNFINISHED = re.compile(
+    r"(\b(euh+|heu+|hum+|hm+|bah|ben|et|ou|mais|donc|alors|puis|enfin|du coup|parce que|parce qu|que|qu|qui|dont|de|du|des|le|la|les|l|un|une|au|aux|à|pour|avec|sans|sur|sous|dans|en|par|comme|si|quand|lorsque|c'est|il y a|je|j|tu|on|il|elle|nous|vous|ils|elles|mon|ma|mes|ton|ta|tes|son|sa|ses|ce|cet|cette|ces|très|plus|moins|genre|style|tu vois)|[,;:…\-]|\.\.\.)\W*$",
+    re.I,
+)
 
 
 def log(msg: str):
@@ -120,9 +126,13 @@ class Session:
         parts: list[str] = []
         jobs: "queue.Queue[np.ndarray | None]" = queue.Queue()
 
+        working = [False]
+
         def worker():
             while (seg := jobs.get()) is not None:
+                working[0] = True
                 txt = transcribe(seg)
+                working[0] = False
                 if txt:
                     parts.append(txt)
                     self.send({"type": "partial", "text": " ".join(parts)})
@@ -153,8 +163,13 @@ class Session:
                 continue
             if not talking and total:
                 silent += 1
-                if silent * CHUNK / SR >= max(0.0, END_SILENCE - 0.25):
-                    break
+                waited = silent * CHUNK / SR + 0.25  # + les 250 ms déjà comptées par la détection de voix
+                if waited >= END_SILENCE:
+                    # On attend la transcription du dernier morceau, puis on regarde comment la phrase finit.
+                    pending = working[0] or not jobs.empty()
+                    unfinished = bool(UNFINISHED.search(" ".join(parts)))
+                    if waited >= END_MAX or (not pending and not unfinished):
+                        break
         jobs.put(None)
         th.join()
         heard = " ".join(parts).strip()
