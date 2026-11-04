@@ -58,7 +58,7 @@ log("LOADING")
 vad_model = load_silero_vad()
 
 import openvino_genai as ov  # noqa: E402
-from huggingface_hub import snapshot_download  # noqa: E402
+from huggingface_hub import hf_hub_download, snapshot_download  # noqa: E402
 
 _pipe = ov.WhisperPipeline(snapshot_download("OpenVINO/whisper-large-v3-int8-ov"), "GPU")
 
@@ -79,6 +79,27 @@ def transcribe(seg: np.ndarray) -> str:
 
 transcribe(np.zeros(SR, dtype="float32"))  # échauffement
 tts = TTSModel.load_model(language="french")
+
+# Détecteur de fin de tour (Smart Turn v3.2 de Pipecat, BSD-2) : à partir des 8 dernières secondes d'audio, il dit si
+# la phrase est finie (intonation, rythme), en ~20 ms sur le processeur. Sans lui, on retombe sur les silences.
+try:
+    import onnxruntime as ort
+    from transformers import WhisperFeatureExtractor
+
+    _turn = ort.InferenceSession(hf_hub_download("pipecat-ai/smart-turn-v3", "smart-turn-v3.2-cpu.onnx"), providers=["CPUExecutionProvider"])
+    _feats = WhisperFeatureExtractor(chunk_length=8)
+
+    def turn_done(audio: np.ndarray) -> float:
+        a = audio[-8 * SR:]
+        a = np.pad(a, (8 * SR - len(a), 0))  # complété au début, comme à l'entraînement
+        f = _feats(a, sampling_rate=SR, return_tensors="np", do_normalize=True).input_features.astype(np.float32)
+        return float(_turn.run(None, {"input_features": f})[0].reshape(-1)[0])
+
+    turn_done(np.zeros(SR, dtype="float32"))
+    log("smart-turn prêt")
+except Exception as e:  # noqa: BLE001
+    turn_done = None
+    log(f"smart-turn indisponible : {e}")
 _voices: dict = {}
 
 
@@ -140,6 +161,9 @@ class Session:
         th = threading.Thread(target=worker, daemon=True)
         th.start()
         buf = list(preroll)
+        heard_audio: list[np.ndarray] = list(preroll)
+        judged = False  # le détecteur a déjà donné son avis pour ce silence
+        silent_until = END_MAX
         talking, silent, total = bool(preroll), 0, 0
         if talking:
             self.send({"type": "speech", "on": True})
@@ -148,10 +172,12 @@ class Session:
             if block is None:
                 continue
             ev = vad(torch.from_numpy(block))
+            if talking or total:
+                heard_audio.append(block)
             if ev and "start" in ev:
                 if not talking:
                     self.send({"type": "speech", "on": True})
-                talking, silent = True, 0
+                talking, silent, judged = True, 0, False
             if talking:
                 buf.append(block)
             if ev and "end" in ev and talking:
@@ -164,10 +190,20 @@ class Session:
             if not talking and total:
                 silent += 1
                 waited = silent * CHUNK / SR + 0.25  # + les 250 ms déjà comptées par la détection de voix
-                if waited >= END_SILENCE:
-                    # On attend la transcription du dernier morceau, puis on regarde comment la phrase finit.
-                    pending = working[0] or not jobs.empty()
-                    unfinished = bool(UNFINISHED.search(" ".join(parts)))
+                pending = working[0] or not jobs.empty()
+                unfinished = bool(UNFINISHED.search(" ".join(parts)))
+                # Détecteur de fin de tour : avis rendu une fois par silence, dès 0,45 s. Phrase finie selon lui (et pas
+                # d'hésitation en dernier mot) : on répond vite ; sinon on attend, jusqu'au plafond.
+                if turn_done and not judged and waited >= 0.45:
+                    judged = True
+                    p_done = turn_done(np.concatenate(heard_audio))
+                    log(f"fin de tour ? {p_done:.2f} ({waited:.2f} s de silence) : {' '.join(parts)[-60:]}")
+                    # Très sûr que c'est fini : on répond vite. Sûr que non : on attend jusqu'au plafond. Entre les deux : l'attente normale.
+                    silent_until = 0.6 if p_done >= 0.8 else END_MAX if p_done < 0.3 else END_SILENCE
+                if turn_done and judged:
+                    if waited >= END_MAX or (waited >= silent_until and not pending and not unfinished):
+                        break
+                elif waited >= END_SILENCE:
                     if waited >= END_MAX or (not pending and not unfinished):
                         break
         jobs.put(None)
@@ -176,7 +212,8 @@ class Session:
         # Un bruit (porte, clavier, toux) : trop court pour être une phrase, ou une de ces formules que Whisper
         # invente sur du bruit (« Merci. »). On l'ignore au lieu de réveiller Claude.
         speech = total / SR
-        if speech < MIN_SPEECH or (speech < 1.5 and SHORT_GHOSTS.match(heard)):
+        # Un « Merci. » tout seul est le fantôme le plus courant de Whisper sur un bruit ou une musique, quelle que soit la durée.
+        if speech < MIN_SPEECH or SHORT_GHOSTS.match(heard):
             if heard:
                 log(f"ignoré ({speech:.1f} s) : {heard}")
             heard = ""
