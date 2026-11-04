@@ -378,3 +378,6 @@ kbd { font-family: var(--mono); font-size: 10.5px; padding: 1px 5px; border-radi
 .tt-sum { color: var(--g600); font-family: var(--mono, Consolas, monospace); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tt-res { margin: -4px 0 0 14px; padding: 4px 10px; border-left: 2px solid var(--line-strong); font-family: var(--mono, Consolas, monospace); font-size: 11.5px; color: var(--g550); white-space: pre-wrap; max-height: 90px; overflow: hidden; }
 .tt-res.err { border-left-color: var(--st-err, #b4462e); color: var(--st-err, #b4462e); }
+/* Chaque ligne garde sa hauteur (sinon la colonne qui défile les écrase les unes sur les autres). */
+.tt-body > * { flex: none; }
+.tt-res { margin: -2px 0 2px 14px; }

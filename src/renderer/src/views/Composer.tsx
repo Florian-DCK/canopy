@@ -120,7 +120,10 @@ function BgPill({ sessionId, tasks }: { sessionId: string; tasks: NonNullable<Se
               <span className="bg-label" title={t.label}>{t.label}</span>
               <span className="bg-time">{clock(Math.max(0, Math.round((Date.now() - t.startedAt) / 1000)))}</span>
               {/agent/.test(t.kind) && (
-                <button type="button" className="btn text sm" onClick={() => setThread({ id: t.id, label: t.label })}>Voir son fil</button>
+                <button type="button" className="btn text sm" onClick={() => {
+                  setThread({ id: t.id, label: t.label })
+                  setOpen(false)
+                }}>Voir son fil</button>
               )}
               <button type="button" className="btn text sm bg-stop" onClick={() => void api.stopTask(sessionId, t.id)}>Arrêter</button>
             </div>
