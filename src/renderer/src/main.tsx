@@ -40,10 +40,11 @@ function App() {
 
   return (
     <TitleBar>
-    <DaemonBanner />
     <div className="app">
       <Rail />
       <div className="stage">
+        {/* Le bandeau du moteur reste à droite de la barre latérale : celle-ci ne s'interrompt jamais. */}
+        <DaemonBanner />
         {view.name === 'cockpit' && <Cockpit />}
         {view.name === 'project' && <ProjectView projectId={view.projectId} />}
         {view.name === 'session' && <SessionView key={view.sessionId} sessionId={view.sessionId} />}
