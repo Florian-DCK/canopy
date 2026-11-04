@@ -9,12 +9,14 @@ import { DATA } from './paths'
 
 const IMAGE_EXT = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg']
 const VIDEO_EXT = ['.mp4', '.webm', '.mov', '.m4v']
+const AUDIO_EXT = ['.wav', '.mp3', '.ogg', '.m4a', '.flac', '.opus', '.aac']
 const MIME: Record<string, string> = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp' }
 
 export function kindOf(path: string): MediaKind | null {
   const e = extname(path).toLowerCase()
   if (IMAGE_EXT.includes(e)) return 'image'
   if (VIDEO_EXT.includes(e)) return 'video'
+  if (AUDIO_EXT.includes(e)) return 'audio'
   return null
 }
 
@@ -86,7 +88,7 @@ export class MediaStore {
 
 /** Chemins / URL file:// de médias cités dans un texte (Windows ou relatifs). */
 export function findMediaPaths(text: string): string[] {
-  const ext = 'png|jpe?g|gif|webp|bmp|svg|mp4|webm|mov|m4v'
+  const ext = 'png|jpe?g|gif|webp|bmp|svg|mp4|webm|mov|m4v|wav|mp3|ogg|m4a|flac|opus|aac'
   const re = new RegExp(
     String.raw`(?:file:\/\/\/[^\s"'<>|]+?|[A-Za-z]:[\\/][^\s"'<>|*?\`]+?|(?:\.{1,2}[\\/])?[\w\-.]+(?:[\\/][\w\-. ]+?)*)\.(?:${ext})(?![\w])`,
     'gi'

@@ -31,6 +31,8 @@ export function Thumb({ m, w, h, label = true }: { m: MediaItem; w: number; h: n
     >
       {m.kind === 'image' ? (
         <img src={thumbUrl(m.id)} alt="" loading="lazy" draggable={false} />
+      ) : m.kind === 'audio' ? (
+        <span className="thumb-audio" aria-hidden="true"><Icon name="audio" size={Math.min(34, h * 0.4)} /></span>
       ) : (
         <>
           <video src={`${mediaUrl(m.id)}#t=0.1`} preload="metadata" muted />
@@ -88,6 +90,18 @@ export function InlineMedia({ sessionId, itemId }: { sessionId: string; itemId: 
         <span className="small muted">
           Vue {idx + 1} / {series.length} de la série
         </span>
+      </div>
+    )
+
+  if (m.kind === 'audio')
+    return (
+      <div className="media-card audio-card">
+        <span className="audio-head">
+          <Icon name="audio" size={16} />
+          <span className="mono" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.path ?? m.name}>{m.name}</span>
+          <span className="muted">{fmtSize(m.size)}</span>
+        </span>
+        <audio src={mediaUrl(m.id)} controls preload="metadata" />
       </div>
     )
 
@@ -170,7 +184,7 @@ export function useLastImage(sessionId: string): MediaItem | undefined {
 }
 
 function Frame({ m, zoom }: { m: MediaItem; zoom: number }) {
-  if (m.kind === 'video') return null
+  if (m.kind !== 'image') return null
   const style =
     zoom === 0
       ? { maxWidth: '100%', maxHeight: '100%' }
@@ -265,13 +279,19 @@ export function ViewerOverlay() {
         <button type="button" className="v-btn" onClick={() => navigator.clipboard.writeText(cur.path)}>Copier le chemin</button>
         <button type="button" className="v-btn" onClick={() => api.showMediaInFolder(cur.id)}>Ouvrir le dossier</button>
         <button type="button" className="v-btn" onClick={() => api.openMedia(cur.id)}>Ouvrir avec…</button>
-        {!readOnly && <button type="button" className="v-btn primary" onClick={capture}>{cur.kind === 'video' ? 'Capture → session' : 'Joindre → session'}</button>}
+        {!readOnly && cur.kind !== 'audio' && <button type="button" className="v-btn primary" onClick={capture}>{cur.kind === 'video' ? 'Capture → session' : 'Joindre → session'}</button>}
         <button type="button" className="v-btn" aria-label="Fermer (Échap)" onClick={close}>✕</button>
       </header>
 
       <div className="viewer-stage">
         {idx > 0 && <button type="button" className="v-nav left" aria-label="Précédent" onClick={() => go(strip[idx - 1])}>‹</button>}
-        {cur.kind === 'video' ? (
+        {cur.kind === 'audio' ? (
+          <div className="v-audio">
+            <Icon name="audio" size={56} />
+            <span className="mono">{cur.name}</span>
+            <audio src={mediaUrl(cur.id)} controls autoPlay />
+          </div>
+        ) : cur.kind === 'video' ? (
           <video ref={videoRef} src={mediaUrl(cur.id)} controls autoPlay loop style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 8 }} />
         ) : comparing && v.mode === 'side' ? (
           <div className="v-side">
@@ -322,7 +342,7 @@ export function ViewerOverlay() {
               className={m.id === cur.id ? 'on' : m.id === other?.id && comparing ? 'a' : ''}
               onClick={(e) => go(m, e.shiftKey)}
             >
-              {m.kind === 'image' ? <img src={thumbUrl(m.id)} alt="" loading="lazy" /> : <PlayBadge size={22} />}
+              {m.kind === 'image' ? <img src={thumbUrl(m.id)} alt="" loading="lazy" /> : m.kind === 'audio' ? <Icon name="audio" size={20} /> : <PlayBadge size={22} />}
             </button>
           ))}
         </div>
