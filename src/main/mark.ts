@@ -12,11 +12,13 @@ let hideTimer: ReturnType<typeof setTimeout> | null = null
 const PAGE = `<!doctype html><meta charset="utf-8"><style>
 html,body{margin:0;background:transparent;overflow:hidden}
 svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.d{fill:none;stroke:#D97757;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw .6s cubic-bezier(.6,.05,.3,1) forwards}
+.d{fill:none;stroke:#D97757;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:loop 1.7s cubic-bezier(.5,.1,.3,1) 2,draw 1.1s cubic-bezier(.5,.1,.3,1) 3.4s forwards}
 .f{opacity:0;animation:fade .35s ease forwards}
 .dim{opacity:0;animation:fade .5s ease forwards}
 .out{transition:opacity .4s ease;opacity:0!important}
-@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+/* Le trait se dessine deux fois puis reste : l'œil a le temps de le suivre et de trouver l'endroit. */
+@keyframes loop{0%{stroke-dashoffset:1;opacity:1}60%{stroke-dashoffset:0;opacity:1}85%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
 @keyframes fade{to{opacity:1}}
 text{font-family:Georgia,serif}
 </style><svg id="s"></svg>
@@ -31,7 +33,7 @@ function ell(cx,cy,rx,ry,n){const o=[];for(let i=0;i<n;i++){const a=-2.2+2*Math.
 function grow(pts,d){const cx=pts.reduce((a,p)=>a+p[0],0)/pts.length,cy=pts.reduce((a,p)=>a+p[1],0)/pts.length;return pts.map(([x,y])=>{const dx=x-cx,dy=y-cy,L=Math.hypot(dx,dy)||1;return[x+dx/L*d,y+dy/L*d]})}
 function line(x0,y0,x1,y1,seed,amp){const r=rng(seed),ph=r()*6,o=[];for(let i=0;i<=24;i++){const t=i/24;o.push((x0+(x1-x0)*t).toFixed(1)+' '+(y0+(y1-y0)*t+amp*Math.sin(t*6.5+ph)).toFixed(1))}return 'M'+o.join(' L')}
 function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||s).appendChild(e);return e}
-function stroke(d,w,delay,op){return el('path',{d,class:'d','stroke-width':w,pathLength:1,opacity:op??1,style:'animation-delay:'+delay+'s'})}
+function stroke(d,w,delay,op){return el('path',{d,class:'d','stroke-width':w,pathLength:1,opacity:op??1,style:'animation-delay:'+delay+'s,'+(delay+3.4)+'s'})}
 function bbox(t){if(t.points){const xs=t.points.map(p=>p[0]),ys=t.points.map(p=>p[1]);const x=Math.min(...xs),y=Math.min(...ys);return{x,y,w:Math.max(...xs)-x,h:Math.max(...ys)-y}}return t}
 function outline(t){const b=bbox(t);if(t.points)return grow(t.points,16);if(t.shape==='ellipse')return ell(b.x+b.w/2,b.y+b.h/2,b.w/2+12,b.h/2+12,8);return ell(b.x+b.w/2,b.y+b.h/2,b.w/2+Math.min(26,8+b.w*.08),b.h/2+Math.min(18,8+b.h*.2),10)}
 function holeOf(t){const b=bbox(t);if(t.lines)return t.lines.map(l=>'M'+(l.x-6)+' '+(l.y-3)+'H'+(l.x+l.w+6)+'V'+(l.y+l.h+3)+'H'+(l.x-6)+'Z').join(' ');
@@ -144,7 +146,7 @@ export async function runMark(p: MarkParams): Promise<CaptureResult> {
   if (hideTimer) clearTimeout(hideTimer)
   if (!w.isVisible()) w.showInactive()
   await w.webContents.executeJavaScript(`show(${JSON.stringify({ targets, steps: !!p.steps })})`).catch(() => {})
-  const secs = Math.max(2, Math.min(60, p.seconds ?? (p.steps ? 4 + targets.length * 1.5 : 7)))
+  const secs = Math.max(2, Math.min(60, p.seconds ?? (p.steps ? 7 + targets.length * 1.5 : 10)))
   hideTimer = setTimeout(clearMarks, secs * 1000)
   const styles = [...new Set(targets.map((t) => (t as { style: string }).style))].join(', ')
   return {
