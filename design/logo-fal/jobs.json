@@ -1,0 +1,59 @@
+[
+  {
+    "name": "lisiere-01-raffinee",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:/Users/fdonc/AppData/Local/Temp/claude/1726f5d14c2ae2e6/7d16de63-7de1-4577-bdf9-782ec70f38d7/scratchpad/ref/treeline.png"],
+    "prompt": "Refine this app icon into a polished, professional app icon for a desktop app called Canopy. Keep the exact concept: three round trees standing on one ground line, the middle tree taller and filled in warm clay orange #D97757, the two side trees in ivory #F0EEE6, on a deep charcoal #1F1E1D rounded-square background. Improve proportions, optical balance and spacing, make the trunks and ground line elegant and consistent. Flat vector style, crisp edges, no gradients, no texture, no text, no letters, centered, generous margin."
+  },
+  {
+    "name": "lisiere-02-feuillage",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:/Users/fdonc/AppData/Local/Temp/claude/1726f5d14c2ae2e6/7d16de63-7de1-4577-bdf9-782ec70f38d7/scratchpad/ref/treeline.png"],
+    "prompt": "Redesign this icon as a refined app icon: a treeline of three deciduous trees with softly organic, slightly irregular crowns (like hand-cut paper), the center tree in clay orange #D97757, the others in ivory #F0EEE6, sharing one ground line, on a charcoal #1F1E1D rounded square. Minimal, warm, crafted feel, flat colors, subtle layered depth allowed but no gradients, no text, centered."
+  },
+  {
+    "name": "lisiere-03-geometrique",
+    "aspect_ratio": "1:1",
+    "prompt": "Minimalist geometric app icon for a desktop app named Canopy: a row of three simple round-crowned trees on a single horizontal ground line, built from perfect circles and straight strokes, the middle tree slightly larger and filled clay orange #D97757, the side trees ivory #F0EEE6, on a deep charcoal #1F1E1D rounded-square tile. Swiss modernist, perfectly balanced, flat vector, no gradients, no shadows, no text, centered, generous padding."
+  },
+  {
+    "name": "lisiere-04-ligne",
+    "aspect_ratio": "1:1",
+    "prompt": "Elegant monoline app icon: a single continuous ivory #F0EEE6 line drawing a treeline of three rounded trees and the ground beneath them, with one solid clay orange #D97757 dot inside the middle tree's crown, on a charcoal #1F1E1D rounded-square tile. Refined, calm, premium, uniform stroke weight, flat vector, no text, centered."
+  },
+  {
+    "name": "lumiere-01-raffinee",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:/Users/fdonc/AppData/Local/Temp/claude/1726f5d14c2ae2e6/7d16de63-7de1-4577-bdf9-782ec70f38d7/scratchpad/ref/light.png"],
+    "prompt": "Refine this app icon into a polished, professional app icon for a desktop app called Canopy. Keep the concept: a warm clay orange #D97757 sun partly hidden behind two rounded ivory #F0EEE6 tree crowns with a short trunk, on a charcoal #1F1E1D rounded-square background. Improve the composition, overlaps and silhouette so it reads clearly at small sizes. Flat vector, crisp, no gradients, no text, centered."
+  },
+  {
+    "name": "lumiere-02-rayons",
+    "aspect_ratio": "1:1",
+    "prompt": "App icon for a desktop app named Canopy: light filtering through a tree canopy. A clay orange #D97757 sun disc behind a dense rounded ivory #F0EEE6 canopy, with a few thin clay rays slipping through gaps between the leaves, on a charcoal #1F1E1D rounded square. Minimal, poetic, flat vector, at most three colors, no gradients, no text, centered."
+  },
+  {
+    "name": "lumiere-03-negatif",
+    "aspect_ratio": "1:1",
+    "prompt": "Clever negative-space app icon: a large clay orange #D97757 circle (a setting sun) on a charcoal #1F1E1D rounded-square tile, with the silhouette of a rounded tree canopy cut out of the circle in charcoal, so the tree is drawn by the sun's light. Bold, simple, iconic, flat vector, no gradients, no text, centered, readable at 16 pixels."
+  },
+  {
+    "name": "lumiere-04-aube",
+    "aspect_ratio": "1:1",
+    "prompt": "App icon: dawn behind a forest canopy. A half clay orange #D97757 sun rising behind a soft undulating ivory #F0EEE6 canopy line made of overlapping round tree crowns, on a charcoal #1F1E1D rounded square, calm and warm. Flat vector illustration, minimal shapes, no gradients, no text, centered."
+  },
+  {
+    "name": "croise-01-soleil-lisiere",
+    "aspect_ratio": "1:1",
+    "image_files": [
+      "C:/Users/fdonc/AppData/Local/Temp/claude/1726f5d14c2ae2e6/7d16de63-7de1-4577-bdf9-782ec70f38d7/scratchpad/ref/treeline.png",
+      "C:/Users/fdonc/AppData/Local/Temp/claude/1726f5d14c2ae2e6/7d16de63-7de1-4577-bdf9-782ec70f38d7/scratchpad/ref/light.png"
+    ],
+    "prompt": "Combine these two app icons into one: a treeline of three round ivory #F0EEE6 trees on one ground line (from the first) with a clay orange #D97757 sun rising behind the middle tree (from the second), on a charcoal #1F1E1D rounded square. Only the sun is clay. Balanced, polished, flat vector, no gradients, no text, centered, readable at small size."
+  },
+  {
+    "name": "croise-02-canopee-lumineuse",
+    "aspect_ratio": "1:1",
+    "prompt": "Premium app icon for a desktop app named Canopy, merging a treeline and light: three rounded ivory #F0EEE6 tree crowns side by side forming a canopy, and between them the warm clay orange #D97757 light of the sun glowing through, as a single solid shape peeking out. Charcoal #1F1E1D rounded-square background, flat vector, three colors only, no gradients, no text, centered, generous margin."
+  }
+]

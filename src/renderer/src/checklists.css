@@ -1,0 +1,75 @@
+/* Checklists : page (planche 12), dock de session et carte du fil (planche 13). */
+
+.rail .badge.blue { border-radius: 50%; background: var(--blue); transform: none; }
+
+/* Case d'état */
+.cl-box { width: 18px; height: 18px; flex: none; border-radius: 5px; border: 1.5px solid var(--g400); background: transparent; display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--white); }
+.cl-box:hover { border-color: var(--g600); }
+.cl-box.done { background: var(--st-ok); border-color: var(--st-ok); }
+.cl-box.work { border-color: var(--st-run); }
+.cl-box.work::after { content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--st-run); }
+.cl-box.static { pointer-events: none; }
+.cl-ring { display: inline-flex; flex: none; color: var(--st-run); }
+.cl-ring.full { color: var(--st-ok); }
+
+/* Page */
+.cl-page { flex: 1; min-height: 0; display: flex; }
+.cl-left { width: 380px; flex: none; border-right: 0.5px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.cl-left-top { padding: 16px 16px 10px; display: flex; flex-direction: column; gap: 10px; }
+.cl-input { height: 36px; border-radius: 9px; border: 0.5px solid var(--line-strong); background: var(--white); padding: 0 12px; font-size: 13px; min-width: 0; }
+.cl-new { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: var(--white); border: 0.5px solid var(--line-strong); }
+.cl-new-acts { display: flex; gap: 8px; }
+.cl-group { padding: 4px 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+.cl-group-h { display: flex; align-items: center; gap: 8px; padding: 6px 4px 2px; font-size: 12px; font-weight: 600; color: var(--g600); }
+.cl-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.cl-card { display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 12px; border-radius: 12px; border: 0.5px solid var(--line); background: var(--white); text-align: left; color: var(--slate); }
+.cl-card:hover { border-color: var(--line-strong); }
+.cl-card[aria-current='true'] { border-color: var(--blue); background: var(--blue-tint); }
+.cl-card-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cl-card-t { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-card-m { font-size: 12px; color: var(--g550); display: flex; gap: 6px; flex-wrap: wrap; }
+.cl-right { flex: 1; min-width: 0; overflow: auto; }
+.cl-detail { max-width: 860px; padding: 28px 40px 48px; display: flex; flex-direction: column; gap: 18px; }
+.cl-path { font-size: 12px; color: var(--g550); font-family: var(--mono); display: flex; gap: 6px; align-items: center; }
+.cl-title-row { display: flex; align-items: center; gap: 14px; }
+.cl-title { margin: 0; font-family: var(--serif); font-size: 28px; font-weight: 400; line-height: 1.2; flex: 1; min-width: 0; }
+.cl-title-in { font: inherit; width: 100%; border: none; border-bottom: 1px solid var(--blue); background: transparent; color: var(--slate); outline: none; }
+.cl-prog { font-size: 13px; color: var(--g600); display: flex; align-items: center; gap: 10px; }
+.cl-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.cl-sec-h { margin: 8px 0 2px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--g550); }
+.cl-item { display: flex; align-items: center; gap: 12px; min-height: 36px; padding: 4px 8px; border-radius: 8px; }
+.cl-item:hover { background: var(--g150); }
+.cl-item.sub { margin-left: 30px; }
+.cl-text { flex: 1; min-width: 0; font-size: 14.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.cl-item.done .cl-text { color: var(--g550); }
+.cl-text-in { flex: 1; min-width: 0; font: inherit; font-size: 14.5px; border: none; border-bottom: 1px solid var(--blue); background: transparent; color: var(--slate); outline: none; }
+.cl-meta { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--g550); flex: none; }
+.cl-meta .ico.claude { color: var(--clay); }
+.cl-item .cl-hover { opacity: 0; display: inline-flex; gap: 2px; }
+.cl-item:hover .cl-hover, .cl-item:focus-within .cl-hover { opacity: 1; }
+.cl-add { display: flex; align-items: center; gap: 12px; padding: 4px 8px; color: var(--g550); }
+.cl-add input { flex: 1; min-width: 0; border: none; background: transparent; font-size: 14.5px; color: var(--slate); outline: none; height: 32px; }
+.cl-empty { padding: 40px 24px; color: var(--g550); font-size: 14px; text-align: center; }
+
+/* Dock de session */
+.cl-dock { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.cl-dcard { border: 0.5px solid var(--line); border-radius: 12px; background: var(--white); overflow: hidden; }
+.cl-dhead { display: flex; align-items: center; gap: 9px; width: 100%; padding: 10px 12px; border: none; background: transparent; text-align: left; color: var(--slate); font-size: 13px; }
+.cl-dhead b { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-dhead .a-chev { transition: transform 0.15s; transform: rotate(-90deg); color: var(--g550); }
+.cl-dcard.open .cl-dhead .a-chev { transform: none; }
+.cl-dbody { padding: 0 8px 8px; display: flex; flex-direction: column; gap: 1px; }
+.cl-dbody .cl-item { min-height: 30px; padding: 2px 6px; gap: 10px; }
+.cl-dbody .cl-text { font-size: 13px; }
+.cl-more { border: none; background: transparent; color: var(--blue-text); font-size: 12px; text-align: left; padding: 4px 6px; }
+
+/* Carte du fil */
+.cl-tcard { border: 0.5px solid var(--line); border-radius: 12px; background: var(--white); overflow: hidden; }
+.cl-thead { display: flex; align-items: center; gap: 9px; padding: 10px 14px; font-size: 13px; color: var(--g600); }
+.cl-thead b { color: var(--slate); font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-trow { display: flex; align-items: center; gap: 10px; padding: 6px 14px; font-size: 13px; border-top: 0.5px solid var(--line); }
+.cl-trow .cl-text { font-size: 13px; }
+.cl-tag { font-size: 11.5px; flex: none; color: var(--g550); }
+.cl-tag.ok { color: var(--st-ok); }
+.cl-tag.run { color: var(--st-run); }
+.cl-trow.removed .cl-text { text-decoration: line-through; color: var(--g550); }

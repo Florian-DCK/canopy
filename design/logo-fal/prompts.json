@@ -1,0 +1,346 @@
+[
+  {
+    "name": "lisiere-01-raffinee",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Refine this app icon into a polished, professional app icon for a desktop app called Canopy. Keep the exact concept: three round trees standing on one ground line, the middle tree taller and filled in warm clay orange #D97757, the two side trees in ivory #F0EEE6, on a deep charcoal #1F1E1D rounded-square background. Improve proportions, optical balance and spacing, make the trunks and ground line elegant and consistent. Flat vector style, crisp edges, no gradients, no texture, no text, no letters, centered, generous margin.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab11880/PzRWRj2qFcI5rG2O_0je6_1793783049226.png"
+      ]
+    },
+    "requestId": "01a1a5cd-30fe-78a3-8792-38e4c25504ef",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\lisiere-01-raffinee.png",
+        "url": "https://v3b.fal.media/files/b/0ab11881/ZxieJqO1dLnKggiqiYQHY_oVc8B9bQ.png"
+      }
+    ]
+  },
+  {
+    "name": "lisiere-02-feuillage",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Redesign this icon as a refined app icon: a treeline of three deciduous trees with softly organic, slightly irregular crowns (like hand-cut paper), the center tree in clay orange #D97757, the others in ivory #F0EEE6, sharing one ground line, on a charcoal #1F1E1D rounded square. Minimal, warm, crafted feel, flat colors, subtle layered depth allowed but no gradients, no text, centered.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab11880/PzRWRj2qFcI5rG2O_0je6_1793783049226.png"
+      ]
+    },
+    "requestId": "01a1a5cd-3103-7cb1-8034-df34f3568179",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\lisiere-02-feuillage.png",
+        "url": "https://v3b.fal.media/files/b/0ab11881/6HsogsmVn3IIliTvnbwnN_pdkP0LDM.png"
+      }
+    ]
+  },
+  {
+    "name": "lisiere-03-geometrique",
+    "endpoint": "google/nano-banana-2.1",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Minimalist geometric app icon for a desktop app named Canopy: a row of three simple round-crowned trees on a single horizontal ground line, built from perfect circles and straight strokes, the middle tree slightly larger and filled clay orange #D97757, the side trees ivory #F0EEE6, on a deep charcoal #1F1E1D rounded-square tile. Swiss modernist, perfectly balanced, flat vector, no gradients, no shadows, no text, centered, generous padding."
+    },
+    "requestId": "01a1a5cd-2d70-77c3-82d1-0a55b76fcb59",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\lisiere-03-geometrique.png",
+        "url": "https://v3b.fal.media/files/b/0ab11880/9l57UEhxaj0vrxjWQfPVn_iB3tC26Z.png"
+      }
+    ]
+  },
+  {
+    "name": "lisiere-04-ligne",
+    "endpoint": "google/nano-banana-2.1",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Elegant monoline app icon: a single continuous ivory #F0EEE6 line drawing a treeline of three rounded trees and the ground beneath them, with one solid clay orange #D97757 dot inside the middle tree's crown, on a charcoal #1F1E1D rounded-square tile. Refined, calm, premium, uniform stroke weight, flat vector, no text, centered."
+    },
+    "requestId": "01a1a5cd-2d75-7202-a4aa-a149bc91781a",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\lisiere-04-ligne.png",
+        "url": "https://v3b.fal.media/files/b/0ab11880/B_AEbdE1mxRcQLFO--3sr_C05tmj8F.png"
+      }
+    ]
+  },
+  {
+    "name": "lumiere-01-raffinee",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Refine this app icon into a polished, professional app icon for a desktop app called Canopy. Keep the concept: a warm clay orange #D97757 sun partly hidden behind two rounded ivory #F0EEE6 tree crowns with a short trunk, on a charcoal #1F1E1D rounded-square background. Improve the composition, overlaps and silhouette so it reads clearly at small sizes. Flat vector, crisp, no gradients, no text, centered.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab11880/LhFnopuL_8uuAXp8GwJNW_1793783049227.png"
+      ]
+    },
+    "requestId": "01a1a5cd-30d7-71f2-998a-1f45bfcaaae6",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\lumiere-01-raffinee.png",
+        "url": "https://v3b.fal.media/files/b/0ab11881/1H-EN961eaTM6o2tzh0Ep_YWHy1HnK.png"
+      }
+    ]
+  },
+  {
+    "name": "lumiere-02-rayons",
+    "endpoint": "google/nano-banana-2.1",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "App icon for a desktop app named Canopy: light filtering through a tree canopy. A clay orange #D97757 sun disc behind a dense rounded ivory #F0EEE6 canopy, with a few thin clay rays slipping through gaps between the leaves, on a charcoal #1F1E1D rounded square. Minimal, poetic, flat vector, at most three colors, no gradients, no text, centered."
+    },
+    "requestId": "01a1a5cd-2d73-7451-a5e9-4cf3bc854f36",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\lumiere-02-rayons.png",
+        "url": "https://v3b.fal.media/files/b/0ab11880/c-a3pZu2v4RbYAZpgpBX0_sociOUdd.png"
+      }
+    ]
+  },
+  {
+    "name": "lumiere-03-negatif",
+    "endpoint": "google/nano-banana-2.1",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Clever negative-space app icon: a large clay orange #D97757 circle (a setting sun) on a charcoal #1F1E1D rounded-square tile, with the silhouette of a rounded tree canopy cut out of the circle in charcoal, so the tree is drawn by the sun's light. Bold, simple, iconic, flat vector, no gradients, no text, centered, readable at 16 pixels."
+    },
+    "requestId": "01a1a5cd-2d70-77c3-82d1-0a6a8bc67011",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\lumiere-03-negatif.png",
+        "url": "https://v3b.fal.media/files/b/0ab11880/dou1Plwrub8fQHMRSm7Xg_S1ObIaR1.png"
+      }
+    ]
+  },
+  {
+    "name": "lumiere-04-aube",
+    "endpoint": "google/nano-banana-2.1",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "App icon: dawn behind a forest canopy. A half clay orange #D97757 sun rising behind a soft undulating ivory #F0EEE6 canopy line made of overlapping round tree crowns, on a charcoal #1F1E1D rounded square, calm and warm. Flat vector illustration, minimal shapes, no gradients, no text, centered."
+    },
+    "requestId": "01a1a5cd-2d75-7202-a4aa-a1502d374c3c",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\lumiere-04-aube.png",
+        "url": "https://v3b.fal.media/files/b/0ab11880/UOSqjt_E8TPUdyiWR6mNs_b9GNeEvJ.png"
+      }
+    ]
+  },
+  {
+    "name": "croise-01-soleil-lisiere",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Combine these two app icons into one: a treeline of three round ivory #F0EEE6 trees on one ground line (from the first) with a clay orange #D97757 sun rising behind the middle tree (from the second), on a charcoal #1F1E1D rounded square. Only the sun is clay. Balanced, polished, flat vector, no gradients, no text, centered, readable at small size.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab11880/PzRWRj2qFcI5rG2O_0je6_1793783049226.png",
+        "https://v3b.fal.media/files/b/0ab11880/LhFnopuL_8uuAXp8GwJNW_1793783049227.png"
+      ]
+    },
+    "requestId": "01a1a5cd-3100-7803-a319-1bd3b861856f",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\croise-01-soleil-lisiere.png",
+        "url": "https://v3b.fal.media/files/b/0ab11881/u8ci_dFz4IFQ2d3sQSYuW_5lxDAiVl.png"
+      }
+    ]
+  },
+  {
+    "name": "croise-02-canopee-lumineuse",
+    "endpoint": "google/nano-banana-2.1",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Premium app icon for a desktop app named Canopy, merging a treeline and light: three rounded ivory #F0EEE6 tree crowns side by side forming a canopy, and between them the warm clay orange #D97757 light of the sun glowing through, as a single solid shape peeking out. Charcoal #1F1E1D rounded-square background, flat vector, three colors only, no gradients, no text, centered, generous margin."
+    },
+    "requestId": "01a1a5cd-2d76-73d2-b670-de2445e0dfd4",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\croise-02-canopee-lumineuse.png",
+        "url": "https://v3b.fal.media/files/b/0ab11880/CrXCM16lH__HKOjYbAgM__WPWYNNa2.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-lisiere4-a-pleine",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Recreate this exact icon design as a full-bleed app icon: remove the white outer frame so the deep charcoal #1F1E1D rounded square fills the whole image edge to edge. Keep the single continuous ivory #F0EEE6 line drawing of three rounded trees and the ground, and the solid clay orange #D97757 dot in the middle tree. Slightly thicker, perfectly uniform stroke so it stays readable at small sizes, refined curves, balanced spacing. Flat vector, no shadow, no text, centered.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1188f/_0_Bw7ksMJc7Es-EW5aVd_1793783194288.png"
+      ]
+    },
+    "requestId": "01a1a5cf-6aac-7893-8d8d-70fadf9cf9e4",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\r2-lisiere4-a-pleine.png",
+        "url": "https://v3b.fal.media/files/b/0ab1188f/Kbz-6je0sHtqg0LITipoj_FCVAW0ia.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-lisiere4-b-soleil",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Variation of this icon, full-bleed deep charcoal #1F1E1D rounded square with no white frame: the same elegant single continuous ivory #F0EEE6 line drawing of three rounded trees on a ground line, but instead of the dot, a solid clay orange #D97757 half-sun rises behind the middle tree's crown, partly hidden by the line. Uniform stroke weight, refined, calm, premium, flat vector, no text, centered.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1188f/_0_Bw7ksMJc7Es-EW5aVd_1793783194288.png"
+      ]
+    },
+    "requestId": "01a1a5cf-6aaa-72e1-b98f-fe8871f31106",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\r2-lisiere4-b-soleil.png",
+        "url": "https://v3b.fal.media/files/b/0ab1188f/kqC0pvCUty4z5Mao4rST-_wORmTJjz.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-lisiere2-a-affinee",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Refine this app icon, same composition and style: three paper-cut deciduous trees on one ground line, the center tree in clay orange #D97757 and the side trees ivory #F0EEE6, on a full-bleed deep charcoal #1F1E1D rounded square. Cleaner silhouettes, crisper edges, consistent scalloped leaf edges, better balance, flat colors, no gradients, no text, centered.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1188f/24TG080bZK68LlBJ2NTew_1793783194285.png"
+      ]
+    },
+    "requestId": "01a1a5cf-6b25-70b0-81fc-14c5aad8213c",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\r2-lisiere2-a-affinee.png",
+        "url": "https://v3b.fal.media/files/b/0ab1188f/s7OGWl9iWV3qYctGIsx5r_99jYpuOF.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-lisiere2-b-simple",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Simplify this app icon so it reads perfectly at 16 pixels: keep three paper-cut trees on one ground line (center tree clay orange #D97757, side trees ivory #F0EEE6) on a full-bleed charcoal #1F1E1D rounded square, but use fewer, larger scallops on each crown, thicker trunks and ground line, bolder overall shapes. Flat vector, no gradients, no text, centered.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1188f/24TG080bZK68LlBJ2NTew_1793783194285.png"
+      ]
+    },
+    "requestId": "01a1a5cf-6b24-77a1-a473-d773c714c8b5",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\r2-lisiere2-b-simple.png",
+        "url": "https://v3b.fal.media/files/b/0ab1188f/YvOhU6Sb6rf-dPV7eQyI9_jpaBdy5l.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-lumiere3-a-decoupe",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Refine the first icon: a large clay orange #D97757 sun disc with a single tree silhouette cut out of it in charcoal #1F1E1D, on a full-bleed charcoal rounded square. Give the tree crown the soft scalloped paper-cut edge of the trees in the second image. Bold, iconic, perfectly balanced, flat vector, two colors only, no text, centered, readable at 16 pixels.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1188f/ulZ0dQ6xxGP-3f77BL1L9_1793783194283.png",
+        "https://v3b.fal.media/files/b/0ab1188f/24TG080bZK68LlBJ2NTew_1793783194285.png"
+      ]
+    },
+    "requestId": "01a1a5cf-6b26-79d0-b736-464f1d153cb7",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\r2-lumiere3-a-decoupe.png",
+        "url": "https://v3b.fal.media/files/b/0ab1188f/7ogGY_88jekKv2OtyCVzx_8k90cNqq.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-lumiere3-b-trois-arbres",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Variation of this icon: the same large clay orange #D97757 sun disc on a full-bleed charcoal #1F1E1D rounded square, but cut out of the bottom of the sun are three rounded trees standing side by side on one ground line (a small treeline), the middle one slightly taller, all in charcoal negative space. Bold, iconic, flat vector, two colors only, no text, centered, readable at small sizes.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1188f/ulZ0dQ6xxGP-3f77BL1L9_1793783194283.png"
+      ]
+    },
+    "requestId": "01a1a5cf-6aed-78a0-aa90-5db848c8f8a0",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\r2-lumiere3-b-trois-arbres.png",
+        "url": "https://v3b.fal.media/files/b/0ab1188f/OhheXZzVbjKcteu9YGx5w_1stQ4bBd.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-lumiere2-a-sans-rayons",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Edit this app icon: remove all the light rays completely. Keep the clay orange #D97757 sun disc behind the dense paper-cut ivory #F0EEE6 tree canopy with its trunk, on a full-bleed deep charcoal #1F1E1D rounded square (no outer frame or border). Clean, flat vector, no gradients, no text, centered.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1188f/G-MLDP7ONxZ2pJAcVduso_1793783194232.png"
+      ]
+    },
+    "requestId": "01a1a5cf-6a78-7880-96cc-85b7463d4999",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\r2-lumiere2-a-sans-rayons.png",
+        "url": "https://v3b.fal.media/files/b/0ab1188f/Yf_wbSH-T02AziLH9w7bp_tjDwKFf8.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-lumiere2-b-simple",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Simplify this app icon for small sizes: no light rays at all, one clay orange #D97757 sun disc behind a single ivory #F0EEE6 tree whose canopy is made of a few large leaf clusters instead of many small leaves, with a short trunk, on a full-bleed charcoal #1F1E1D rounded square with no border. Flat vector, three colors, no gradients, no text, centered.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1188f/G-MLDP7ONxZ2pJAcVduso_1793783194232.png"
+      ]
+    },
+    "requestId": "01a1a5cf-6a77-7d82-9b7c-712d3e04093e",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo-fal\\r2-lumiere2-b-simple.png",
+        "url": "https://v3b.fal.media/files/b/0ab1188f/mOUXmIR3CgOnfArQWirz9_RdSOsxcU.png"
+      }
+    ]
+  }
+]

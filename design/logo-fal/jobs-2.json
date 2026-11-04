@@ -1,0 +1,53 @@
+[
+  {
+    "name": "r2-lisiere4-a-pleine",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:/Users/fdonc/Documents/Atelier/design/logo-fal/lisiere-04-ligne.png"],
+    "prompt": "Recreate this exact icon design as a full-bleed app icon: remove the white outer frame so the deep charcoal #1F1E1D rounded square fills the whole image edge to edge. Keep the single continuous ivory #F0EEE6 line drawing of three rounded trees and the ground, and the solid clay orange #D97757 dot in the middle tree. Slightly thicker, perfectly uniform stroke so it stays readable at small sizes, refined curves, balanced spacing. Flat vector, no shadow, no text, centered."
+  },
+  {
+    "name": "r2-lisiere4-b-soleil",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:/Users/fdonc/Documents/Atelier/design/logo-fal/lisiere-04-ligne.png"],
+    "prompt": "Variation of this icon, full-bleed deep charcoal #1F1E1D rounded square with no white frame: the same elegant single continuous ivory #F0EEE6 line drawing of three rounded trees on a ground line, but instead of the dot, a solid clay orange #D97757 half-sun rises behind the middle tree's crown, partly hidden by the line. Uniform stroke weight, refined, calm, premium, flat vector, no text, centered."
+  },
+  {
+    "name": "r2-lisiere2-a-affinee",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:/Users/fdonc/Documents/Atelier/design/logo-fal/lisiere-02-feuillage.png"],
+    "prompt": "Refine this app icon, same composition and style: three paper-cut deciduous trees on one ground line, the center tree in clay orange #D97757 and the side trees ivory #F0EEE6, on a full-bleed deep charcoal #1F1E1D rounded square. Cleaner silhouettes, crisper edges, consistent scalloped leaf edges, better balance, flat colors, no gradients, no text, centered."
+  },
+  {
+    "name": "r2-lisiere2-b-simple",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:/Users/fdonc/Documents/Atelier/design/logo-fal/lisiere-02-feuillage.png"],
+    "prompt": "Simplify this app icon so it reads perfectly at 16 pixels: keep three paper-cut trees on one ground line (center tree clay orange #D97757, side trees ivory #F0EEE6) on a full-bleed charcoal #1F1E1D rounded square, but use fewer, larger scallops on each crown, thicker trunks and ground line, bolder overall shapes. Flat vector, no gradients, no text, centered."
+  },
+  {
+    "name": "r2-lumiere3-a-decoupe",
+    "aspect_ratio": "1:1",
+    "image_files": [
+      "C:/Users/fdonc/Documents/Atelier/design/logo-fal/lumiere-03-negatif.png",
+      "C:/Users/fdonc/Documents/Atelier/design/logo-fal/lisiere-02-feuillage.png"
+    ],
+    "prompt": "Refine the first icon: a large clay orange #D97757 sun disc with a single tree silhouette cut out of it in charcoal #1F1E1D, on a full-bleed charcoal rounded square. Give the tree crown the soft scalloped paper-cut edge of the trees in the second image. Bold, iconic, perfectly balanced, flat vector, two colors only, no text, centered, readable at 16 pixels."
+  },
+  {
+    "name": "r2-lumiere3-b-trois-arbres",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:/Users/fdonc/Documents/Atelier/design/logo-fal/lumiere-03-negatif.png"],
+    "prompt": "Variation of this icon: the same large clay orange #D97757 sun disc on a full-bleed charcoal #1F1E1D rounded square, but cut out of the bottom of the sun are three rounded trees standing side by side on one ground line (a small treeline), the middle one slightly taller, all in charcoal negative space. Bold, iconic, flat vector, two colors only, no text, centered, readable at small sizes."
+  },
+  {
+    "name": "r2-lumiere2-a-sans-rayons",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:/Users/fdonc/Documents/Atelier/design/logo-fal/lumiere-02-rayons.png"],
+    "prompt": "Edit this app icon: remove all the light rays completely. Keep the clay orange #D97757 sun disc behind the dense paper-cut ivory #F0EEE6 tree canopy with its trunk, on a full-bleed deep charcoal #1F1E1D rounded square (no outer frame or border). Clean, flat vector, no gradients, no text, centered."
+  },
+  {
+    "name": "r2-lumiere2-b-simple",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:/Users/fdonc/Documents/Atelier/design/logo-fal/lumiere-02-rayons.png"],
+    "prompt": "Simplify this app icon for small sizes: no light rays at all, one clay orange #D97757 sun disc behind a single ivory #F0EEE6 tree whose canopy is made of a few large leaf clusters instead of many small leaves, with a short trunk, on a full-bleed charcoal #1F1E1D rounded square with no border. Flat vector, three colors, no gradients, no text, centered."
+  }
+]

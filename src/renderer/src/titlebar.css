@@ -1,0 +1,50 @@
+/* Barre de fenêtre maison (planche « Barre de fenêtre », B2 + recherche). */
+#root { display: flex; flex-direction: column; }
+#root > .app { flex: 1; min-height: 0; height: auto; }
+
+.titlebar { height: 44px; flex: none; position: relative; z-index: 20; display: flex; align-items: center; background: var(--head); border-bottom: 0.5px solid var(--line); -webkit-app-region: drag; user-select: none; container-type: inline-size; }
+/* Tout ce qui se clique échappe au glisser de la fenêtre. */
+.titlebar :is(button, input, a, select, [role='tab'], .menu, .menu-wrap, .usage-pop) { -webkit-app-region: no-drag; }
+
+.tb-logo { width: 64px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; border-right: 0.5px solid var(--line); }
+.tb-logo img { width: 24px; height: 24px; display: block; }
+.tb-left { min-width: 0; display: flex; align-items: center; flex: 0 1 auto; overflow: hidden; }
+.tb-right { display: flex; align-items: center; flex: none; }
+.tb-drag { flex: 1; min-width: 24px; height: 100%; }
+.tb-drag.small { flex: none; width: 16px; }
+.tb-sep { width: 0.5px; height: 20px; background: var(--line); margin: 0 4px; flex: none; }
+
+/* L'en-tête de session et le fil d'Ariane, posés dans la barre */
+.titlebar .s-head { height: 44px; border-bottom: none; background: transparent; padding: 0 8px; }
+.tb-crumb { padding: 0 14px; font-size: 13px; white-space: nowrap; }
+
+.tb-search { width: 300px; flex: 0 1 300px; min-width: 150px; height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 8px; border: 0.5px solid var(--line); background: var(--g150); color: var(--g550); font-size: 12.5px; text-align: left; }
+.tb-search:hover { border-color: var(--line-strong); color: var(--g600); }
+.tb-search-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-keys { display: inline-flex; gap: 3px; flex: none; }
+.titlebar .cmp-usage { margin: 0 2px; }
+
+/* Boutons de fenêtre : 46 px de large comme Windows, Fermer en rouge au survol */
+.win-btn { width: 46px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; color: var(--g600); }
+.win-btn:hover { background: var(--g150); color: var(--slate); }
+.win-btn:active { background: var(--g200); }
+.win-btn.close:hover { background: #c42b1c; color: #fff; }
+.win-btn.close:active { background: #a52314; color: #fff; }
+.win-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+
+/* Fenêtre inactive : la barre s'atténue */
+.titlebar.blur .tb-logo img { opacity: 0.55; filter: grayscale(0.6); }
+.titlebar.blur :is(.tb-left, .tb-right, .tb-search, .cmp-usage, .win-btn) { opacity: 0.6; }
+
+/* Fenêtre étroite : la recherche devient une loupe */
+@container (max-width: 1000px) {
+  .tb-search { width: 32px; min-width: 32px; flex: none; padding: 0; justify-content: center; }
+  .tb-search-txt, .tb-keys { display: none; }
+}
+
+/* Quand la place manque : le titre se tronque, puis la recherche rétrécit, avant les onglets et le statut. */
+.tb-left > * { min-width: 0; }
+.titlebar .s-head { min-width: 0; flex: 1 1 auto; overflow: hidden; }
+.titlebar .s-title { flex: 0 1 auto; min-width: 60px; }
+.titlebar .s-tabs { flex: none; }
+.tb-search { flex-shrink: 4; }

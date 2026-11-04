@@ -1,0 +1,67 @@
+/* Navigateur intégré (planches 10 et 11) */
+.bt { flex: 1; min-height: 0; display: flex; }
+.bt-main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--ivory); }
+.bt-bar { height: 44px; flex: none; display: flex; align-items: center; gap: 2px; padding: 0 8px; border-bottom: 0.5px solid var(--line); }
+.bt-url { flex: 1; min-width: 0; height: 30px; margin: 0 6px; border-radius: 8px; background: var(--g100); border: 0.5px solid var(--line); display: flex; align-items: center; gap: 8px; padding: 0 10px; }
+.bt-url .ico { color: var(--g550); }
+.bt-url .ico.st-idle { color: var(--st-ok); }
+.bt-url input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 12.5px; color: var(--slate); }
+.bt-url:focus-within { border-color: var(--st-run); }
+.bt-dev { margin: 0 4px; }
+.bt-dev button { padding: 0 8px; }
+.bt-console { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 6px; font-size: 12px; color: var(--g550); }
+.bt-console.err { color: var(--st-err); }
+.bt-slot { flex: 1; min-height: 0; margin: 0 10px 10px; border-radius: 10px; background: var(--g150); }
+
+/* Couche des webviews (au-dessus de l'emplacement, sous les menus) */
+.bh { position: fixed; z-index: 3; display: flex; justify-content: center; border-radius: 10px; overflow: hidden; pointer-events: none; }
+.bh.on { pointer-events: auto; }
+.bh-page { height: 100%; display: flex; background: #fff; }
+.bh-page.device { box-shadow: 0 0 0 0.5px var(--line-strong), 0 10px 30px rgba(0, 0, 0, 0.25); }
+.bh-float { position: absolute; z-index: 2; display: flex; align-items: center; gap: 3px; padding: 5px 5px 5px 2px; border-radius: 14px; background: rgba(26, 25, 24, 0.96); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4); color: #e3e1d8; white-space: nowrap; }
+.bh-float.min { padding: 4px 4px 4px 2px; border-radius: 22px; }
+.bh-grip { width: 16px; height: 32px; display: inline-flex; align-items: center; justify-content: center; color: #73726c; cursor: grab; touch-action: none; border-radius: 6px; }
+.bh-grip:hover { color: #b8b6ad; background: rgba(240, 238, 230, 0.06); }
+.bh-grip:active { cursor: grabbing; }
+.bh-mini { position: relative; width: 36px; height: 36px; border: none; border-radius: 50%; background: rgba(240, 238, 230, 0.08); color: #b8b6ad; display: inline-flex; align-items: center; justify-content: center; }
+.bh-mini:hover { color: #f5f4ee; }
+.bh-mini.on { background: rgba(91, 155, 230, 0.25); color: #b5d4f8; }
+.bh-mini .bh-n { position: absolute; top: -4px; right: -4px; box-shadow: 0 0 0 2px #1a1918; }
+.bh-float .bh-ib .ico { transform: none; }
+.bh-b { height: 32px; padding: 0 11px; border: none; border-radius: 9px; background: transparent; color: #b8b6ad; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.bh-b:hover { color: #f5f4ee; }
+.bh-b.on { background: rgba(91, 155, 230, 0.2); color: #b5d4f8; font-weight: 500; }
+.bh-b.send { background: #d97757; color: #141413; font-weight: 600; }
+.bh-b.send:disabled { background: rgba(240, 238, 230, 0.08); color: #8f8d86; font-weight: 500; cursor: default; }
+.bh-n { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #5b9be6; color: #141413; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; }
+.bh-sep { width: 1px; height: 20px; background: rgba(240, 238, 230, 0.12); margin: 0 3px; }
+.bh-queue { position: absolute; right: 0; width: 380px; max-height: 60vh; overflow: auto; border-radius: 12px; background: rgba(26, 25, 24, 0.97); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45); color: #e3e1d8; }
+.bh-qh { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 13px; color: #b8b6ad; }
+.bh-qh b { color: #f5f4ee; font-weight: 600; }
+.bh-empty { margin: 0; padding: 4px 14px 14px; font-size: 12.5px; color: #8f8d86; line-height: 1.5; }
+.bh-qr { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-top: 0.5px solid rgba(240, 238, 230, 0.1); cursor: pointer; }
+.bh-qr:hover { background: rgba(240, 238, 230, 0.04); }
+.bh-qr img { width: 52px; height: 34px; object-fit: cover; border-radius: 5px; flex: none; }
+.bh-qt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: #f5f4ee; line-height: 1.4; }
+.bh-qt small { font-family: var(--mono); font-size: 11px; color: #8f8d86; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bh-qa { display: flex; gap: 2px; }
+.bh-ib { width: 24px; height: 24px; border: none; border-radius: 6px; background: transparent; color: #8f8d86; display: inline-flex; align-items: center; justify-content: center; }
+.bh-ib:hover { background: rgba(240, 238, 230, 0.08); color: #f5f4ee; }
+.bh-pin { width: 22px; height: 22px; flex: none; border-radius: 11px 11px 11px 3px; color: #141413; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.bh-pin.new { background: #5b9be6; }
+.bh-pin.sent { background: #f5f4ee; }
+.bh-pin.work { background: #e5b567; }
+.bh-pin.done { background: #8fc47a; }
+
+/* Carte « serveur détecté » dans le fil */
+.srv-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--white); border: 0.5px solid var(--line); font-size: 13px; }
+.srv-card .ico { color: var(--st-ok); }
+.srv-card span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.srv-card small { font-size: 11.5px; color: var(--g550); }
+.bh.off { opacity: 0.001; z-index: -1; }
+.bh-fail { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: var(--ivory); color: var(--slate); font-size: 13px; text-align: center; padding: 24px; }
+.bh-fail > .ico { color: var(--st-err); }
+.bh-fail span { color: var(--g550); font-family: var(--mono); font-size: 12px; }
+.bh-queue.above { bottom: calc(100% + 8px); }
+.bh-queue.below { top: calc(100% + 8px); }
+.bh-shield { position: fixed; inset: 0; z-index: -1; cursor: grabbing; }

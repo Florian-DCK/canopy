@@ -1,0 +1,55 @@
+/* Questions de Claude (planches 17 et 18) */
+.q-card { border-radius: 14px; overflow: hidden; outline: none; animation: atl-in 0.22s ease-out; }
+.q-card.wait { background: var(--wait-bg); border: 1px solid var(--clay-line); }
+.q-card.async { background: var(--blue-tint); border: 0.5px solid color-mix(in srgb, var(--blue) 45%, transparent); }
+.q-card:focus-visible { box-shadow: 0 0 0 2px var(--blue); }
+.q-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px 0; font-size: 13.5px; }
+.q-head b { font-weight: 600; color: var(--slate); }
+.q-card.async .q-head b { color: var(--blue-text); }
+.q-steps { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px 0; }
+.q-step { height: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: none; border-radius: 999px; background: var(--g150); color: var(--g600); font-size: 12px; }
+.q-step[aria-selected='true'] { background: var(--slate); color: var(--ivory); font-weight: 500; }
+.q-step-n { opacity: 0.7; }
+.q-body { display: flex; gap: 12px; padding: 12px 16px; }
+.q-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.q-text { font-family: var(--serif); font-size: 18px; line-height: 1.35; color: var(--slate); }
+.q-hint { font-size: 12px; color: var(--g550); }
+.q-opts { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+.q-opt { display: flex; align-items: flex-start; gap: 11px; width: 100%; padding: 9px 12px; border-radius: 10px; border: 0.5px solid var(--line-strong); background: var(--white); color: var(--slate); text-align: left; font: inherit; }
+.q-opt:hover { border-color: var(--g400); }
+.q-opt.on { border: 1px solid var(--clay); background: var(--clay-tint); }
+.q-card.async .q-opt.on { border-color: var(--blue); background: var(--blue-tint); }
+.q-opt.other { border-style: dashed; color: var(--g600); background: transparent; }
+.q-key { width: 22px; height: 22px; flex: none; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11.5px; background: var(--g150); color: var(--g600); }
+.q-opt.on .q-key { background: var(--clay); color: var(--on-accent); }
+.q-card.async .q-opt.on .q-key { background: var(--blue); }
+.q-opt-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.q-label { font-weight: 500; }
+.q-desc { font-size: 12.5px; line-height: 1.45; color: var(--g600); }
+.q-default { flex: none; align-self: center; font-size: 11px; color: var(--blue-text); }
+.q-other { display: flex; align-items: center; gap: 11px; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--g400); background: var(--white); }
+.q-other input { flex: 1; min-width: 0; height: 28px; border: none; outline: none; background: transparent; color: var(--slate); font: inherit; }
+.q-note { width: 100%; resize: vertical; border-radius: 9px; border: 0.5px solid var(--line-strong); background: var(--white); color: var(--slate); padding: 8px 10px; font: inherit; font-size: 13px; }
+.q-note-btn { align-self: flex-start; }
+.q-fallback { margin: 2px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--g600); }
+.q-fallback b { color: var(--slate); font-weight: 600; }
+.q-preview { width: 300px; flex: none; display: flex; flex-direction: column; border-radius: 10px; overflow: hidden; border: 0.5px solid var(--line); background: var(--code-bg); }
+.q-preview-h { height: 30px; flex: none; display: flex; align-items: center; padding: 0 10px; font-size: 11.5px; color: var(--g550); border-bottom: 0.5px solid var(--line); }
+.q-preview pre { margin: 0; padding: 10px; overflow: auto; max-height: 320px; font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--code-fg); white-space: pre-wrap; }
+.q-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 16px 12px; border-top: 0.5px solid var(--line); }
+.q-foot .btn { height: 32px; }
+.q-keys { flex: 1; min-width: 160px; font-size: 11.5px; color: var(--g550); }
+/* Répondue : une ligne repliable. */
+.q-done { border-radius: 12px; border: 0.5px solid var(--line); background: var(--white); }
+.q-done-h { width: 100%; display: flex; align-items: center; gap: 9px; padding: 9px 14px; border: none; background: transparent; color: var(--g600); font-size: 12.5px; text-align: left; }
+.q-done-h b { font-weight: 600; color: var(--slate); flex: none; }
+.q-done-peek { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.q-done-list { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 12px 37px; font-size: 13px; line-height: 1.45; }
+.q-done-row { display: flex; gap: 8px; }
+.q-chip { flex: none; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--g150); color: var(--g600); font-size: 11px; display: inline-flex; align-items: center; }
+/* Case étroite (Mosaïque) : aperçu sous la question, raccourcis masqués. */
+@container (max-width: 560px) {
+  .q-body { flex-direction: column; }
+  .q-preview { width: auto; }
+  .q-keys { display: none; }
+}

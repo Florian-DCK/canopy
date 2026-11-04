@@ -1,0 +1,22 @@
+/* Effets d'état des sessions (planche 16) : B · respiration pour l'attente, A · flash pour la fin. */
+.fx-wait { animation: fx-wait 2.4s ease-in-out infinite; }
+.fx-run { animation: fx-run 3.2s ease-in-out infinite; }
+.fx-done { animation: fx-done 2.2s ease-out 1 forwards; }
+.fx-err { box-shadow: 0 0 0 1.5px var(--st-err) !important; }
+@keyframes fx-wait {
+  0%, 100% { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--clay) 25%, transparent); }
+  50% { box-shadow: 0 0 0 1.5px var(--clay); }
+}
+@keyframes fx-run {
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--blue) 12%, transparent); }
+  50% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--blue) 50%, transparent); }
+}
+@keyframes fx-done {
+  0% { box-shadow: 0 0 0 2px var(--st-ok), 0 0 28px 6px color-mix(in srgb, var(--st-ok) 55%, transparent); }
+  100% { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--st-ok) 60%, transparent), 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-wait { animation: none; box-shadow: 0 0 0 1.5px var(--clay); }
+  .fx-run { animation: none; }
+  .fx-done { animation: none; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--st-ok) 60%, transparent); }
+}

@@ -1,0 +1,49 @@
+.ac-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: min(420px, 100%);
+  margin-bottom: 6px;
+  padding: 4px;
+  background: var(--white);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(20, 20, 19, 0.12);
+  z-index: 30;
+}
+.ac-sec {
+  padding: 6px 8px 2px;
+  font-size: 11px;
+  color: var(--g600);
+}
+.ac-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--slate);
+}
+.ac-row.on {
+  background: var(--g150);
+}
+.ac-name {
+  flex: none;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--slate);
+  font-size: 13px;
+}
+.ac-detail {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--g550);
+  font-size: 12px;
+}
