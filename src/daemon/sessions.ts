@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import type { ActParams, MarkParams,
   AppEvent,
   ArtifactRef,
@@ -17,6 +18,7 @@ import type { ActParams, MarkParams,
   PermissionModeUI,
   QuestionAnswer,
   SessionMeta,
+  TaskThreadEntry,
   ToolsInventory
 } from '../shared/types'
 import type { BrowserParams, BrowserResult } from '../shared/browser'
@@ -1089,6 +1091,54 @@ export class SessionManager {
   async stopTask(id: string, taskId: string) {
     const s = this.sessions.get(id)
     await s?.query?.stopTask?.(taskId).catch(() => {})
+  }
+
+  /** Fil d'un sous-agent, lu dans son journal (~/.claude/projects/<projet>/<session>/subagents/agent-<id>.jsonl). */
+  taskThread(id: string, taskId: string): TaskThreadEntry[] | null {
+    const sdk = this.sessions.get(id)?.meta.sdkSessionId
+    if (!sdk || !/^[\w-]+$/.test(taskId)) return null
+    const base = join(homedir(), '.claude', 'projects')
+    let file = ''
+    try {
+      for (const d of readdirSync(base)) {
+        const f = join(base, d, sdk, 'subagents', `agent-${taskId}.jsonl`)
+        if (existsSync(f)) {
+          file = f
+          break
+        }
+      }
+    } catch {
+      return null
+    }
+    if (!file) return null
+    const out: TaskThreadEntry[] = []
+    const clip = (t: string, n: number) => (t.length > n ? t.slice(0, n) + '…' : t)
+    for (const line of readFileSync(file, 'utf8').split('\n')) {
+      if (!line.trim()) continue
+      let d: any
+      try {
+        d = JSON.parse(line)
+      } catch {
+        continue
+      }
+      const at = d.timestamp ? Date.parse(d.timestamp) : undefined
+      const c = d.message?.content
+      if (d.type === 'user') {
+        if (typeof c === 'string') out.push({ kind: 'prompt', text: clip(c, 1200), at })
+        else if (Array.isArray(c))
+          for (const b of c) {
+            if (b?.type !== 'tool_result') continue
+            const t = typeof b.content === 'string' ? b.content : Array.isArray(b.content) ? b.content.filter((x: any) => x?.type === 'text').map((x: any) => x.text).join('\n') : ''
+            out.push({ kind: 'result', text: clip(t.trim() || (Array.isArray(b.content) && b.content.some((x: any) => x?.type === 'image') ? '(image)' : '(vide)'), 400), error: !!b.is_error, at })
+          }
+      } else if (d.type === 'assistant' && Array.isArray(c)) {
+        for (const b of c) {
+          if (b?.type === 'text' && b.text?.trim()) out.push({ kind: 'text', text: clip(b.text.trim(), 2000), at })
+          else if (b?.type === 'tool_use') out.push({ kind: 'tool', name: b.name, text: summarize(b.name, b.input, this.sessions.get(id)?.meta.cwd ?? ''), at })
+        }
+      }
+    }
+    return out.slice(-300)
   }
 
   /** Fin (16 Ko) du fichier de sortie d'une tâche de fond terminée. */

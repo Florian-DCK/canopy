@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import type { Attachment, Item, PermissionModeUI, SessionMeta } from '../../../shared/types'
+import type { Attachment, Item, PermissionModeUI, SessionMeta, TaskThreadEntry } from '../../../shared/types'
 import { contextWindowOf } from '../derive'
 import { Icon, MODE_ICON, Ring, toolDoing, type IconName } from '../icons'
 import { thumbUrl } from '../media'
@@ -95,6 +95,7 @@ const BG_KIND: Record<string, string> = { local_bash: 'Commande', shell: 'Comman
 /** Pastille « N en fond » : la liste des tâches de fond, avec Arrêter, et le délai de passage automatique. */
 function BgPill({ sessionId, tasks }: { sessionId: string; tasks: NonNullable<SessionMeta['bgTasks']> }) {
   const [open, setOpen] = useState(false)
+  const [thread, setThread] = useState<{ id: string; label: string } | null>(null)
   const ref = useRef<HTMLSpanElement>(null)
   const { delay, set } = useBgDelay()
   useEffect(() => {
@@ -118,6 +119,9 @@ function BgPill({ sessionId, tasks }: { sessionId: string; tasks: NonNullable<Se
               <span className="bg-kind">{BG_KIND[t.kind] ?? 'Tâche'}</span>
               <span className="bg-label" title={t.label}>{t.label}</span>
               <span className="bg-time">{clock(Math.max(0, Math.round((Date.now() - t.startedAt) / 1000)))}</span>
+              {/agent/.test(t.kind) && (
+                <button type="button" className="btn text sm" onClick={() => setThread({ id: t.id, label: t.label })}>Voir son fil</button>
+              )}
               <button type="button" className="btn text sm bg-stop" onClick={() => void api.stopTask(sessionId, t.id)}>Arrêter</button>
             </div>
           ))}
@@ -131,7 +135,61 @@ function BgPill({ sessionId, tasks }: { sessionId: string; tasks: NonNullable<Se
           </div>
         </div>
       )}
+      {thread && <TaskThread sessionId={sessionId} taskId={thread.id} label={thread.label} running={tasks.some((t) => t.id === thread.id)} onClose={() => setThread(null)} />}
     </span>
+  )
+}
+
+/** Fil d'un sous-agent de fond, en lecture seule, rafraîchi toutes les 2 s tant qu'il travaille. */
+function TaskThread({ sessionId, taskId, label, running, onClose }: { sessionId: string; taskId: string; label: string; running: boolean; onClose: () => void }) {
+  const [entries, setEntries] = useState<TaskThreadEntry[] | null>(null)
+  const box = useRef<HTMLDivElement>(null)
+  const stick = useRef(true)
+  useEffect(() => {
+    let alive = true
+    const load = () => void api.taskThread(sessionId, taskId).then((e) => alive && setEntries(e ?? [])).catch(() => {})
+    load()
+    const t = running ? setInterval(load, 2000) : undefined
+    return () => {
+      alive = false
+      if (t) clearInterval(t)
+    }
+  }, [sessionId, taskId, running])
+  // Suit la fin du fil, sauf si tu es remonté le lire.
+  useEffect(() => {
+    const b = box.current
+    if (b && stick.current) b.scrollTop = b.scrollHeight
+  }, [entries])
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <div className="tt-wrap" role="dialog" aria-label={`Fil de ${label}`} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="tt">
+        <div className="tt-h">
+          <Icon name="agent" size={15} />
+          <b title={label}>{label}</b>
+          <span className={`tt-state ${running ? 'run' : ''}`}>{running ? 'travaille…' : 'terminé'}</span>
+          <span style={{ flex: 1 }} />
+          <button type="button" className="icon-btn sm" aria-label="Fermer" onClick={onClose}><Icon name="close" size={14} /></button>
+        </div>
+        <div ref={box} className="tt-body" onScroll={(e) => (stick.current = e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight < 40)}>
+          {entries === null && <div className="empty">Lecture du fil…</div>}
+          {entries?.length === 0 && <div className="empty">Rien encore : il démarre.</div>}
+          {entries?.map((e, k) =>
+            e.kind === 'tool' ? (
+              <div key={k} className="tt-tool"><span className="tt-name">{e.name}</span><span className="tt-sum">{e.text}</span></div>
+            ) : e.kind === 'result' ? (
+              <div key={k} className={`tt-res${e.error ? ' err' : ''}`}>{e.text}</div>
+            ) : (
+              <div key={k} className={e.kind === 'prompt' ? 'tt-prompt' : 'tt-text'}>{e.text}</div>
+            )
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 

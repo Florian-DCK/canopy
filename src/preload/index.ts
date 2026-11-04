@@ -47,6 +47,7 @@ const api: AtelierApi = {
   moveMemory: (projectId, file, to) => ipcRenderer.invoke('memory:move', projectId, file, to),
   configProject: () => ipcRenderer.invoke('tools:configProject'),
   taskOutput: (id, itemId) => ipcRenderer.invoke('task:output', id, itemId),
+  taskThread: (id, taskId) => ipcRenderer.invoke('task:thread', id, taskId),
   getTheme: () => ipcRenderer.invoke('theme:get'),
   setTheme: (mode) => ipcRenderer.invoke('theme:set', mode),
   setCurrentView: (sessionId) => ipcRenderer.send('view:current', sessionId),

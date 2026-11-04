@@ -38,6 +38,8 @@ export type SessionMeta = {
 }
 
 export type BgTask = { id: string; kind: string; label: string; startedAt: number }
+/** Fil d'un sous-agent (lu dans son journal, en direct) : ce qu'il dit, les outils qu'il lance, leurs résultats. */
+export type TaskThreadEntry = { kind: 'prompt' | 'text' | 'tool' | 'result'; text: string; name?: string; error?: boolean; at?: number }
 
 export type PermissionModeUI = 'default' | 'acceptEdits' | 'auto' | 'plan'
 
@@ -362,6 +364,7 @@ export type AtelierApi = {
   configProject(): Promise<Project>
   /** Fin de la sortie d'une tâche de fond terminée (élément « task » du fil). */
   taskOutput(sessionId: string, itemId: string): Promise<string>
+  taskThread(sessionId: string, taskId: string): Promise<TaskThreadEntry[] | null>
   getTheme(): Promise<ThemeMode>
   setTheme(mode: ThemeMode): Promise<void>
   /** Session affichée (null = autre vue) : le main s'en sert pour ne pas notifier ce que tu regardes déjà. */

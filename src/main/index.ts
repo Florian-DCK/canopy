@@ -527,6 +527,7 @@ const RELAY: Record<string, string> = {
   'memory:move': 'moveMemory',
   'tools:configProject': 'configProject',
   'task:output': 'taskOutput',
+  'task:thread': 'taskThread',
   'history:list': 'listHistory',
   'files:list': 'listFiles',
   'commands:list': 'listCommands',
