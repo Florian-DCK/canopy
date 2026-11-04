@@ -326,14 +326,14 @@ function follow() {
   }
 }
 
-/** Ajoute à la scène les images, fichiers modifiés et artefacts apparus depuis le début du tour. */
+/** Ajoute à la scène les images et artefacts apparus depuis le début du tour. */
 function collectStage(sid: string, items: Item[], since: number) {
   const cur = useVoice.getState().stage
   const have = new Set(cur.map((e) => e.id))
   const add: StageEntry[] = []
   for (const it of items) {
     if (it.at < since || it.kind !== 'tool') continue
-    if (it.diff && !have.has(it.id)) add.push({ id: it.id, kind: 'diff', diff: it.diff })
+    // Les fichiers modifiés (diffs) ne vont pas à l'écran du mode voix : illisibles à distance, ils restent dans la session.
     if (it.artifact && !have.has(it.id)) add.push({ id: it.id, kind: 'artifact', url: it.artifact.url, title: it.artifact.title })
   }
   const said = items.filter((i) => i.at >= since && i.kind === 'text').map((i) => (i as { text: string }).text.toLowerCase()).join('\n')
