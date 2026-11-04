@@ -458,13 +458,16 @@ function onMessage(ev: MessageEvent) {
       if (speechTimer) clearTimeout(speechTimer)
       speechTimer = null
       if (m.on) speechTimer = setTimeout(() => set({ speech: true, ...(!turn ? { phase: 'listen' as const } : {}) }), 700)
-      else set({ speech: false })
+      // Une pause au milieu de ta phrase n'est pas la fin : l'écoute reste affichée jusqu'à ce que le service tranche
+      // (« final » : tu as fini ; « noise » : ce n'était pas une phrase). Seul un bruit jamais confirmé s'éteint ici.
+      else if (!useVoice.getState().speech) set({ speech: false })
       break
     case 'partial':
       // Des mots transcrits : c'est bien toi qui parles, même si c'était bref.
       if (!turn) set({ heard: m.text, ...(m.text ? { speech: true, phase: 'listen' as const } : {}) })
       break
     case 'final':
+      set({ speech: false })
       // C'était bien toi : la réponse interrompue s'arrête là (elle reste écrite dans la session).
       if (held && turn) turn.dropped = true
       held = null
@@ -482,6 +485,7 @@ function onMessage(ev: MessageEvent) {
       break
     }
     case 'noise':
+      set({ speech: false })
       // Ce n'était pas de la parole : Claude reprend la phrase coupée et la suite.
       if (held && turn) {
         const again = held
