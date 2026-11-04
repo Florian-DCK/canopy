@@ -36,6 +36,19 @@ const LOBES: [number, number, number][] = [
 
 const BODY =
   'M705 900C700 1000 700 1110 670 1170C630 1250 630 1420 700 1490C760 1560 820 1600 960 1605C1110 1605 1190 1570 1250 1500C1330 1410 1340 1260 1300 1150C1270 1070 1260 960 1235 870C1230 760 1200 640 965 630C730 640 700 760 705 900Z'
+// Le corps se déforme à chaque image : on garde ses points pour le redessiner courbé.
+const BODY_PTS = (BODY.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number)
+const BODY_TOP = 630
+type Warp = (x: number, y: number) => { x: number; y: number }
+const bodyPath = (w: Warp) => {
+  const q = (i: number) => {
+    const d = w(BODY_PTS[i], BODY_PTS[i + 1])
+    return `${(BODY_PTS[i] + d.x).toFixed(1)} ${(BODY_PTS[i + 1] + d.y).toFixed(1)}`
+  }
+  let d = `M${q(0)}`
+  for (let i = 2; i + 5 < BODY_PTS.length; i += 6) d += `C${q(i)} ${q(i + 2)} ${q(i + 4)}`
+  return d + 'Z'
+}
 const ARM = 'M-32 0C-36 60-46 118-42 150A42 42 0 0 0 42 150C46 118 34 60 32 0Z'
 // Le trait de séparation ne longe que le bas du bras : à l'épaule, bras et corps se fondent.
 const ARM_GAP = 'M-40 70C-44 110-46 130-42 150A42 42 0 0 0 42 150C46 130 44 110 40 70Z'
@@ -379,6 +392,7 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
     const all = (sel: string) => Array.from(svg.querySelectorAll<SVGGraphicsElement>(sel))
     const el = {
       all: all('.e-all'),
+      body: all('.e-body'),
       can: all('.e-can'),
       lobes: LOBES.map((_, i) => all(`.e-lobe${i}`)),
       footL: all('.e-footL'),
@@ -401,6 +415,9 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
     const can = { x: spring(0), y: spring(0), r: spring(0) }
     const lobes = LOBES.map(() => ({ x: spring(0), y: spring(0), s: spring(1) }))
     let prevTop = { x: 0, y: 0 }
+    let prevVis = { x: 0, y: 0 }
+    // Souplesse du corps : courbure du haut, tassement, ventre.
+    const soft = { bend: spring(0), sag: spring(0), bulge: spring(0) }
     let last = performance.now()
     let blinkAt = last + rnd(1500, 3500)
     let blinkStart = -1
@@ -542,24 +559,49 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
       // Corps : inclinaison et écrasement autour des pieds.
       const sy = P.squash * grow.v
       const sx = (1 + (1 - P.squash) * 0.7) * grow.v
-      const allT = `translate(0 ${P.bob}) rotate(${P.lean} ${BASE.x} ${BASE.y}) translate(${BASE.x} ${BASE.y}) scale(${sx} ${sy}) translate(${-BASE.x} ${-BASE.y})`
+      const allT = `translate(0 ${P.bob}) rotate(${P.lean * 0.4} ${BASE.x} ${BASE.y}) translate(${BASE.x} ${BASE.y}) scale(${sx} ${sy}) translate(${-BASE.x} ${-BASE.y})`
       el.all.forEach((g) => g.setAttribute('transform', allT))
 
-      // Canopée : où le haut du corps est allé cette image, elle y va avec retard (inertie), puis oscille.
-      const rad = (P.lean * Math.PI) / 180
+      // Corps souple : le pied pivote un peu, le reste de l'inclinaison est une courbure ; quand le corps bouge,
+      // le haut traîne derrière le bas puis rattrape (gelée), et le ventre s'élargit quand il se tasse.
+      const rad = (P.lean * 0.4 * Math.PI) / 180
       const h = BASE.y - ANCHOR.y
       const top = { x: Math.sin(rad) * h * sy, y: P.bob + (1 - Math.cos(rad)) * h + (1 - sy) * h }
       const dTop = { x: top.x - prevTop.x, y: top.y - prevTop.y }
       prevTop = top
-      can.x.v -= dTop.x * 0.55
-      can.y.v -= dTop.y * 0.7
-      can.r.v -= dTop.x * 0.06
+      soft.bend.v -= dTop.x * 0.9
+      soft.sag.v -= dTop.y * 0.45
+      stepSpring(soft.bend, P.lean * 10, 140, 9, dt)
+      stepSpring(soft.sag, 0, 170, 10, dt)
+      stepSpring(soft.bulge, Math.max(-0.04, soft.sag.v * 0.004 + (1 - P.squash) * 1.6), 180, 10, dt)
+      const warp: Warp = (x, y) => {
+        const u = Math.max(0, (BASE.y - y) / (BASE.y - BODY_TOP))
+        const g = Math.exp(-(((y - 1380) / 180) ** 2))
+        return { x: soft.bend.v * u * u + (x - BASE.x) * soft.bulge.v * g, y: soft.sag.v * u }
+      }
+      // Pente de la courbe à une hauteur donnée (degrés) : ce qui est posé dessus tourne avec.
+      const slope = (y: number) => {
+        const u = Math.max(0, (BASE.y - y) / (BASE.y - BODY_TOP))
+        return ((2 * soft.bend.v * u) / (BASE.y - BODY_TOP)) * (180 / Math.PI)
+      }
+      const bd = bodyPath(warp)
+      el.body.forEach((g) => g.setAttribute('d', bd))
+      const DA = warp(ANCHOR.x, 760)
+      const DF = warp(1030, 990)
+
+      // Canopée : où le haut du corps est allé cette image, elle y va avec retard (inertie), puis oscille.
+      const vis = { x: top.x + DA.x, y: top.y + DA.y }
+      const dVis = { x: vis.x - prevVis.x, y: vis.y - prevVis.y }
+      prevVis = vis
+      can.x.v -= dVis.x * 0.5
+      can.y.v -= dVis.y * 0.6
+      can.r.v -= dVis.x * 0.06
       const cprev = { x: can.x.v, y: can.y.v }
       stepSpring(can.x, 0, 95, 7, dt)
       stepSpring(can.y, 0, 110, 7.5, dt)
       stepSpring(can.r, 0, 80, 6, dt)
       const dCan = { x: can.x.v - cprev.x, y: can.y.v - cprev.y }
-      const canT = `translate(${can.x.v} ${can.y.v + P.canY}) rotate(${can.r.v + P.tilt} ${ANCHOR.x} ${ANCHOR.y}) translate(${ANCHOR.x} 820) scale(${P.perk}) translate(${-ANCHOR.x} -820)`
+      const canT = `translate(${can.x.v + DA.x} ${can.y.v + P.canY + DA.y}) rotate(${can.r.v + P.tilt + slope(760)} ${ANCHOR.x} ${ANCHOR.y}) translate(${ANCHOR.x} 820) scale(${P.perk}) translate(${-ANCHOR.x} -820)`
       el.can.forEach((g) => g.setAttribute('transform', canT))
 
       // Lobes : chacun traîne un peu derrière la canopée ; en réflexion le feuillage frissonne, en parole il vibre.
@@ -585,8 +627,10 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
 
       el.footL.forEach((g) => g.setAttribute('transform', `translate(0 ${-Math.max(0, P.footL)})`))
       el.footR.forEach((g) => g.setAttribute('transform', `translate(0 ${-Math.max(0, P.footR)})`))
-      el.armL.forEach((g) => g.setAttribute('transform', `translate(${ARM_L.x} ${ARM_L.y}) rotate(${P.armL})`))
-      el.armR.forEach((g) => g.setAttribute('transform', `translate(${ARM_R.x} ${ARM_R.y}) rotate(${P.armR})`))
+      const DL = warp(ARM_L.x, ARM_L.y)
+      const DR = warp(ARM_R.x, ARM_R.y)
+      el.armL.forEach((g) => g.setAttribute('transform', `translate(${ARM_L.x + DL.x} ${ARM_L.y + DL.y}) rotate(${P.armL + slope(ARM_L.y)})`))
+      el.armR.forEach((g) => g.setAttribute('transform', `translate(${ARM_R.x + DR.x} ${ARM_R.y + DR.y}) rotate(${P.armR + slope(ARM_R.y)})`))
 
       // Clignement : fermeture rapide, réouverture plus douce ; parfois deux d'affilée.
       if (blinkStart < 0 && now > blinkAt) {
@@ -609,7 +653,7 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
         }
       }
       const open = Math.max(0, Math.min(1.1, P.eyeOpen)) * (1 - blink)
-      el.face.forEach((g) => g.setAttribute('transform', `rotate(${P.tilt * 0.8} ${ANCHOR.x} ${ANCHOR.y}) translate(${P.gazeX * 0.35} ${P.gazeY * 0.3})`))
+      el.face.forEach((g) => g.setAttribute('transform', `translate(${DF.x} ${DF.y}) rotate(${P.tilt * 0.8 + slope(990)} ${ANCHOR.x} ${ANCHOR.y}) translate(${P.gazeX * 0.35} ${P.gazeY * 0.3})`))
       el.eyes.forEach((g, i) => {
         const e = EYES[i % 2]
         g.setAttribute('transform', `translate(${e.x} ${e.y}) scale(${P.eyeSize} ${P.eyeSize * Math.max(0.05, open)}) translate(${-e.x} ${-e.y})`)
@@ -687,7 +731,7 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
         </mask>
         <mask id={`${id}f`} maskUnits="userSpaceOnUse" {...box}>
           <rect {...box} fill="white" />
-          <path d={BODY} fill="black" {...gap} />
+          <path className="e-body" d={BODY} fill="black" {...gap} />
         </mask>
         <mask id={`${id}a`} maskUnits="userSpaceOnUse" {...box}>
           <rect {...box} fill="white" />
@@ -703,7 +747,7 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
           <ellipse className="e-footR" cx={1110} cy={1645} rx={70} ry={55} fill={COLOR} />
         </g>
         <g mask={`url(#${id}b)`}>
-          <path d={BODY} fill={COLOR} />
+          <path className="e-body" d={BODY} fill={COLOR} />
           <g className="e-face">
             {EYES.map((e, i) => (
               <g key={i}>
