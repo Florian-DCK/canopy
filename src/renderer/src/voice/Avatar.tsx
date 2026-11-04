@@ -1,5 +1,5 @@
 import { CanopyMark, type MarkState } from './CanopyMark'
-import { Character } from './Character'
+import { Gland } from './Gland'
 import { Esprit } from './Esprit'
 import { Plume } from './Plume'
 import type { Avatar as AvatarKind } from './prefs'
@@ -9,5 +9,5 @@ export function Avatar({ kind, state, size, levels }: { kind: AvatarKind; state:
   if (kind === 'canopy') return <CanopyMark state={state} size={size} levels={levels} />
   if (kind === 'esprit') return <Esprit state={state} size={size} levels={levels} />
   if (kind === 'chouette') return <Plume state={state} size={size} levels={levels} />
-  return <Character kind={kind} state={state} size={size} levels={levels} />
+  return <Gland state={state} size={size} levels={levels} />
 }
