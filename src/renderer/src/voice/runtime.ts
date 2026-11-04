@@ -381,6 +381,14 @@ function baLabel(summary: string): string {
   }
 }
 
+/** Phrase d'un fichier dans la réponse du résumé : chemins comparés sans tenir compte des barres ni de la casse. */
+function noteFor(got: Record<string, string>, path: string): string {
+  const key = (p: string) => p.replace(/\\/g, '/').toLowerCase()
+  const base = (p: string) => key(p).split('/').pop()
+  const hit = Object.entries(got).find(([k]) => key(k) === key(path)) ?? Object.entries(got).find(([k]) => base(k) === base(path))
+  return hit?.[1] ?? ''
+}
+
 /** Récap des fichiers modifiés : une seule entrée par tour, mise à jour au fil des modifications. */
 let recapTimer: ReturnType<typeof setTimeout> | null = null
 function collectChanges(items: Item[], since: number, add: StageEntry[]) {
@@ -416,7 +424,7 @@ function collectChanges(items: Item[], since: number, add: StageEntry[]) {
     void api
       .summarizeChanges(todo)
       .then((got) =>
-        set((v) => ({ stage: v.stage.map((e) => (e.id === id && e.kind === 'changes' ? { ...e, files: e.files.map((f) => ({ ...f, note: f.note ?? got[f.path] })) } : e)) }))
+        set((v) => ({ stage: v.stage.map((e) => (e.id === id && e.kind === 'changes' ? { ...e, files: e.files.map((f) => ({ ...f, note: f.note ?? noteFor(got, f.path) })) } : e)) }))
       )
       // Résumé indisponible (moteur pas à jour, hors ligne) : pas de « Je résume… » sans fin.
       .catch(() => set((v) => ({ stage: v.stage.map((e) => (e.id === id && e.kind === 'changes' ? { ...e, files: e.files.map((f) => ({ ...f, note: f.note ?? '' })) } : e)) })))
