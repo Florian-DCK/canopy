@@ -42,7 +42,7 @@ if(t.shape==='ellipse'){const rx=b.w/2+10,ry=b.h/2+10,cx=b.x+b.w/2,cy=b.y+b.h/2;
 const x=b.x-10,y=b.y-10,w=b.w+20,h=b.h+20,r=Math.min(16,h/2);return 'M'+(x+r)+' '+y+'H'+(x+w-r)+'A'+r+' '+r+' 0 0 1 '+(x+w)+' '+(y+r)+'V'+(y+h-r)+'A'+r+' '+r+' 0 0 1 '+(x+w-r)+' '+(y+h)+'H'+(x+r)+'A'+r+' '+r+' 0 0 1 '+x+' '+(y+h-r)+'V'+(y+r)+'A'+r+' '+r+' 0 0 1 '+(x+r)+' '+y+'Z'}
 function linesOf(t){if(t.lines)return t.lines;const b=bbox(t),n=Math.max(1,Math.round(b.h/26)),h=b.h/n,o=[];for(let i=0;i<n;i++)o.push({x:b.x,y:b.y+i*h,w:b.w,h});return o}
 function badge(n,x,y,delay){const g=el('g',{class:'f',style:'animation-delay:'+delay+'s'});el('circle',{cx:x,cy:y,r:15,fill:'#D97757'},g);const t=el('text',{x,y:y+6,'text-anchor':'middle','font-size':17,fill:'#fff'},g);t.textContent=n}
-window.show=(spec)=>{s.innerHTML='';const W=innerWidth,H=innerHeight;let delay=0;
+window.show=(spec)=>{s.innerHTML='';s.classList.remove('out');const W=innerWidth,H=innerHeight;let delay=0;
 const spots=spec.targets.filter(t=>t.style==='spotlight');
 if(spots.length){el('path',{class:'dim','fill-rule':'evenodd',fill:'rgba(20,20,19,0.55)',d:'M0 0H'+W+'V'+H+'H0Z '+spots.map(holeOf).join(' ')})}
 spec.targets.forEach((t,i)=>{const seed=7+i*13;
