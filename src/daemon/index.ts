@@ -237,8 +237,9 @@ const rpc: Record<string, (...a: any[]) => unknown> = {
   setSkillEnabled: (name: string, enabled: boolean) => setSkillEnabled(name, enabled),
   setMcpEnabled: (projectId: string, name: string, enabled: boolean) => sessions.setMcpEnabled(projectId, name, enabled),
   reconnectMcp: (projectId: string, name: string) => sessions.reconnectMcp(projectId, name),
-  listAgents: (projectId: string) => listAgents(pathOf(projectId)),
-  saveAgent: (projectId: string, a: any, oldPath?: string) => saveAgent(pathOf(projectId), a, oldPath),
+  // « global » : les agents de tous les projets (~/.claude/agents), sans projet ni interrupteur par projet.
+  listAgents: (projectId: string) => listAgents(projectId === 'global' ? CLAUDE_DIR : pathOf(projectId)),
+  saveAgent: (projectId: string, a: any, oldPath?: string) => saveAgent(projectId === 'global' ? CLAUDE_DIR : pathOf(projectId), { ...a, scope: projectId === 'global' ? 'user' : a.scope }, oldPath),
   deleteAgent: (path: string) => deleteAgent(path),
   setAgentEnabled: (projectId: string, name: string, enabled: boolean) => setAgentEnabled(pathOf(projectId), name, enabled),
   draftAgent: (text: string) => draftAgent(text),

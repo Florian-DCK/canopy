@@ -91,9 +91,12 @@ export function ToolsView() {
   // Agents custom : lus dans les fichiers (les miens et ceux du projet), avec leur état pour ce projet.
   const [agents, setAgents] = useState<AgentFile[] | null>(null)
   const [agentSel, setAgentSel] = useState<AgentSel | null>(null)
+  // Agents : vus « globalement » par défaut (ceux de tous les projets), ou depuis un projet pour ses agents et ses interrupteurs.
+  const [agentGlobal, setAgentGlobal] = useState(true)
+  const agentPid = agentGlobal ? 'global' : projectId
   const loadAgents = async (keep?: AgentFile) => {
-    if (!projectId) return
-    const list = await api.listAgents(projectId).catch(() => [] as AgentFile[])
+    if (!agentPid) return
+    const list = await api.listAgents(agentPid).catch(() => [] as AgentFile[])
     setAgents(list)
     if (keep) setAgentSel({ kind: 'file', agent: list.find((a) => a.path === keep.path) ?? keep })
   }
@@ -102,9 +105,9 @@ export function ToolsView() {
     setAgentSel(null)
     void loadAgents()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId])
+  }, [agentPid])
   const toggleAgent = async (a: AgentFile) => {
-    if (!projectId) return
+    if (!projectId || agentGlobal) return
     await api.setAgentEnabled(projectId, a.name, !a.enabled)
     setAgents((cur) => cur && cur.map((x) => (x.path === a.path ? { ...x, enabled: !a.enabled } : x)))
     setAgentSel((s) => (s?.kind === 'file' && s.agent.path === a.path ? { kind: 'file', agent: { ...s.agent, enabled: !a.enabled } } : s))
@@ -181,7 +184,15 @@ export function ToolsView() {
           <div className="tools-top">
             <label className="tools-proj">
               <span className="muted small">Vus depuis</span>
-              <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+              <select
+                value={tab === 'agents' && agentGlobal ? 'global' : projectId}
+                onChange={(e) => {
+                  if (e.target.value === 'global') return setAgentGlobal(true)
+                  setAgentGlobal(false)
+                  setProjectId(e.target.value)
+                }}
+              >
+                {tab === 'agents' && <option value="global">Global · tous les projets</option>}
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
@@ -241,7 +252,7 @@ export function ToolsView() {
             <MemoryPane mem={mem} inv={inv} filter={filter} sel={memCur?.file} onSel={setSel} projectName={project?.name ?? 'ce projet'} />
           )}
           {tab === 'agents' && (
-            <AgentsPane agents={agents} inv={inv} filter={filter} sel={agentSel ?? (agents?.[0] ? { kind: 'file', agent: agents[0] } : null)} onSel={setAgentSel} onToggle={(a) => void toggleAgent(a)} />
+            <AgentsPane global={agentGlobal} agents={agents} inv={inv} filter={filter} sel={agentSel ?? (agents?.[0] ? { kind: 'file', agent: agents[0] } : null)} onSel={setAgentSel} onToggle={(a) => void toggleAgent(a)} />
           )}
           {tab !== 'memory' && tab !== 'agents' && (
           <div className="tools-table" role="list" aria-label="Éléments">
@@ -273,7 +284,7 @@ export function ToolsView() {
 
         {tab !== 'memory' && tab !== 'agents' && cur && inv && <ToolDetail key={cur.key} row={cur} tab={tab} inv={inv} projectId={projectId} />}
         {tab === 'agents' && projectId && (agentSel ?? (agents?.[0] ? { kind: 'file' as const, agent: agents[0] } : null)) && (
-          <AgentSide sel={(agentSel ?? { kind: 'file', agent: agents![0] }) as AgentSel} projectId={projectId} projectName={project?.name ?? 'ce projet'} onSel={setAgentSel} onChanged={(keep) => void loadAgents(keep)} />
+          <AgentSide global={agentGlobal} sel={(agentSel ?? { kind: 'file', agent: agents![0] }) as AgentSel} projectId={agentPid!} projectName={project?.name ?? 'ce projet'} onSel={setAgentSel} onChanged={(keep) => void loadAgents(keep)} />
         )}
         {tab === 'memory' && memCur && projectId && (
           <aside className="tools-side" aria-label={`Souvenir ${memCur.name}`}>

@@ -25,7 +25,7 @@ function Mark({ name, size = 28 }: { name: string; size?: number }) {
   )
 }
 
-export function AgentsPane({ agents, inv, filter, sel, onSel, onToggle }: { agents: AgentFile[] | null; inv: ToolsInventory | null; filter: string; sel: AgentSel | null; onSel: (s: AgentSel) => void; onToggle: (a: AgentFile) => void }) {
+export function AgentsPane({ global, agents, inv, filter, sel, onSel, onToggle }: { global?: boolean; agents: AgentFile[] | null; inv: ToolsInventory | null; filter: string; sel: AgentSel | null; onSel: (s: AgentSel) => void; onToggle: (a: AgentFile) => void }) {
   if (!agents) return <div className="empty">Lecture des agents…</div>
   const q = filter.trim().toLowerCase()
   const match = (s: string) => !q || s.toLowerCase().includes(q)
@@ -36,9 +36,13 @@ export function AgentsPane({ agents, inv, filter, sel, onSel, onToggle }: { agen
   const cur = sel?.kind === 'file' ? sel.agent.path : sel?.kind === 'builtin' ? `b:${sel.name}` : ''
   const row = (a: AgentFile) => (
     <div key={a.path} role="listitem" className={`tools-row ${cur === a.path ? 'on' : ''} ${a.enabled ? '' : 'off'}`}>
-      <button type="button" role="switch" aria-checked={a.enabled} aria-label={`${a.enabled ? 'Couper' : 'Activer'} ${a.name} pour ce projet`} className="tools-switch" onClick={() => onToggle(a)}>
-        <span />
-      </button>
+      {global ? (
+        <span className="tools-switch ghost" aria-hidden="true" />
+      ) : (
+        <button type="button" role="switch" aria-checked={a.enabled} aria-label={`${a.enabled ? 'Couper' : 'Activer'} ${a.name} pour ce projet`} className="tools-switch" onClick={() => onToggle(a)}>
+          <span />
+        </button>
+      )}
       <button type="button" className="ag-row" onClick={() => onSel({ kind: 'file', agent: a })}>
         <Mark name={a.name} />
         <span className="ag-txt"><b>{a.name}</b><span>{a.description}</span></span>
@@ -55,7 +59,7 @@ export function AgentsPane({ agents, inv, filter, sel, onSel, onToggle }: { agen
         <span style={{ flex: 1 }} />
         <button type="button" className="btn sm" onClick={() => onSel({ kind: 'describe' })}><Icon name="plus" size={14} />Nouvel agent</button>
       </div>
-      {[['Les miens · tous projets', own], ['Ce projet', proj]].map(([title, list]) => (
+      {(global ? [['Les miens · tous projets', own]] : [['Les miens · tous projets', own], ['Ce projet', proj]]).map(([title, list]) => (
         <section key={title as string} className="ag-group">
           <div className="side-h">{title as string}</div>
           <div className="tools-table" role="list" aria-label={title as string}>
@@ -97,8 +101,8 @@ function Seg<T>({ value, options, onChange, label }: { value: T; options: [T, st
 }
 
 /** Panneau de droite : décrire un nouvel agent, ou sa fiche. */
-export function AgentSide({ sel, projectId, projectName, onSel, onChanged }: { sel: AgentSel; projectId: string; projectName: string; onSel: (s: AgentSel | null) => void; onChanged: (keep?: AgentFile) => void }) {
-  if (sel.kind === 'describe') return <Describe projectName={projectName} onDraft={(draft, why) => onSel({ kind: 'new', draft, why })} onBlank={(scope) => onSel({ kind: 'new', draft: { name: '', description: '', prompt: '', scope } })} />
+export function AgentSide({ global, sel, projectId, projectName, onSel, onChanged }: { global?: boolean; sel: AgentSel; projectId: string; projectName: string; onSel: (s: AgentSel | null) => void; onChanged: (keep?: AgentFile) => void }) {
+  if (sel.kind === 'describe') return <Describe global={global} projectName={projectName} onDraft={(draft, why) => onSel({ kind: 'new', draft, why })} onBlank={(scope) => onSel({ kind: 'new', draft: { name: '', description: '', prompt: '', scope } })} />
   if (sel.kind === 'builtin')
     return (
       <aside className="tools-side" aria-label={`Agent ${sel.name}`}>
@@ -111,10 +115,10 @@ export function AgentSide({ sel, projectId, projectName, onSel, onChanged }: { s
       </aside>
     )
   const key = sel.kind === 'file' ? sel.agent.path : `new:${sel.draft.name}:${sel.why ?? ''}`
-  return <Sheet key={key} sel={sel} projectId={projectId} projectName={projectName} onSel={onSel} onChanged={onChanged} />
+  return <Sheet key={key} global={global} sel={sel} projectId={projectId} projectName={projectName} onSel={onSel} onChanged={onChanged} />
 }
 
-function Describe({ projectName, onDraft, onBlank }: { projectName: string; onDraft: (d: AgentDraft & { scope: AgentFile['scope'] }, why: string) => void; onBlank: (scope: AgentFile['scope']) => void }) {
+function Describe({ global, projectName, onDraft, onBlank }: { global?: boolean; projectName: string; onDraft: (d: AgentDraft & { scope: AgentFile['scope'] }, why: string) => void; onBlank: (scope: AgentFile['scope']) => void }) {
   const [text, setText] = useState('')
   const [scope, setScope] = useState<AgentFile['scope']>('user')
   const [busy, setBusy] = useState(false)
@@ -140,7 +144,7 @@ function Describe({ projectName, onDraft, onBlank }: { projectName: string; onDr
         <p className="small muted">Claude rédige la fiche : consignes, outils au plus juste, le modèle le moins cher qui suffit. Tu la relis avant de l’enregistrer.</p>
         <label className="sr-only" htmlFor="ag-describe">Description de l’agent</label>
         <textarea id="ag-describe" rows={5} value={text} placeholder="Ex. : un agent qui prépare mes comptes rendus de réunion à partir de la transcription Teams : décisions, actions avec qui et quand, et rien d’autre." onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.ctrlKey || e.metaKey) && void go()} />
-        <div className="ag-field"><span>Portée</span><Seg<AgentFile['scope']> label="Portée" value={scope} options={[['user', 'Moi · tous projets'], ['project', `Ce projet · ${projectName}`]]} onChange={setScope} /></div>
+        {!global && <div className="ag-field"><span>Portée</span><Seg<AgentFile['scope']> label="Portée" value={scope} options={[['user', 'Moi · tous projets'], ['project', `Ce projet · ${projectName}`]]} onChange={setScope} /></div>}
         {err && <p className="tools-err">{err}</p>}
         <div className="tools-acts">
           <button type="button" className="btn clay sm" disabled={busy || !text.trim()} onClick={() => void go()}>{busy ? 'Claude rédige la fiche…' : 'Rédiger la fiche'}</button>
@@ -151,7 +155,7 @@ function Describe({ projectName, onDraft, onBlank }: { projectName: string; onDr
   )
 }
 
-function Sheet({ sel, projectId, projectName, onSel, onChanged }: { sel: Extract<AgentSel, { kind: 'file' | 'new' }>; projectId: string; projectName: string; onSel: (s: AgentSel | null) => void; onChanged: (keep?: AgentFile) => void }) {
+function Sheet({ global, sel, projectId, projectName, onSel, onChanged }: { global?: boolean; sel: Extract<AgentSel, { kind: 'file' | 'new' }>; projectId: string; projectName: string; onSel: (s: AgentSel | null) => void; onChanged: (keep?: AgentFile) => void }) {
   const base = sel.kind === 'file' ? sel.agent : sel.draft
   const [a, setA] = useState<AgentDraft & { scope: AgentFile['scope'] }>({ name: base.name, description: base.description, model: base.model, tools: base.tools, prompt: base.prompt, scope: base.scope })
   const [tools, setTools] = useState((base.tools ?? []).join(', '))
@@ -202,7 +206,7 @@ function Sheet({ sel, projectId, projectName, onSel, onChanged }: { sel: Extract
         </label>
         <div className="ag-field">
           <span>Portée</span>
-          <Seg<AgentFile['scope']> label="Portée" value={a.scope} options={[['user', 'Moi · tous projets'], ['project', `Ce projet · ${projectName}`]]} onChange={(scope) => setA({ ...a, scope })} />
+          {global ? <span className="small">Tous les projets</span> : <Seg<AgentFile['scope']> label="Portée" value={a.scope} options={[['user', 'Moi · tous projets'], ['project', `Ce projet · ${projectName}`]]} onChange={(scope) => setA({ ...a, scope })} />}
           {sel.kind === 'file' && <small className="mono" title={sel.agent.path}>{sel.agent.path}</small>}
         </div>
         <label className="ag-field ag-prompt">
