@@ -240,3 +240,8 @@
 .v-ibtn:hover::after, .v-ibtn:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
 .v-tools .v-ibtn:last-child::after { left: auto; right: 0; transform: translate(0, 4px); }
 .v-tools .v-ibtn:last-child:hover::after, .v-tools .v-ibtn:last-child:focus-visible::after { transform: translate(0, 0); }
+
+/* Vignettes : une ligne ; « +N » déplie tout (quelques lignes au plus, puis défilement). */
+.v-thumbs { flex-wrap: nowrap; overflow: hidden; }
+.v-thumbs.all { flex-wrap: wrap; max-height: 148px; overflow: auto; }
+.v-thumbs .v-more { min-width: 64px; font-size: 13px; color: #E3E1D8; background: rgba(240, 238, 230, 0.06); }

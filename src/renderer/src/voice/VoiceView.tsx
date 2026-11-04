@@ -207,6 +207,13 @@ function VoiceHeader({ sessionId }: { sessionId: string | null }) {
 function Stage({ entries, cur, sessionId }: { entries: StageEntry[]; cur: StageEntry; sessionId: string | null }) {
   const st = useStore()
   const info = stageInfo(cur)
+  // Une seule ligne de vignettes (les plus récentes, la courante toujours visible) ; « +N » déplie le reste.
+  const [all, setAll] = useState(false)
+  const MAX = 6
+  const idx = entries.indexOf(cur)
+  const start = Math.min(Math.max(0, entries.length - MAX), Math.max(0, idx))
+  const shown = all ? entries : entries.slice(start, start + MAX)
+  const hidden = entries.length - shown.length
   const open = () => {
     if (!sessionId) return
     if (cur.kind === 'image' || cur.kind === 'video') st.openViewer({ sessionId, mediaId: cur.media.id, mode: 'single' })
@@ -232,12 +239,18 @@ function Stage({ entries, cur, sessionId }: { entries: StageEntry[]; cur: StageE
         </div>
       </div>
       {entries.length > 1 && (
-        <div className="v-thumbs">
-          {entries.map((e) => (
+        <div className={`v-thumbs${all ? ' all' : ''}`}>
+          {!all && hidden > 0 && (
+            <button type="button" className="v-more" onClick={() => setAll(true)} aria-label={`Voir les ${entries.length} éléments`}>+{hidden}</button>
+          )}
+          {shown.map((e) => (
             <button key={e.id} type="button" aria-pressed={e.id === cur.id} title={stageInfo(e).title} onClick={() => selectStage(e.id)}>
               {e.kind === 'image' ? <img src={thumbUrl(e.media.id)} alt="" /> : <span>{stageInfo(e).title}</span>}
             </button>
           ))}
+          {all && (
+            <button type="button" className="v-more" onClick={() => setAll(false)}>Réduire</button>
+          )}
         </div>
       )}
     </section>
