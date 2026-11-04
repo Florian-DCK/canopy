@@ -245,3 +245,6 @@
 .v-thumbs { flex-wrap: nowrap; overflow: hidden; }
 .v-thumbs.all { flex-wrap: wrap; max-height: 148px; overflow: auto; }
 .v-thumbs .v-more { min-width: 64px; font-size: 13px; color: #E3E1D8; background: rgba(240, 238, 230, 0.06); }
+/* Les icônes du cadre ne prennent pas le style des anciens boutons texte. */
+.v-stage-info .v-tools .v-ibtn { width: 30px; height: 30px; padding: 0; border: none; border-radius: 50%; }
+.v-stage-info .v-tools { flex: none; }
