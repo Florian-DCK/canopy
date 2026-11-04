@@ -19,6 +19,8 @@ const CAP_LINE = '#1E1817'
 const CREAM = '#F3E6D3'
 const INK = '#1C1614'
 const TONGUE = '#A84A33'
+/** Part de l'inclinaison faite d'un bloc (le reste est une légère courbure) : un gland est dur. */
+const RIGID = 0.85
 const BASE = { x: 1000, y: 1778 }
 const ANCHOR = { x: 1000, y: 980 }
 const BODY_TOP = 800
@@ -793,23 +795,23 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
 
       // Corps : inclinaison et écrasement autour des pieds.
       const sy = P.squash * grow.v
-      const sx = (1 + (1 - P.squash) * 0.7) * grow.v
-      const allT = `translate(0 ${P.bob}) rotate(${P.lean * 0.4} ${BASE.x} ${BASE.y}) translate(${BASE.x} ${BASE.y}) scale(${sx} ${sy}) translate(${-BASE.x} ${-BASE.y})`
+      const sx = (1 + (1 - P.squash) * 0.35) * grow.v
+      const allT = `translate(0 ${P.bob}) rotate(${P.lean * RIGID} ${BASE.x} ${BASE.y}) translate(${BASE.x} ${BASE.y}) scale(${sx} ${sy}) translate(${-BASE.x} ${-BASE.y})`
       el.all.forEach((g) => g.setAttribute('transform', allT))
 
-      // Corps souple : le bas pivote un peu, le reste de l'inclinaison est une courbure ; quand le corps bouge, le haut
-      // traîne derrière le bas puis rattrape (gelée), et le ventre s'élargit quand il se tasse.
-      const rad = (P.lean * 0.4 * Math.PI) / 180
+      // Un gland est dur : il pivote surtout d'un bloc, ne se courbe qu'à peine et ne fait pas la gelée ; seuls un léger
+      // retard du haut et un petit tassement à l'atterrissage gardent le mouvement vivant.
+      const rad = (P.lean * RIGID * Math.PI) / 180
       const h = BASE.y - ANCHOR.y
       // Sans la croissance de l'arrivée : elle déplierait la gelée au lieu de le faire grandir.
       const top = { x: Math.sin(rad) * h * P.squash, y: P.bob + (1 - Math.cos(rad)) * h + (1 - P.squash) * h }
       const dTop = { x: top.x - prevTop.x, y: top.y - prevTop.y }
       prevTop = top
-      body.bend.v -= dTop.x * 0.9
-      body.sag.v -= dTop.y * 0.45
-      stepSpring(body.bend, P.lean * 10 + P.tilt * 2.5, 140, 9, dt)
-      stepSpring(body.sag, 0, 170, 10, dt)
-      stepSpring(body.bulge, Math.max(-0.04, body.sag.v * 0.004 + (1 - P.squash) * 1.6), 180, 10, dt)
+      body.bend.v -= dTop.x * 0.25
+      body.sag.v -= dTop.y * 0.15
+      stepSpring(body.bend, P.lean * 2.5 + P.tilt * 0.8, 260, 26, dt)
+      stepSpring(body.sag, 0, 320, 30, dt)
+      stepSpring(body.bulge, Math.max(-0.015, body.sag.v * 0.001 + (1 - P.squash) * 0.5), 300, 28, dt)
       const warp: Warp = (x, y) => {
         const u = Math.max(0, (BASE.y - y) / (BASE.y - BODY_TOP))
         const g = Math.exp(-(((y - 1330) / 220) ** 2))
