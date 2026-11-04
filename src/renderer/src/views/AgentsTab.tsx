@@ -32,7 +32,8 @@ export function AgentsPane({ global, agents, inv, filter, sel, onSel, onToggle }
   const tokens = (name: string) => inv?.agents.find((a) => a.name === name)?.tokens ?? 0
   const own = agents.filter((a) => a.scope === 'user' && match(`${a.name} ${a.description}`))
   const proj = agents.filter((a) => a.scope === 'project' && match(`${a.name} ${a.description}`))
-  const builtins = (inv?.agents ?? []).filter((a) => !agents.some((f) => f.name === a.name) && match(a.name))
+  // Intégrés et plugins seulement : un agent venu d'un fichier (réglages perso ou projet) est déjà listé plus haut.
+  const builtins = (inv?.agents ?? []).filter((a) => !/settings$|^user$|^project$|^local$/i.test(a.source) && !agents.some((f) => f.name === a.name) && match(a.name))
   const cur = sel?.kind === 'file' ? sel.agent.path : sel?.kind === 'builtin' ? `b:${sel.name}` : ''
   const row = (a: AgentFile) => (
     <div key={a.path} role="listitem" className={`tools-row ${cur === a.path ? 'on' : ''} ${a.enabled ? '' : 'off'}`}>

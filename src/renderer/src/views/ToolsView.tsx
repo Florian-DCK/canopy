@@ -105,7 +105,7 @@ export function ToolsView() {
     setAgentSel(null)
     void loadAgents()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentPid])
+  }, [agentPid, tab === 'agents'])
   const toggleAgent = async (a: AgentFile) => {
     if (!projectId || agentGlobal) return
     await api.setAgentEnabled(projectId, a.name, !a.enabled)
