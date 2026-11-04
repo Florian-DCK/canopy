@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { CompanionPhase, CompanionState } from '../../../shared/companion'
 import { api, useStore } from '../store'
-import { hush, startVoice, useVoice } from './runtime'
+import { hush, setMicMuted, startVoice, useVoice } from './runtime'
 import { withTransition } from './transition'
 
 // Mode compagnon (planche 32) : la voix reste ici ; on envoie à la bulle (fenêtre des notifications) ce qu'elle
@@ -78,6 +78,7 @@ function stateNow(): CompanionState {
     text: phase === 'listen' ? v.heard : phase === 'speak' ? v.written || v.said : phase === 'ask' ? 'Claude attend ta réponse' : phase === 'error' ? v.error : '',
     activity: act ? { label, since: actSince } : undefined,
     summary: phase === 'done' ? summary : undefined,
+    micMuted: v.micMuted,
     lines: phase === 'speak' ? v.spoken.map((l) => l.text) : undefined,
     page: (() => {
       const e = v.stage.find((x) => x.id === v.stageSel) ?? v.stage[v.stage.length - 1]
@@ -139,6 +140,7 @@ window.addEventListener('atelier:companion', (e) => {
 
 api.onCompanionCommand((c) => {
   if (c === 'hush') return hush()
+  if (c === 'mic') return setMicMuted(!useVoice.getState().micMuted)
   setCompanion(false)
   if (c === 'open') withTransition(() => useStore.getState().go({ name: 'voice' }))
 })

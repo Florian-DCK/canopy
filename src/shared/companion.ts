@@ -22,7 +22,9 @@ export type CompanionState = {
   current?: number
   /** Page libre posée par Claude : affichée au-dessus de la bulle. */
   page?: { src: string; title: string; height: number }
+  /** Micro coupé : la bulle le montre et propose de le réactiver. */
+  micMuted?: boolean
 }
 
 /** open : rouvrir Canopy sur le mode voix ; quit : quitter le compagnon ; hush : couper Claude. */
-export type CompanionCommand = 'open' | 'quit' | 'hush'
+export type CompanionCommand = 'open' | 'quit' | 'hush' | 'mic'

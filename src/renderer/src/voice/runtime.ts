@@ -52,6 +52,8 @@ type VoiceState = {
   voice: string
   /** Claude travaille pareil mais ne répond pas à voix haute (sa réponse reste écrite). */
   mute: boolean
+  /** Micro coupé par l'utilisateur : plus rien n'est envoyé au service voix. */
+  micMuted: boolean
 }
 
 export const useVoice = create<VoiceState>(() => ({
@@ -73,6 +75,7 @@ export const useVoice = create<VoiceState>(() => ({
   gesture: false,
   sessionId: null,
   error: '',
+  micMuted: false,
   mute: (() => {
     try {
       return localStorage.getItem(MUTE_KEY) === '1'
@@ -524,6 +527,7 @@ async function startMic() {
   // ScriptProcessor : simple et sans module externe (la CSP de la fenêtre interdit les worklets en blob).
   const proc = micCtx.createScriptProcessor(512, 1, 1)
   proc.onaudioprocess = (e) => {
+    if (useVoice.getState().micMuted) return
     if (ws?.readyState === WebSocket.OPEN) ws.send(new Float32Array(e.inputBuffer.getChannelData(0)).buffer)
   }
   const mute = micCtx.createGain()
@@ -624,3 +628,10 @@ useVoice.subscribe((v, p) => {
 
 // Un réglage change dans les Paramètres : le service voix l'applique tout de suite.
 useVoicePrefs.subscribe(() => send({ type: 'config', ...voiceConfig() }))
+
+/** Couper ou rendre le micro (bouton de la vue voix et de la bulle). */
+export function setMicMuted(muted: boolean) {
+  if (speechTimer) clearTimeout(speechTimer)
+  speechTimer = null
+  set({ micMuted: muted, speech: false, ...(muted ? { heard: '' } : {}) })
+}

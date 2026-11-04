@@ -3,7 +3,7 @@ import { Icon } from '../icons'
 import { thumbUrl } from '../media'
 import { api, useStore } from '../store'
 import { CanopyMark, type MarkState } from './CanopyMark'
-import { clearStage, hush, voiceLevels, selectStage, setVoiceSession, setMute, setVoiceName, startVoice, stopVoice, useVoice, VOICES, type StageEntry, type VoicePhase } from './runtime'
+import { clearStage, setMicMuted, hush, voiceLevels, selectStage, setVoiceSession, setMute, setVoiceName, startVoice, stopVoice, useVoice, VOICES, type StageEntry, type VoicePhase } from './runtime'
 import { StageBody, stageInfo } from './Scene'
 import { withTransition } from './transition'
 import { setCompanion } from './companion'
@@ -54,7 +54,7 @@ export function VoiceView() {
     : v.phase === 'listen' && !v.speech && v.written ? v.written
     : v.heard ? `« ${v.heard} »`
     : v.said
-  const word = v.phase === 'listen' && !v.speech && v.gesture ? 'Montré sans parler' : WORD[v.phase]
+  const word = v.micMuted && (v.phase === 'listen' || v.phase === 'off') ? 'Micro coupé' : v.phase === 'listen' && !v.speech && v.gesture ? 'Montré sans parler' : WORD[v.phase]
   const split = v.stage.length > 0
   const fromClaude = !!line && v.phase !== 'error' && v.phase !== 'waking' && (line === v.said || line === v.written)
   const whole = fromClaude && line === v.written && line !== v.said
@@ -88,6 +88,7 @@ export function VoiceView() {
       <div className="v-bar">
         {!session && <span className="v-with">Aucune session : ouvre-en une pour lui parler</span>}
         <span style={{ flex: 1 }} />
+        <MicButton />
         <button type="button" aria-pressed={v.mute} onClick={() => setMute(!v.mute)} title="Mode fantôme : Claude travaille pareil mais ne répond plus à voix haute. À la voix : « passe en mode fantôme », « quitte le mode fantôme ».">{v.mute ? 'Mode fantôme' : 'Réponses à voix haute'}</button>
         <span>Voix</span>
         <div className="v-seg" role="group" aria-label="Voix">
@@ -233,6 +234,17 @@ function Stage({ entries, cur, sessionId }: { entries: StageEntry[]; cur: StageE
         </div>
       )}
     </section>
+  )
+}
+
+/** Couper ou rendre ton micro : je n'entends plus rien tant qu'il est coupé. */
+function MicButton() {
+  const muted = useVoice((v) => v.micMuted)
+  return (
+    <button type="button" className={`v-mic${muted ? ' off' : ''}`} aria-pressed={muted} onClick={() => setMicMuted(!muted)} title={muted ? 'Réactiver le micro' : 'Couper le micro'}>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />{muted && <path d="M4 4l16 16" />}</svg>
+      {muted ? 'Micro coupé' : 'Micro'}
+    </button>
   )
 }
 

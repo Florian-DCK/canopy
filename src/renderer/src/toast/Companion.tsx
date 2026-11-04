@@ -92,7 +92,15 @@ export function Companion({ c }: { c: CompanionState }) {
   }
 
   const size = SIZE[c.phase]
-  const line = look !== null ? (
+  // Micro coupé : c'est ce qu'on voit d'abord à côté de la bulle, avec de quoi le réactiver.
+  const muteLine = c.micMuted && (c.phase === 'rest' || c.phase === 'listen') ? (
+    <div className="c-pill c-muted-mic" data-hit>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" /><path d="M4 4l16 16" /></svg>
+      <span className="c-strong">Micro coupé</span>
+      <button type="button" onClick={() => bridge.companion('mic')}>Réactiver</button>
+    </div>
+  ) : null
+  const line = muteLine ?? (look !== null ? (
     <div className="c-pill c-look" data-hit>
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D57151" strokeWidth="1.8"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
       <span className="c-strong">Je regarde ton écran</span>
@@ -138,7 +146,7 @@ export function Companion({ c }: { c: CompanionState }) {
       default:
         return null
     }
-  })()
+  })())
 
   return (
     <div className="c-wrap">
@@ -165,6 +173,7 @@ export function Companion({ c }: { c: CompanionState }) {
           <div className="c-card-foot">
             {c.phase === 'speak' && <button type="button" onClick={() => bridge.companion('hush')}><Icon name="stop" size={13} />Couper</button>}
             <span style={{ flex: 1 }} />
+            <button type="button" onClick={() => bridge.companion('mic')}>{c.micMuted ? 'Réactiver le micro' : 'Couper le micro'}</button>
             <button type="button" onClick={() => bridge.companion('quit')}><Icon name="close" size={13} />Quitter le compagnon</button>
           </div>
         </div>
@@ -172,7 +181,7 @@ export function Companion({ c }: { c: CompanionState }) {
       <div className="c-row">
         {!open && line}
         <div
-          className={`c-bubble c-${c.phase}${look !== null ? ' c-looking' : ''}`}
+          className={`c-bubble c-${c.phase}${look !== null ? ' c-looking' : ''}${c.micMuted ? ' c-mic-off' : ''}`}
           style={{ width: size, height: size }}
           data-hit
           onPointerDown={down}

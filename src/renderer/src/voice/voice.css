@@ -221,3 +221,7 @@
 
 /* Page libre de Claude (outil scène, type html) : isolée dans un cadre. */
 .sc-html { display: block; width: 100%; max-height: 100%; border: none; padding: 0; background: #1F1E1D; }
+
+/* Micro coupé : le bouton passe en argile et le soleil s'estompe. */
+.v-bar .v-mic.off { background: rgba(213, 113, 81, 0.18); border-color: rgba(213, 113, 81, 0.6); color: #F5C2AE; }
+.voice:has(.v-mic.off) .v-sun > .cmark { opacity: 0.45; filter: saturate(0.6); transition: opacity 0.3s, filter 0.3s; }
