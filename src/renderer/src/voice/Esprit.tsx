@@ -484,7 +484,7 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
     const mouth = { open: spring(0), wide: spring(0), smile: spring(SMILE[first]), base: spring(MOUTH_W[first]) }
     let raf = 0
 
-    const tick = (now: number) => {
+    const frame = (now: number) => {
       const dt = Math.min(1 / 30, (now - last) / 1000)
       last = now
       const s = now / 1000
@@ -764,6 +764,17 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
         g.setAttribute('transform', `translate(${x} ${y}) rotate(${Math.sin(c * Math.PI * 3) * 50 + c * 120})`)
       })
 
+    }
+    // Une erreur dans une image ne doit jamais figer le personnage : on la signale une fois et la boucle continue.
+    let warned = false
+    const tick = (now: number) => {
+      try {
+        frame(now)
+      } catch (e) {
+        if (!warned) console.error('Esprit :', e)
+        warned = true
+        last = now
+      }
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -779,8 +790,8 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
   const gap = { stroke: 'black', strokeWidth: 26 }
   const arms = (fill: string, extra?: typeof gap) => (
     <>
-      <path className="e-armL" d={extra ? ARM_GAP : ARM} fill={fill} {...extra} />
-      <path className="e-armR" d={extra ? ARM_GAP : ARM} fill={fill} {...extra} />
+      <path className="e-armL" d={extra ? ARM_GAP : ARM} fill={fill} transform={`translate(${ARM_L.x} ${ARM_L.y}) rotate(${POSES.rest.armL})`} {...extra} />
+      <path className="e-armR" d={extra ? ARM_GAP : ARM} fill={fill} transform={`translate(${ARM_R.x} ${ARM_R.y}) rotate(${POSES.rest.armR})`} {...extra} />
     </>
   )
   const box = { x: -400, y: -400, width: 2800, height: 2800 }
@@ -828,7 +839,7 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
             ))}
             <g transform={`translate(${MOUTH.x} ${MOUTH.y})`}>
               <ellipse className="e-tout" cx={13} cy={14} rx={10} ry={11} fill={TONGUE} stroke={INK} strokeWidth={5} opacity="0" />
-              <path className="e-mouth" fill={INK} stroke={INK} strokeWidth={13} strokeLinejoin="round" />
+              <path className="e-mouth" d="M-4 0C-2 0 2 0 4 0C3 0-3 0-4 0Z" fill={INK} stroke={INK} strokeWidth={13} strokeLinejoin="round" />
               <ellipse className="e-tongue" cx={0} cy={0} rx={0} ry={0} fill={TONGUE} clipPath={`url(#${id}m)`} opacity="0" />
             </g>
           </g>
