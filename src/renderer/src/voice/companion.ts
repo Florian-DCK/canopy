@@ -8,12 +8,14 @@ import { useVoicePrefs } from './prefs'
 // Mode compagnon (planche 32) : la voix reste ici ; on envoie à la bulle (fenêtre des notifications) ce qu'elle
 // doit montrer, et on reçoit ses gestes.
 
-// Mémorisé : si la fenêtre principale se recharge (mise à jour du code, Ctrl+R), la bulle continue d'être alimentée
-// au lieu de rester figée sur son dernier état.
+// Mémorisé le temps de la fenêtre (sessionStorage) : si elle se recharge (mise à jour du code, Ctrl+R), la bulle
+// continue d'être alimentée. Un nouveau lancement de Canopy repart sans compagnon : sinon la fenêtre se rangerait
+// aussitôt dans la barre des tâches et Canopy semblerait ne pas s'ouvrir.
 const KEY = 'atelier.companion'
 const saved = (() => {
   try {
-    return localStorage.getItem(KEY) === '1'
+    localStorage.removeItem(KEY) // ancien emplacement, persistant
+    return sessionStorage.getItem(KEY) === '1'
   } catch {
     return false
   }
@@ -21,7 +23,7 @@ const saved = (() => {
 export const useCompanion = create<{ on: boolean }>(() => ({ on: saved }))
 useCompanion.subscribe((c) => {
   try {
-    localStorage.setItem(KEY, c.on ? '1' : '0')
+    sessionStorage.setItem(KEY, c.on ? '1' : '0')
   } catch {
     /* stockage indisponible */
   }
