@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import type { Attachment, Item, PermissionModeUI, SessionMeta, TaskThreadEntry } from '../../../shared/types'
+import type { Attachment, Item, PermissionModeUI, SessionMeta } from '../../../shared/types'
 import { contextWindowOf } from '../derive'
 import { Icon, MODE_ICON, Ring, toolDoing, type IconName } from '../icons'
 import { thumbUrl } from '../media'
@@ -8,6 +8,7 @@ import { BG_DELAYS, isForeground, sendToBackground, useBgDelay } from '../bgtask
 import { LimitCard } from '../Palette'
 import { UsageChip } from '../usage'
 import { useAutocomplete } from './session/Autocomplete'
+import { Thread } from './session/Thread'
 
 // Saisie (planche 3) : la bande d'activité au-dessus du texte, puis la barre — joindre, modèle, mode
 // à gauche ; contexte, fenêtre 5 h et un seul bouton (Envoyer ou Arrêter) à droite.
@@ -145,7 +146,7 @@ function BgPill({ sessionId, tasks }: { sessionId: string; tasks: NonNullable<Se
 
 /** Fil d'un sous-agent de fond, en lecture seule, rafraîchi toutes les 2 s tant qu'il travaille. */
 function TaskThread({ sessionId, taskId, label, running, onClose }: { sessionId: string; taskId: string; label: string; running: boolean; onClose: () => void }) {
-  const [entries, setEntries] = useState<TaskThreadEntry[] | null>(null)
+  const [entries, setEntries] = useState<Item[] | null>(null)
   const box = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
   useEffect(() => {
@@ -178,18 +179,10 @@ function TaskThread({ sessionId, taskId, label, running, onClose }: { sessionId:
           <span style={{ flex: 1 }} />
           <button type="button" className="icon-btn sm" aria-label="Fermer" onClick={onClose}><Icon name="close" size={14} /></button>
         </div>
-        <div ref={box} className="tt-body" onScroll={(e) => (stick.current = e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight < 40)}>
+        <div ref={box} className="tt-body thread" onScroll={(e) => (stick.current = e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight < 40)}>
           {entries === null && <div className="empty">Lecture du fil…</div>}
           {entries?.length === 0 && <div className="empty">Rien encore : il démarre.</div>}
-          {entries?.map((e, k) =>
-            e.kind === 'tool' ? (
-              <div key={k} className="tt-tool"><span className="tt-name">{e.name}</span><span className="tt-sum">{e.text}</span></div>
-            ) : e.kind === 'result' ? (
-              <div key={k} className={`tt-res${e.error ? ' err' : ''}`}>{e.text}</div>
-            ) : (
-              <div key={k} className={e.kind === 'prompt' ? 'tt-prompt' : 'tt-text'}>{e.text}</div>
-            )
-          )}
+          {entries && entries.length > 0 && <Thread sessionId={sessionId} items={entries} limit={400} onMore={() => {}} />}
         </div>
       </div>
     </div>

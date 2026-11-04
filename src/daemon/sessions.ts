@@ -18,7 +18,6 @@ import type { ActParams, MarkParams,
   PermissionModeUI,
   QuestionAnswer,
   SessionMeta,
-  TaskThreadEntry,
   ToolsInventory
 } from '../shared/types'
 import type { BrowserParams, BrowserResult } from '../shared/browser'
@@ -126,6 +125,8 @@ type Live = {
   bgSeen?: Set<string>
   /** Fichier de sortie de chaque carte « tâche terminée » (id de l'élément → chemin). */
   taskOutputs?: Map<string, string>
+  /** Images des sous-agents déjà rangées dans les médias (fil d'un agent de fond). */
+  threadMedia?: Set<string>
   /** Premier message, en attendant le vrai titre (donné par Haiku à la fin du premier tour). */
   autoTitle?: string
   /** Texte de l'agent principal en cours d'écriture (flux token par token). */
@@ -1093,10 +1094,12 @@ export class SessionManager {
     await s?.query?.stopTask?.(taskId).catch(() => {})
   }
 
-  /** Fil d'un sous-agent, lu dans son journal (~/.claude/projects/<projet>/<session>/subagents/agent-<id>.jsonl). */
-  taskThread(id: string, taskId: string): TaskThreadEntry[] | null {
-    const sdk = this.sessions.get(id)?.meta.sdkSessionId
-    if (!sdk || !/^[\w-]+$/.test(taskId)) return null
+  /** Fil d'un sous-agent, lu dans son journal (~/.claude/projects/<projet>/<session>/subagents/agent-<id>.jsonl),
+   *  converti en éléments de session : le fil s'affiche comme celui de la session (outils regroupés, images, diffs). */
+  taskThread(id: string, taskId: string): Item[] | null {
+    const s = this.sessions.get(id)
+    const sdk = s?.meta.sdkSessionId
+    if (!s || !sdk || !/^[\w-]+$/.test(taskId)) return null
     const base = join(homedir(), '.claude', 'projects')
     let file = ''
     try {
@@ -1111,8 +1114,10 @@ export class SessionManager {
       return null
     }
     if (!file) return null
-    const out: TaskThreadEntry[] = []
-    const clip = (t: string, n: number) => (t.length > n ? t.slice(0, n) + '…' : t)
+    const root = s.meta.cwd ?? getProject(s.meta.projectId)?.path ?? ''
+    const out: Item[] = []
+    const tools = new Map<string, Extract<Item, { kind: 'tool' }>>()
+    let n = 0
     for (const line of readFileSync(file, 'utf8').split('\n')) {
       if (!line.trim()) continue
       let d: any
@@ -1121,24 +1126,40 @@ export class SessionManager {
       } catch {
         continue
       }
-      const at = d.timestamp ? Date.parse(d.timestamp) : undefined
+      const at = d.timestamp ? Date.parse(d.timestamp) : Date.now()
       const c = d.message?.content
       if (d.type === 'user') {
-        if (typeof c === 'string') out.push({ kind: 'prompt', text: clip(c, 1200), at })
+        if (typeof c === 'string') out.push({ id: `${taskId}-u${n++}`, kind: 'user', text: c, at })
         else if (Array.isArray(c))
-          for (const b of c) {
-            if (b?.type !== 'tool_result') continue
-            const t = typeof b.content === 'string' ? b.content : Array.isArray(b.content) ? b.content.filter((x: any) => x?.type === 'text').map((x: any) => x.text).join('\n') : ''
-            out.push({ kind: 'result', text: clip(t.trim() || (Array.isArray(b.content) && b.content.some((x: any) => x?.type === 'image') ? '(image)' : '(vide)'), 400), error: !!b.is_error, at })
+          for (const blk of c) {
+            if (blk?.type !== 'tool_result') continue
+            const t = tools.get(blk.tool_use_id)
+            if (!t) continue
+            const parts = Array.isArray(blk.content) ? blk.content : []
+            const txt = typeof blk.content === 'string' ? blk.content : parts.filter((x: any) => x?.type === 'text').map((x: any) => x.text).join('\n')
+            t.status = blk.is_error ? 'error' : 'ok'
+            t.result = txt.length > 6000 ? txt.slice(0, 6000) + '\n…' : txt
+            // Images renvoyées par ses outils : rangées dans les médias de la session une seule fois, puis affichées dans le fil.
+            for (const im of parts) {
+              if (im?.type !== 'image' || im.source?.type !== 'base64') continue
+              const key = `${blk.tool_use_id}:${String(im.source.data).length}`
+              if ((s.threadMedia ??= new Set()).has(key)) continue
+              s.threadMedia.add(key)
+              this.emitMedia(this.media.fromBase64(im.source.data, im.source.media_type, { sessionId: id, itemId: blk.tool_use_id, source: 'tool', name: `${t.name}.png` }))
+            }
           }
       } else if (d.type === 'assistant' && Array.isArray(c)) {
-        for (const b of c) {
-          if (b?.type === 'text' && b.text?.trim()) out.push({ kind: 'text', text: clip(b.text.trim(), 2000), at })
-          else if (b?.type === 'tool_use') out.push({ kind: 'tool', name: b.name, text: summarize(b.name, b.input, this.sessions.get(id)?.meta.cwd ?? ''), at })
+        for (const blk of c) {
+          if (blk?.type === 'text' && blk.text?.trim()) out.push({ id: `${taskId}-t${n++}`, kind: 'text', text: blk.text, parent: null, at })
+          else if (blk?.type === 'tool_use') {
+            const t: Extract<Item, { kind: 'tool' }> = { id: blk.id, kind: 'tool', name: blk.name, summary: summarize(blk.name, blk.input, root), parent: null, status: 'running', diff: diffOf(blk.name, blk.input, root), at }
+            tools.set(blk.id, t)
+            out.push(t)
+          }
         }
       }
     }
-    return out.slice(-300)
+    return out.slice(-400)
   }
 
   /** Fin (16 Ko) du fichier de sortie d'une tâche de fond terminée. */

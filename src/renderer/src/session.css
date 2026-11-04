@@ -381,3 +381,6 @@ kbd { font-family: var(--mono); font-size: 10.5px; padding: 1px 5px; border-radi
 /* Chaque ligne garde sa hauteur (sinon la colonne qui défile les écrase les unes sur les autres). */
 .tt-body > * { flex: none; }
 .tt-res { margin: -2px 0 2px 14px; }
+
+/* Fil d'un sous-agent : même rendu que le fil de la session, un peu plus serré. */
+.tt-body.thread { padding: 16px 18px 28px; gap: 12px; }
