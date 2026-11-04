@@ -45,6 +45,8 @@ type VoiceState = {
   /** Phrases dites pendant le tour, et celle qu'on entend à l'instant (suivie au rythme de la voix). */
   spoken: { id: string; text: string }[]
   speaking: string | null
+  /** Début du passage parlé en cours dans `spoken` : chaque reprise de parole ouvre un nouveau transcript. */
+  burst: number
   /** Claude a fait un geste sur l'interface pendant ce tour, sans parler. */
   gesture: boolean
   sessionId: string | null
@@ -69,6 +71,7 @@ export const useVoice = create<VoiceState>(() => ({
   written: '',
   spoken: [],
   speaking: null,
+  burst: 0,
   speech: false,
   heard: '',
   said: '',
@@ -252,8 +255,15 @@ function play(chunk: ArrayBuffer) {
   src.onended = () => {
     sources = sources.filter((x) => x !== src)
     maybeEndTurn()
+    // Plus rien à dire pour l'instant mais Claude continue à travailler : on repasse en « travaille », le transcript se ferme.
+    if (turn && !turn.done && !sources.length && saysOut === 0 && useVoice.getState().phase === 'speak') set({ phase: 'think' })
   }
-  if (useVoice.getState().phase !== 'speak') set({ phase: 'speak' })
+  if (useVoice.getState().phase !== 'speak') {
+    // Nouvelle prise de parole : le transcript repart de la phrase qui commence.
+    const v = useVoice.getState()
+    const k = v.spoken.findIndex((l) => l.id === genId)
+    set({ phase: 'speak', burst: k >= 0 ? k : Math.max(0, v.spoken.length - 1) })
+  }
 }
 
 /** Fin du tour : Claude a fini d'écrire et tout ce qu'il avait à dire a été joué. */
@@ -435,7 +445,7 @@ async function onFinal(text: string) {
   }
   // Ce qui est montré reste à l'écran : il sera remplacé par ce que le nouveau tour montrera. Les fichiers modifiés, eux, s'effacent.
   const kept = useVoice.getState().stage.filter((e) => e.kind !== 'diff')
-  const next = () => set({ sessionId: sid, heard: text, said: '', written: '', spoken: [], speaking: null, gesture: false, phase: 'think', stage: kept, stageSel: null })
+  const next = () => set({ sessionId: sid, heard: text, said: '', written: '', spoken: [], speaking: null, burst: 0, gesture: false, phase: 'think', stage: kept, stageSel: null })
   if (kept.length !== useVoice.getState().stage.length) withTransition(next)
   else next()
   stageReset = true

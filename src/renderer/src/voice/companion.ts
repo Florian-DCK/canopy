@@ -79,12 +79,12 @@ function stateNow(): CompanionState {
     activity: act ? { label, since: actSince } : undefined,
     summary: phase === 'done' ? summary : undefined,
     micMuted: v.micMuted,
-    lines: phase === 'speak' ? v.spoken.map((l) => l.text) : undefined,
+    lines: phase === 'speak' ? v.spoken.slice(v.burst).map((l) => l.text) : undefined,
     page: (() => {
       const e = v.stage.find((x) => x.id === v.stageSel) ?? v.stage[v.stage.length - 1]
       return e?.kind === 'scene' && e.block.type === 'html' && e.block.src ? { src: e.block.src, title: e.block.title, height: Math.min(e.block.height ?? 420, 520) } : undefined
     })(),
-    current: phase === 'speak' ? v.spoken.findIndex((l) => l.id === v.speaking) : undefined,
+    current: phase === 'speak' ? v.spoken.slice(v.burst).findIndex((l) => l.id === v.speaking) : undefined,
     project,
     session: s?.title,
     heard: v.heard,

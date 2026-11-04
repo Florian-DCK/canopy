@@ -77,7 +77,7 @@ export function VoiceView() {
           <div className="v-words" aria-live="polite">
             <span className="v-word">{word}</span>
             {v.phase === 'speak' && v.spoken.length > 0 ? (
-              <SpokenLines lines={v.spoken} speaking={v.speaking} />
+              <SpokenLines lines={v.spoken.slice(v.burst)} speaking={v.speaking} />
             ) : (
             <SwapLine k={!line ? 'empty' : fromClaude ? `c-${line}` : v.phase === 'waking' ? 'waking' : 'you'} className={`v-line${fromClaude ? (whole ? ' v-whole' : '') : v.phase === 'waking' || v.phase === 'error' ? ' sys' : ' you'}`} text={line ?? ''} />
             )}
