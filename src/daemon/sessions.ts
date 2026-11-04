@@ -124,6 +124,8 @@ type Live = {
   bgSeen?: Set<string>
   /** Fichier de sortie de chaque carte « tâche terminée » (id de l'élément → chemin). */
   taskOutputs?: Map<string, string>
+  /** Premier message, en attendant le vrai titre (donné par Haiku à la fin du premier tour). */
+  autoTitle?: string
   /** Texte de l'agent principal en cours d'écriture (flux token par token). */
   draft?: { id: string; text: string; timer?: NodeJS.Timeout }
 }
@@ -598,6 +600,29 @@ export class SessionManager {
     } else this.emit({ type: 'item:patch', sessionId: s.meta.id, itemId, patch })
   }
 
+  /** Titre court donné par Haiku (requête à part, sans trace dans l'historique), aussi enregistré dans Claude Code. */
+  private async makeTitle(s: Live, first: string) {
+    try {
+      const { query, renameSession } = await loadSdk()
+      const prompt =
+        "Donne un titre court à cette conversation : 3 à 6 mots, en français, qui disent de quoi il s'agit (pas une salutation), " +
+        "sans guillemets ni point final. Réponds uniquement par le titre.\n\nPremier message de l'utilisateur :\n" +
+        first.replace(/^🎙\s*/, '').slice(0, 1500)
+      let title = ''
+      const env = { ...process.env } as Record<string, string>
+      delete env.ELECTRON_RUN_AS_NODE
+      for await (const m of query({ prompt, options: { model: 'haiku', maxTurns: 1, allowedTools: [], persistSession: false, settingSources: [], env } as any })) {
+        if ((m as any).type === 'result' && typeof (m as any).result === 'string') title = (m as any).result
+      }
+      title = title.split('\n')[0].replace(/^["«»“”'\s]+|["«»“”'.\s]+$/g, '').trim()
+      if (!title || title.length > 80 || !this.sessions.has(s.meta.id)) return
+      this.patch(s, { title })
+      if (s.meta.sdkSessionId) await renameSession(s.meta.sdkSessionId, title).catch(() => {})
+    } catch {
+      /* le titre provisoire reste */
+    }
+  }
+
   /** Dossier de travail : celui du projet ; au bac à sable, un sous-dossier par conversation (date + identifiant). */
   private cwdFor(s: Live, project: { path: string; sandbox?: boolean }): string {
     if (!project.sandbox) return s.meta.cwd ?? project.path
@@ -615,7 +640,11 @@ export class SessionManager {
     const s = this.sessions.get(id)
     if (!s) throw new Error('Session inconnue')
     if (s.meta.readOnly) throw new Error('Session en lecture seule')
-    if (s.meta.title === 'Nouvelle session') this.patch(s, { title: short(text.replace(/\s+/g, ' '), 70) })
+    if (s.meta.title === 'Nouvelle session') {
+      // Titre provisoire : le début du message ; le vrai titre arrive à la fin du premier tour.
+      this.patch(s, { title: short(text.replace(/^🎙\s*/, '').replace(/\s+/g, ' '), 70) })
+      s.autoTitle = text
+    }
     // Pièces jointes → blocs image du message (médias connus ou captures en data URL).
     const images: unknown[] = []
     const userId = randomUUID()
@@ -838,6 +867,11 @@ export class SessionManager {
         break
       }
       case 'result': {
+        if (!replay && s.autoTitle) {
+          const first = s.autoTitle
+          s.autoTitle = undefined
+          void this.makeTitle(s, first)
+        }
         const ok = m.subtype === 'success'
         const secs = Math.round((m.duration_ms ?? 0) / 1000)
         this.add(s, {
