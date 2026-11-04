@@ -96,6 +96,12 @@ export class ToastCenter {
     this.win.webContents.send('companion:look', title)
   }
 
+  /** Paramètres : la bulle revient en bas à droite de l'écran principal. */
+  resetAnchor() {
+    this.anchorPt = null
+    this.place()
+  }
+
   get companionOn() {
     return !!this.comp
   }

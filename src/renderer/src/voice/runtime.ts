@@ -5,6 +5,7 @@ import { api, useStore } from '../store'
 import { speakNumbers } from './numbers'
 import { withTransition } from './transition'
 import { gestureChime } from '../uiAgent'
+import { useVoicePrefs, voiceConfig } from './prefs'
 
 // Mode voix (planches 25 et 28) : la fenêtre capte le micro (écho retiré par Chromium) et joue la voix ;
 // le service local (voice/server.py) transcrit et synthétise. On parle à une vraie session de Canopy :
@@ -448,6 +449,7 @@ function onMessage(ev: MessageEvent) {
     case 'ready':
       rate = m.rate
       set({ phase: 'listen', error: '' })
+      send({ type: 'config', ...voiceConfig() })
       resumed = false
       follow()
       void startMic()
@@ -457,7 +459,7 @@ function onMessage(ev: MessageEvent) {
       // transcription arrive ; un « fin de parole » avant annule tout.
       if (speechTimer) clearTimeout(speechTimer)
       speechTimer = null
-      if (m.on) speechTimer = setTimeout(() => set({ speech: true, ...(!turn ? { phase: 'listen' as const } : {}) }), 700)
+      if (m.on) speechTimer = setTimeout(() => set({ speech: true, ...(!turn ? { phase: 'listen' as const } : {}) }), voiceConfig().listenDelay)
       // Une pause au milieu de ta phrase n'est pas la fin : l'écoute reste affichée jusqu'à ce que le service tranche
       // (« final » : tu as fini ; « noise » : ce n'était pas une phrase). Seul un bruit jamais confirmé s'éteint ici.
       else if (!useVoice.getState().speech) set({ speech: false })
@@ -608,6 +610,12 @@ useVoice.subscribe((v, p) => {
   if (v.phase === p.phase) return
   if (duckTimer) clearTimeout(duckTimer)
   duckTimer = null
-  if (v.phase === 'speak') api.voiceDuck(true)
+  if (v.phase === 'speak') {
+    const pr = useVoicePrefs.getState()
+    if (pr.duck) api.voiceDuck(true, pr.duckLevel)
+  }
   else duckTimer = setTimeout(() => api.voiceDuck(false), v.phase === 'off' ? 0 : 800)
 })
+
+// Un réglage change dans les Paramètres : le service voix l'applique tout de suite.
+useVoicePrefs.subscribe(() => send({ type: 'config', ...voiceConfig() }))

@@ -168,6 +168,9 @@ export type CaptureParams = {
   /** 'art' : affiche l'onglet du dernier artefact. */
   tab?: 'session' | 'art'
 }
+/** Mode compagnon : ce que Claude a le droit de faire sur l'ordinateur (page Paramètres). */
+export type CompanionPrefs = { screen: boolean; act: boolean }
+
 export type ActParams = {
   action: 'find' | 'invoke' | 'click' | 'type' | 'key'
   target?: string
@@ -355,7 +358,11 @@ export type AtelierApi = {
   /** « Stop » : Claude n'agit plus sur l'écran (quelques secondes), sa main disparaît. */
   actStop(): void
   /** Baisser (ou remettre) le son des autres applications pendant que Claude parle. */
-  voiceDuck(on: boolean): void
+  voiceDuck(on: boolean, factor?: number): void
+  getCompanionPrefs(): Promise<CompanionPrefs>
+  setCompanionPrefs(p: Partial<CompanionPrefs>): Promise<CompanionPrefs>
+  /** Remettre la bulle du compagnon dans son coin. */
+  companionResetPosition(): void
   /** Ramener la fenêtre de Canopy au premier plan (Claude montre quelque chose pendant le mode compagnon). */
   showWindow(): void
   onCompanionCommand(cb: (c: import('./companion').CompanionCommand) => void): () => void

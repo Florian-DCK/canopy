@@ -44,6 +44,8 @@ SHORT_GHOSTS = re.compile(r"^\W*(merci( beaucoup)?|au revoir|bonjour|ok|euh+|hm+
 END_SILENCE = float(os.environ.get("CANOPY_VOICE_END", "1.0"))  # fin du tour : silence minimal (phrase qui se termine)
 END_MAX = float(os.environ.get("CANOPY_VOICE_END_MAX", "2.6"))  # silence maximal quand la phrase semble inachevée
 # Fin de phrase qui annonce une suite (hésitation, mot de liaison, article…) : on attend plus longtemps.
+# Réglages modifiables depuis la page Paramètres de Canopy (message « config »).
+CFG = {"threshold": 0.6, "end": END_SILENCE, "end_max": END_MAX}
 UNFINISHED = re.compile(
     r"(\b(euh+|heu+|hum+|hm+|bah|ben|et|ou|mais|donc|alors|puis|enfin|du coup|parce que|parce qu|que|qu|qui|dont|de|du|des|le|la|les|l|un|une|au|aux|à|pour|avec|sans|sur|sous|dans|en|par|comme|si|quand|lorsque|c'est|il y a|je|j|tu|on|il|elle|nous|vous|ils|elles|mon|ma|mes|ton|ta|tes|son|sa|ses|ce|cet|cette|ces|très|plus|moins|genre|style|tu vois)|[,;:…\-]|\.\.\.)\W*$",
     re.I,
@@ -143,7 +145,7 @@ class Session:
             return None
 
     def one_turn(self, preroll: list[np.ndarray]):
-        vad = VADIterator(vad_model, sampling_rate=SR, threshold=0.6, min_silence_duration_ms=250)
+        vad = VADIterator(vad_model, sampling_rate=SR, threshold=CFG["threshold"], min_silence_duration_ms=250)
         parts: list[str] = []
         jobs: "queue.Queue[np.ndarray | None]" = queue.Queue()
 
@@ -163,7 +165,7 @@ class Session:
         buf = list(preroll)
         heard_audio: list[np.ndarray] = list(preroll)
         judged = False  # le détecteur a déjà donné son avis pour ce silence
-        silent_until = END_MAX
+        silent_until = CFG["end_max"]
         talking, silent, total = bool(preroll), 0, 0
         if talking:
             self.send({"type": "speech", "on": True})
@@ -199,12 +201,12 @@ class Session:
                     p_done = turn_done(np.concatenate(heard_audio))
                     log(f"fin de tour ? {p_done:.2f} ({waited:.2f} s de silence) : {' '.join(parts)[-60:]}")
                     # Très sûr que c'est fini : on répond vite. Sûr que non : on attend jusqu'au plafond. Entre les deux : l'attente normale.
-                    silent_until = 0.6 if p_done >= 0.8 else END_MAX if p_done < 0.3 else END_SILENCE
+                    silent_until = 0.6 if p_done >= 0.8 else CFG["end_max"] if p_done < 0.3 else CFG["end"]
                 if turn_done and judged:
-                    if waited >= END_MAX or (waited >= silent_until and not pending and not unfinished):
+                    if waited >= CFG["end_max"] or (waited >= silent_until and not pending and not unfinished):
                         break
-                elif waited >= END_SILENCE:
-                    if waited >= END_MAX or (not pending and not unfinished):
+                elif waited >= CFG["end"]:
+                    if waited >= CFG["end_max"] or (not pending and not unfinished):
                         break
         jobs.put(None)
         th.join()
@@ -296,6 +298,11 @@ async def handler(ws):
                 s.says.put((str(m.get("id", "")), str(m.get("text", ""))))
             elif t == "stop":
                 s.stop_voice()
+            elif t == "config":
+                for k in ("threshold", "end", "end_max"):
+                    if isinstance(m.get(k), (int, float)):
+                        CFG[k] = float(m[k])
+                log(f"réglages : {CFG}")
             elif t == "busy":
                 s.busy.set()  # Claude reprend après une fausse interruption : on ne guette que l'interruption
             elif t == "listen":

@@ -80,6 +80,7 @@ export type View =
   | { name: 'tiles' }
   | { name: 'tools' }
   | { name: 'voice' }
+  | { name: 'settings' }
 
 type State = {
   projects: Project[]

@@ -160,6 +160,7 @@ export function Rail() {
       {btn('Mode voix', <VoiceRailMark />, { name: 'voice' }, view.name === 'voice')}
       <span style={{ flex: 1 }} />
       <NotifButton />
+      {btn('Paramètres', <Icon name="settings" size={20} />, { name: 'settings' }, view.name === 'settings')}
       <ThemeToggle />
     </nav>
   )

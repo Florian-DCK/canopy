@@ -1,9 +1,9 @@
 import { app, nativeTheme } from 'electron'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { NotifSettings, ThemeMode } from '../shared/types'
+import type { CompanionPrefs, NotifSettings, ThemeMode } from '../shared/types'
 
-type Settings = { theme: ThemeMode; notif?: Partial<NotifSettings>; /** Mode compagnon : coin bas-droit de la bulle. */ companionAnchor?: { x: number; y: number } }
+type Settings = { theme: ThemeMode; notif?: Partial<NotifSettings>; /** Mode compagnon : coin bas-droit de la bulle. */ companionAnchor?: { x: number; y: number } | null; /** Ce que Claude peut faire sur l'ordinateur. */ companion?: Partial<CompanionPrefs> }
 
 export const NOTIF_DEFAULT: NotifSettings = { corner: 'br', overFullscreen: true, sound: true, quiet: false, quietFrom: '22:00', quietTo: '08:00' }
 
@@ -49,6 +49,19 @@ export function getCompanionAnchor(): { x: number; y: number } | null {
   return read().companionAnchor ?? null
 }
 
-export function setCompanionAnchor(p: { x: number; y: number }) {
+export function setCompanionAnchor(p: { x: number; y: number } | null) {
   writeFileSync(file(), JSON.stringify({ ...read(), companionAnchor: p }, null, 2), 'utf8')
+}
+
+const COMPANION_DEFAULT: CompanionPrefs = { screen: true, act: true }
+
+export function getCompanionPrefs(): CompanionPrefs {
+  return { ...COMPANION_DEFAULT, ...read().companion }
+}
+
+export function setCompanionPrefs(patch: Partial<CompanionPrefs>): CompanionPrefs {
+  const cur = read()
+  const companion = { ...COMPANION_DEFAULT, ...cur.companion, ...patch }
+  writeFileSync(file(), JSON.stringify({ ...cur, companion }, null, 2), 'utf8')
+  return companion
 }

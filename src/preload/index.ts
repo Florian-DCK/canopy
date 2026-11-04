@@ -99,7 +99,10 @@ const api: AtelierApi = {
   companionSet: (state) => ipcRenderer.send('companion:set', state),
   showWindow: () => ipcRenderer.send('win:show'),
   actStop: () => ipcRenderer.send('act:stop'),
-  voiceDuck: (on) => ipcRenderer.send('voice:duck', on),
+  voiceDuck: (on, factor) => ipcRenderer.send('voice:duck', on, factor),
+  getCompanionPrefs: () => ipcRenderer.invoke('companion:prefs'),
+  setCompanionPrefs: (p) => ipcRenderer.invoke('companion:prefs', p),
+  companionResetPosition: () => ipcRenderer.send('companion:reset-position'),
   onCompanionCommand: (cb) => {
     const h = (_: unknown, c: Parameters<typeof cb>[0]) => cb(c)
     ipcRenderer.on('companion:command', h)

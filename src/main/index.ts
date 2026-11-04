@@ -6,14 +6,14 @@ import { BROWSER_PARTITION, type BrowserResult } from '../shared/browser'
 import type { UiResult } from '../shared/ui'
 import type { CompanionState } from '../shared/companion'
 import { emptyState, reduce, type AppState } from '../shared/state'
-import type { AppEvent, Item, NotifInfo, NotifSettings, Project, ThemeMode } from '../shared/types'
+import type { CompanionPrefs, CaptureResult, AppEvent, Item, NotifInfo, NotifSettings, Project, ThemeMode } from '../shared/types'
 import { capture } from './capture'
 import { captureScreen } from './screen'
 import { runAct, stopActing } from './act'
 import { restoreDuck, setDuck } from './duck'
 import { DaemonClient, type DaemonStatus } from './daemon'
 import { MediaServer, registerMediaScheme } from './media'
-import { applySavedTheme, getCompanionAnchor, getNotifSettings, getTheme, setCompanionAnchor, setNotifSettings, setTheme, windowBackground } from './settings'
+import { applySavedTheme, getCompanionAnchor, getCompanionPrefs, setCompanionPrefs, getNotifSettings, getTheme, setCompanionAnchor, setNotifSettings, setTheme, windowBackground } from './settings'
 import { inQuietHours, ToastCenter } from './toasts'
 import { startVoice, stopVoice } from './voice'
 
@@ -140,7 +140,12 @@ const toasts = new ToastCenter({
 // Mode compagnon : la fenêtre principale envoie l'état de la bulle (null = quitter). En entrant, Canopy se range
 // dans la barre des tâches ; la voix continue (pas de ralentissement en arrière-plan, voir webPreferences).
 ipcMain.on('act:stop', () => stopActing())
-ipcMain.on('voice:duck', (_e, on: boolean) => setDuck(!!on))
+ipcMain.handle('companion:prefs', (_e, p?: Partial<CompanionPrefs>) => (p ? setCompanionPrefs(p) : getCompanionPrefs()))
+ipcMain.on('companion:reset-position', () => {
+  setCompanionAnchor(null)
+  toasts.resetAnchor()
+})
+ipcMain.on('voice:duck', (_e, on: boolean, factor?: number) => setDuck(!!on, typeof factor === 'number' ? factor : 0.3))
 ipcMain.on('win:show', () => {
   if (!win || win.isDestroyed()) return
   if (win.isMinimized()) win.restore()
@@ -251,7 +256,10 @@ const daemon = new DaemonClient(app.getPath('userData'), join(__dirname, 'daemon
       console.log('[atelier] capture demandée', e.id, Date.now() - e.at, 'ms', JSON.stringify(e.params))
       if (Date.now() - e.at < 15_000) {
         const { id, params } = e
-        void (params.act ? runAct(params.act) : params.desktop ? captureScreen(params.desktop).then((r) => (toasts.look(r.title ?? ''), r)) : capture(win, params))
+        // Autorisations de la page Paramètres : regarder l'écran, agir dessus.
+        const prefs = getCompanionPrefs()
+        const denied = (what: string): Promise<CaptureResult> => Promise.resolve({ ok: false, info: `${what} est désactivé dans les Paramètres de Canopy (section Compagnon). Demande à l'utilisateur de l'activer s'il le souhaite.` })
+        void (params.act ? (prefs.act ? runAct(params.act) : denied('Agir à l’écran')) : params.desktop ? (prefs.screen ? captureScreen(params.desktop).then((r) => (toasts.look(r.title ?? ''), r)) : denied('Regarder l’écran')) : capture(win, params))
           .then((r) => {
             console.log('[atelier] capture prête', id, r.ok, r.info.slice(0, 120))
             return daemon.rpc('captureResult', id, r)

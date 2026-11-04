@@ -23,6 +23,7 @@ import { SessionView } from './views/SessionView'
 import { TilesView } from './views/TilesView'
 import { ToolsView } from './views/ToolsView'
 import { VoiceDock, VoiceView } from './voice/VoiceView'
+import { SettingsView } from './views/SettingsView'
 import { resolve, useTiles } from './tiles'
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
         {view.name === 'tiles' && <TilesView />}
         {view.name === 'tools' && <ToolsView />}
         {view.name === 'voice' && <VoiceView />}
+        {view.name === 'settings' && <SettingsView />}
       </div>
       <BrowserHost />
       <ViewerOverlay />
