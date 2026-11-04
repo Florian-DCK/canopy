@@ -115,3 +115,5 @@ kbd { font-family: 'JetBrains Mono Variable', Consolas, monospace; font-size: 10
 .c-karaoke .k-next { color: #5a5953; }
 .c-karaoke { position: relative; }
 .c-done { padding: 7px; border-radius: 999px; }
+.c-page { width: 480px; border-radius: 16px; overflow: hidden; background: #1f1e1d; border: 0.5px solid rgba(240, 238, 230, 0.14); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); animation: c-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.c-page iframe { display: block; width: 100%; border: none; }

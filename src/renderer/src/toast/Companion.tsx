@@ -142,6 +142,11 @@ export function Companion({ c }: { c: CompanionState }) {
 
   return (
     <div className="c-wrap">
+      {c.page && !open && (
+        <div className="c-page" data-hit>
+          <iframe title={c.page.title} src={c.page.src} sandbox="allow-scripts" style={{ height: c.page.height }} />
+        </div>
+      )}
       {open && (
         <div className="c-card" data-hit>
           <div className="c-card-head">

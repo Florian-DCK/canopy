@@ -280,7 +280,13 @@ const daemon = new DaemonClient(app.getPath('userData'), join(__dirname, 'daemon
     // Action de Claude sur l'interface : même relais que le navigateur.
     if (e.type === 'ui:request') {
       if (Date.now() - e.at < 30_000) {
-        const { id, sessionId, params } = e
+        const { id, sessionId } = e
+        let params = e.params
+        // Page libre de Claude : servie sur une origine à part (atelier-media://scene/…), jamais injectée dans Canopy.
+        if (params.action === 'scene' && params.scene?.type === 'html' && params.scene.html !== undefined) {
+          const pid = media.addPage(params.scene.html)
+          params = { ...params, scene: { ...params.scene, html: undefined, src: `atelier-media://scene/${pid}` } }
+        }
         if (win && !win.isDestroyed()) toRenderer('ui:request', { id, sessionId, params })
         else void daemon.rpc('uiResult', id, { ok: false, text: "Canopy n'est pas ouvert." }).catch(() => {})
       }

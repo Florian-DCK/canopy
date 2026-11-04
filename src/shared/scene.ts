@@ -1,7 +1,7 @@
 // Outil « scène » (planche 30) : en mode voix, Claude pose à droite du soleil un bloc qu'il choisit
 // selon ce qu'il veut montrer. Les images, fichiers modifiés et artefacts du tour s'y ajoutent seuls.
 
-export type SceneType = 'clear' | 'bar' | 'line' | 'donut' | 'kpi' | 'before_after' | 'list' | 'table' | 'gauge' | 'plan'
+export type SceneType = 'clear' | 'html' | 'bar' | 'line' | 'donut' | 'kpi' | 'before_after' | 'list' | 'table' | 'gauge' | 'plan'
 export type SceneStatus = 'ok' | 'ko' | 'warn' | 'done' | 'work' | 'todo'
 
 export type SceneItem = {
@@ -27,4 +27,8 @@ export type SceneBlock = {
   value?: number
   max?: number
   center?: string
+  /** html : la page écrite par Claude (remplacée par src une fois servie par Canopy) et sa hauteur. */
+  html?: string
+  src?: string
+  height?: number
 }

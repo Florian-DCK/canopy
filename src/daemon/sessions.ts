@@ -327,9 +327,9 @@ export class SessionManager {
     )
     const scene = tool(
       'scene',
-      "Mode voix : pose à droite du soleil un bloc visuel qui illustre ce que tu dis. Ce qui est montré reste à l'écran jusqu'à ce qu'autre chose le remplace ; type clear (title vide) le retire, quand l'utilisateur le demande ou que ce n'est plus utile. Choisis la forme qui sert le propos. bar : comparer quelques valeurs (items label + value). line : une évolution (items dans l'ordre). donut : une part d'un tout (items label + value, center = texte au milieu). kpi : 2 ou 3 chiffres qui comptent (items label + display + note). before_after : l'effet d'un changement (items[0] = avant, items[1] = après, avec value, display, note). list : peu de résultats, une ligne chacun (items label + status ok|ko|warn + note). table : plusieurs colonnes (columns + rows). gauge : un score d'abord puis ce qui casse (value, max, items = problèmes). plan : des étapes (items label + status done|work|todo). display = valeur lisible (« 1,4 s ») ; unit = unité des value. Les images, fichiers modifiés et artefacts du tour s'affichent déjà seuls : pas besoin de scène pour eux. Ne décris pas le bloc à voix haute, commente seulement ce qu'il montre.",
+      "Mode voix : pose à droite du soleil un bloc visuel qui illustre ce que tu dis. Ce qui est montré reste à l'écran jusqu'à ce qu'autre chose le remplace ; type clear (title vide) le retire, quand l'utilisateur le demande ou que ce n'est plus utile. Choisis la forme qui sert le propos. bar : comparer quelques valeurs (items label + value). line : une évolution (items dans l'ordre). donut : une part d'un tout (items label + value, center = texte au milieu). kpi : 2 ou 3 chiffres qui comptent (items label + display + note). before_after : l'effet d'un changement (items[0] = avant, items[1] = après, avec value, display, note). list : peu de résultats, une ligne chacun (items label + status ok|ko|warn + note). table : plusieurs colonnes (columns + rows). gauge : un score d'abord puis ce qui casse (value, max, items = problèmes). plan : des étapes (items label + status done|work|todo). html : une page libre que tu écris (html = fragment ou page complète, CSS et JS en ligne, polices Google et bibliothèques cdnjs/jsdelivr permises, pas de réseau ; height en px, 420 par défaut) pour tout ce que les blocs ne savent pas montrer : maquette, schéma animé, petit outil, mise en page. Fond sombre Canopy par défaut (variables --clay, --ivory, --slate, --muted). display = valeur lisible (« 1,4 s ») ; unit = unité des value. Les images, fichiers modifiés et artefacts du tour s'affichent déjà seuls : pas besoin de scène pour eux. Ne décris pas le bloc à voix haute, commente seulement ce qu'il montre.",
       {
-        type: z.enum(['clear', 'bar', 'line', 'donut', 'kpi', 'before_after', 'list', 'table', 'gauge', 'plan']),
+        type: z.enum(['clear', 'html', 'bar', 'line', 'donut', 'kpi', 'before_after', 'list', 'table', 'gauge', 'plan']),
         title: z.string(),
         subtitle: z.string().optional(),
         unit: z.string().optional(),
@@ -338,7 +338,9 @@ export class SessionManager {
         rows: z.array(z.array(z.string())).optional(),
         value: z.number().optional(),
         max: z.number().optional(),
-        center: z.string().optional()
+        center: z.string().optional(),
+        html: z.string().optional(),
+        height: z.number().int().min(120).max(900).optional()
       },
       async (block: SceneBlock) => {
         if (!this.ui) return { content: [{ type: 'text', text: "Interface indisponible (Canopy n'est pas ouvert)" }], isError: true }

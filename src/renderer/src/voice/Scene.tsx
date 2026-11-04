@@ -219,6 +219,8 @@ export function SceneView({ b }: { b: SceneBlock }) {
     case 'gauge': return <Gauge b={b} />
     case 'plan': return <Plan b={b} />
     case 'clear': return null
+    case 'html':
+      return b.src ? <iframe className="sc-card sc-html" title={b.title} src={b.src} sandbox="allow-scripts" style={{ height: b.height ?? 420 }} /> : null
   }
 }
 

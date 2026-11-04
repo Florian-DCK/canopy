@@ -20,6 +20,8 @@ export type CompanionState = {
   /** Parle : les phrases du tour et l'index de celle qu'on entend (le texte défile à ce rythme). */
   lines?: string[]
   current?: number
+  /** Page libre posée par Claude : affichée au-dessus de la bulle. */
+  page?: { src: string; title: string; height: number }
 }
 
 /** open : rouvrir Canopy sur le mode voix ; quit : quitter le compagnon ; hush : couper Claude. */

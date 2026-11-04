@@ -218,3 +218,6 @@
 .v-karaoke .k-now { color: #F5F4EE; }
 .v-karaoke .k-past { color: #73726C; }
 .v-karaoke .k-next { color: #4A4945; }
+
+/* Page libre de Claude (outil scène, type html) : isolée dans un cadre. */
+.sc-html { display: block; width: 100%; max-height: 100%; border: none; padding: 0; background: #1F1E1D; }
