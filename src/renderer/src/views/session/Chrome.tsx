@@ -159,7 +159,7 @@ export function SessionHeader({
       </button>
       <button type="button" className="s-crumb" title={`${project.name} — ${project.path}`} onClick={() => go({ name: 'project', projectId: project.id })}>
         <Tile project={project} size={22} />
-        {!narrow && <span className="s-proj">{project.name} /</span>}
+        {!narrow && (project.sandbox ? <span className="s-proj sb-badge">Bac à sable</span> : <span className="s-proj">{project.name} /</span>)}
       </button>
       <b className="s-title" title={session.title}>{session.title}</b>
       <StatusPill session={session} compact={narrow} />

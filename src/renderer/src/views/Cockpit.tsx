@@ -121,8 +121,9 @@ export function Cockpit() {
         ].filter((e) => !needle || e.title.toLowerCase().includes(needle))
         return { p, entries, last: Math.max(0, ...entries.map((e) => e.at)) }
       })
-      .filter((r) => !needle || r.entries.length)
-      .sort((a, b) => b.last - a.last)
+      .filter((r) => !needle || r.entries.length || r.p.sandbox)
+      // Le bac à sable reste tout en haut ; les projets ensuite, du plus récent au plus ancien.
+      .sort((a, b) => Number(!!b.p.sandbox) - Number(!!a.p.sandbox) || b.last - a.last)
   }, [projects, sessions, history, external, q])
 
   const openEntry = async (e: Entry, ev: { ctrlKey: boolean; metaKey: boolean }) => {
@@ -173,7 +174,7 @@ export function Cockpit() {
               const isOpen = !!open[p.id] || !!q.trim()
               const st = top && stateOf(top)
               return (
-                <section key={p.id} className={`ck-row ${top?.kind === 'open' ? fxClass(top.s, fresh) : ''} ${st?.cls === 'wait' ? 'wait' : ''} ${top && top.kind !== 'open' ? 'quiet' : ''}`} aria-label={p.name}>
+                <section key={p.id} className={`ck-row ${p.sandbox ? 'sandbox ' : ''}${top?.kind === 'open' ? fxClass(top.s, fresh) : ''} ${st?.cls === 'wait' ? 'wait' : ''} ${top && top.kind !== 'open' ? 'quiet' : ''}`} aria-label={p.name}>
                   <div className="ck-line">
                     <span className="ck-proj">
                       <Tile project={p} size={26} />

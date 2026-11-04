@@ -1,3 +1,4 @@
+import { SandboxBanner } from './session/SandboxBanner'
 import '../session.css'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Item } from '../../../shared/types'
@@ -133,6 +134,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                     <p className="sub">Claude Code démarre dans <span className="mono">{project.path}</span> avec ton CLAUDE.md, tes skills et tes hooks.</p>
                   </div>
                 )}
+                <SandboxBanner session={session} project={project} items={items} />
                 <Thread sessionId={session.id} items={items} limit={limit} onMore={more} writing={session.status === 'run' && session.activity?.kind === 'writing'} />
               </div>
             </div>

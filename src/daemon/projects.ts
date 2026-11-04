@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, join } from 'node:path'
 import type { PermissionModeUI, Project } from '../shared/types'
@@ -95,4 +95,21 @@ export function defaultPermissionMode(projectPath: string): PermissionModeUI {
     }
   }
   return 'default'
+}
+
+/** Bac à sable (planche 35) : le « projet » des conversations sans projet, dans Documents\Canopy\Bac à sable. */
+export function ensureSandbox(): Project {
+  const path = join(homedir(), 'Documents', 'Canopy', 'Bac à sable')
+  mkdirSync(path, { recursive: true })
+  const list = load()
+  let p = list.find((x) => x.sandbox) ?? list.find((x) => x.path.toLowerCase() === path.toLowerCase())
+  if (!p) {
+    p = { id: randomUUID(), name: 'Bac à sable', path, color: '#EBCECE', sandbox: true }
+    list.unshift(p)
+    save()
+  } else if (!p.sandbox) {
+    p.sandbox = true
+    save()
+  }
+  return p
 }

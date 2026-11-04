@@ -17,7 +17,7 @@ import type { AppEvent, CaptureResult, SessionMeta } from '../shared/types'
 import { Checklists } from './checklists'
 import { MediaStore } from './media'
 import { dataFile } from './paths'
-import { addProject, getProject, listProjects, removeProject, renameProject } from './projects'
+import { ensureSandbox, addProject, getProject, listProjects, removeProject, renameProject } from './projects'
 import { loadSdk, SessionManager } from './sessions'
 import { listCommands, listFiles } from './suggest'
 import { CLAUDE_DIR, setSkillEnabled } from './tooling'
@@ -62,6 +62,8 @@ function emit(e: AppEvent) {
 }
 
 const media = new MediaStore()
+// Le bac à sable existe toujours (planche 35).
+ensureSandbox()
 const sessions = new SessionManager(emit, media)
 
 // Captures : le démon relaie la demande à Electron (événement) et attend la réponse (RPC captureResult).
@@ -121,7 +123,7 @@ const checklists = sessions.checklists
 const usage = new UsageProbe(loadSdk, (quota) => emit({ type: 'quota', quota }))
 
 // ---------- sessions ouvertes : survivent à un redémarrage du démon ----------
-type OpenEntry = Pick<SessionMeta, 'id' | 'projectId' | 'sdkSessionId' | 'title' | 'modelChoice' | 'permissionMode' | 'readOnly'>
+type OpenEntry = Pick<SessionMeta, 'id' | 'projectId' | 'sdkSessionId' | 'title' | 'modelChoice' | 'permissionMode' | 'readOnly' | 'cwd'>
 let saveTimer: NodeJS.Timeout | null = null
 function saveOpenSoon() {
   if (shuttingDown || saveTimer) return

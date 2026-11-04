@@ -1,5 +1,6 @@
+import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import type { ActParams,
   AppEvent,
   ArtifactRef,
@@ -597,6 +598,19 @@ export class SessionManager {
     } else this.emit({ type: 'item:patch', sessionId: s.meta.id, itemId, patch })
   }
 
+  /** Dossier de travail : celui du projet ; au bac à sable, un sous-dossier par conversation (date + identifiant). */
+  private cwdFor(s: Live, project: { path: string; sandbox?: boolean }): string {
+    if (!project.sandbox) return s.meta.cwd ?? project.path
+    if (!s.meta.cwd) {
+      const d = new Date()
+      const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const dir = join(project.path, `${day} ${s.meta.id.slice(0, 6)}`)
+      mkdirSync(dir, { recursive: true })
+      this.patch(s, { cwd: dir })
+    }
+    return s.meta.cwd!
+  }
+
   async send(id: string, text: string, attachments: Attachment[] = []) {
     const s = this.sessions.get(id)
     if (!s) throw new Error('Session inconnue')
@@ -654,7 +668,7 @@ export class SessionManager {
     const q = query({
       prompt: s.input as any,
       options: {
-        cwd: project.path,
+        cwd: this.cwdFor(s, project),
         env,
         model: s.meta.modelChoice,
         // Reprend la conversation Claude Code existante (session rouverte ou relancée après une erreur).

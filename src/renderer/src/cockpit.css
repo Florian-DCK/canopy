@@ -43,3 +43,6 @@
 @media (max-width: 1100px) {
   .ck-line { grid-template-columns: minmax(140px, 180px) 110px minmax(0, 1fr) 70px 90px 36px; }
 }
+
+/* Bac à sable (planche 35) : une ligne à part, en pointillés argile. */
+.ck-row.sandbox { border: 1.5px dashed var(--clay-line, rgba(217, 119, 87, 0.55)); background: var(--clay-tint, #fbf1ec); }

@@ -6,6 +6,8 @@ export type Project = {
   path: string
   color: string
   branch?: string
+  /** Le bac à sable : conversations sans projet (planche 35). */
+  sandbox?: boolean
 }
 
 export type SessionStatus = 'idle' | 'run' | 'wait' | 'error'
@@ -24,6 +26,8 @@ export type SessionMeta = {
   activity?: { kind: 'thinking' | 'writing' | 'tool'; label?: string; since: number }
   /** Session ouverte en lecture (elle tourne encore dans un terminal). */
   readOnly?: boolean
+  /** Dossier de travail propre à la session (bac à sable : un sous-dossier par conversation). */
+  cwd?: string
   startedAt: number
   updatedAt: number
   contextTokens?: number

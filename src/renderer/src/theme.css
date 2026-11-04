@@ -416,3 +416,10 @@ select.select { height: 32px; border-radius: 8px; border: 0.5px solid var(--line
   15%, 60% { box-shadow: 0 0 0 3px rgba(213, 113, 81, 0.75), 0 0 24px 4px rgba(213, 113, 81, 0.25); }
 }
 .ui-flash { animation: ui-flash 2.6s ease-in-out; border-radius: 8px; }
+
+/* Bac à sable : pastille d'en-tête, proposition de transfert, lien vers la suite. */
+.sb-badge { padding: 2px 8px; border-radius: 7px; border: 1px dashed var(--clay); background: var(--clay-tint); color: var(--clay-text); }
+.sb-suggest, .sb-moved { display: flex; align-items: center; gap: 12px; margin: 0 0 18px; padding: 12px 16px; border-radius: 12px; font-size: 13.5px; }
+.sb-suggest { background: var(--clay-tint); border: 0.5px solid var(--clay-line); }
+.sb-moved { background: var(--white); border: 0.5px solid var(--line); }
+.sb-arrow { color: #3e7c52; }
