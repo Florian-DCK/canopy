@@ -150,6 +150,10 @@ export type ArtifactRef = { url: string; version?: number; title?: string; creat
 export type CaptureParams = {
   /** hidden : vue rendue hors écran ; current : copie de la fenêtre de l'utilisateur. */
   mode?: 'hidden' | 'current'
+  /** Outil écran : l'écran de l'utilisateur (celui de la souris) ou sa fenêtre active, hors de Canopy. */
+  desktop?: 'screen' | 'window'
+  /** Outil agir : un geste de Claude sur l'écran de l'utilisateur. */
+  act?: ActParams
   view?: 'session' | 'cockpit' | 'history' | 'projects' | 'tiles' | 'tools'
   sessionId?: string
   theme?: 'light' | 'dark'
@@ -164,9 +168,21 @@ export type CaptureParams = {
   /** 'art' : affiche l'onglet du dernier artefact. */
   tab?: 'session' | 'art'
 }
+export type ActParams = {
+  action: 'find' | 'invoke' | 'click' | 'type' | 'key'
+  target?: string
+  kind?: string
+  x?: number
+  y?: number
+  text?: string
+  append?: boolean
+  keys?: string
+  look?: boolean
+}
+
 export type CaptureResult = { ok: boolean; image?: string; info: string }
 
-export type MediaKind = 'image' | 'video'
+export type MediaKind = 'image' | 'video' | 'audio'
 export type MediaSource = 'read' | 'screenshot' | 'tool' | 'mention' | 'attach'
 
 export type MediaItem = {
@@ -220,6 +236,8 @@ export type AppEvent =
   | { type: 'projects:changed' }
   /** Action de Claude dans le navigateur intégré d'une session (outil mcp__atelier__browser). */
   | { type: 'browser:request'; id: string; sessionId: string; params: import('./browser').BrowserParams; at: number }
+  /** Claude agit sur l'interface de Canopy (outil mcp__atelier__interface). */
+  | { type: 'ui:request'; id: string; sessionId: string; params: import('./ui').UiParams; at: number }
 
 export type PermissionDecision = 'allow' | 'always' | 'deny'
 
@@ -244,7 +262,7 @@ export type Toast = {
   pulse?: number
 }
 export type ToastAction = { type: 'allow' | 'deny' | 'open' | 'dismiss' | 'silence' | 'mute' | 'settings' | `opt:${number}`; id: string }
-export type ToastState = { toasts: Toast[]; sound: boolean; corner: NotifSettings['corner'] }
+export type ToastState = { toasts: Toast[]; sound: boolean; corner: NotifSettings['corner']; /** Mode compagnon : la bulle, dans cette même fenêtre. */ companion?: import('./companion').CompanionState | null }
 export type NotifSettings = {
   corner: 'tl' | 'tr' | 'bl' | 'br'
   overFullscreen: boolean
@@ -329,6 +347,19 @@ export type AtelierApi = {
   /** Action de Claude dans le navigateur intégré : l'hôte l'exécute puis répond via browserResult. */
   onBrowserRequest(cb: (req: { id: string; sessionId: string; params: import('./browser').BrowserParams }) => void): () => void
   browserResult(id: string, r: import('./browser').BrowserResult): void
+  /** Action de Claude sur l'interface : la fenêtre l'exécute puis répond via uiResult. */
+  onUiRequest(cb: (req: { id: string; sessionId: string; params: import('./ui').UiParams }) => void): () => void
+  uiResult(id: string, r: import('./ui').UiResult): void
+  /** Mode compagnon : état de la bulle (null = quitter) et gestes renvoyés par la bulle. */
+  companionSet(state: import('./companion').CompanionState | null): void
+  /** « Stop » : Claude n'agit plus sur l'écran (quelques secondes), sa main disparaît. */
+  actStop(): void
+  /** Ramener la fenêtre de Canopy au premier plan (Claude montre quelque chose pendant le mode compagnon). */
+  showWindow(): void
+  onCompanionCommand(cb: (c: import('./companion').CompanionCommand) => void): () => void
+  /** Mode voix : démarre le service local (Whisper + Pocket TTS) et donne son adresse. */
+  voiceStart(voice: string): Promise<{ ok: true; port: number; token: string } | { ok: false; error: string }>
+  voiceStop(): Promise<void>
 }
 
 /** API de la fenêtre des notifications (toast.html). */
@@ -336,5 +367,10 @@ export type ToastApi = {
   onState(cb: (s: ToastState) => void): () => void
   action(a: ToastAction): void
   size(height: number): void
+  /** Mode compagnon : déplacer la bulle, la commander, laisser passer les clics hors de la bulle. */
+  drag(phase: 'start' | 'move' | 'end', x: number, y: number): void
+  companion(c: import('./companion').CompanionCommand): void
+  mouse(inside: boolean): void
+  onLook(cb: (title: string) => void): () => void
   ready(): void
 }

@@ -1,0 +1,212 @@
+/* Mode voix : vue Canopée (planche 25) et pastille quand Claude montre autre chose (planche 28). */
+
+/* ---------- logo vivant ---------- */
+.cmark { overflow: visible; display: block; }
+.cmark .cm-tree { transform-box: fill-box; transform-origin: 50% 100%; }
+.cmark .cm-clay { transition: filter 0.4s; }
+.cmark .cm-ring { fill: none; stroke: var(--cm-ring, #D57151); stroke-width: 6; opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; }
+/* Réfléchit : un arc qui tourne autour du disque. Parle : le trait du sol devient l'onde de la voix. */
+.cmark .cm-orbit { opacity: 0; transition: opacity 0.4s; }
+/* Deux arcs sur deux orbites (ils ne se croisent jamais), chacun à vitesse constante, pas la même. */
+.cmark .cm-orbit circle { transform-box: view-box; transform-origin: 512px 512px; }
+.cmark .cm-orbit circle:nth-child(1) { animation: cm-spin 2.6s linear infinite; }
+.cmark .cm-orbit circle:nth-child(2) { animation: cm-spin 4.4s linear infinite; }
+.cmark .cm-ground { transition: opacity 0.25s; }
+.cmark .cm-wave { opacity: 0; transition: opacity 0.25s; }
+.cmark .cm-wave rect { height: 17px; transition: height 90ms linear; }
+
+@keyframes cm-sway { 0%, 100% { transform: rotate(-1.8deg); } 50% { transform: rotate(1.8deg); } }
+@keyframes cm-lean { 0%, 100% { transform: rotate(0deg) scaleY(1); } 50% { transform: rotate(0.6deg) scaleY(1.025); } }
+@keyframes cm-grow { 0% { transform: scaleY(0); } 70% { transform: scaleY(1.04); } 100% { transform: scaleY(1); } }
+@keyframes cm-ring { 0% { transform: scale(1); opacity: 0.55; } 100% { transform: scale(1.32); opacity: 0; } }
+@keyframes cm-glow { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.22); } }
+@keyframes cm-breathe { 0%, 100% { filter: brightness(0.96); } 50% { filter: brightness(1.05); } }
+@keyframes cm-spin { to { transform: rotate(360deg); } }
+@keyframes cm-rise { from { transform: translateY(180px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.cm-rest .cm-clay { animation: cm-breathe 5s ease-in-out infinite; }
+.cm-intro .cm-clay { animation: cm-rise 0.8s cubic-bezier(.2, .8, .2, 1) both; }
+.cm-intro .cm-t1 { animation: cm-grow 0.9s cubic-bezier(.2, .8, .2, 1) 0.5s both; }
+.cm-intro .cm-t2 { animation: cm-grow 1s cubic-bezier(.2, .8, .2, 1) 0.3s both; }
+.cm-intro .cm-t3 { animation: cm-grow 0.9s cubic-bezier(.2, .8, .2, 1) 0.65s both; }
+.cm-listen { --cm-ring: #5B9BE6; }
+.cm-listen .cm-t1 { animation: cm-sway 2.6s ease-in-out infinite; }
+.cm-listen .cm-t2 { animation: cm-sway 3.1s ease-in-out -0.8s infinite; }
+.cm-listen .cm-t3 { animation: cm-sway 2.8s ease-in-out -1.5s infinite; }
+.cm-listen .cm-ring { animation: cm-ring 1.8s ease-out infinite; }
+.cm-listen .cm-ring2 { animation-delay: -0.9s; }
+.cm-think .cm-orbit { opacity: 1; }
+.cm-speak .cm-wave { opacity: 1; }
+/* Sans volume réel (petites tailles, barre latérale) : une onde simulée. */
+.cm-speak:not(.cm-live) .cm-wave rect { animation: cm-wave 0.7s ease-in-out infinite; }
+.cm-speak:not(.cm-live) .cm-wave rect:nth-child(3n) { animation-duration: 0.9s; animation-delay: -0.3s; }
+.cm-speak:not(.cm-live) .cm-wave rect:nth-child(3n+1) { animation-duration: 0.6s; animation-delay: -0.5s; }
+@keyframes cm-wave { 0%, 100% { height: 17px; } 30% { height: 68px; } 55% { height: 34px; } 80% { height: 54px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cmark * { animation: none !important; }
+}
+
+/* ---------- vue voix ---------- */
+.voice {
+  flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px;
+  position: relative; background: radial-gradient(ellipse at 50% 40%, var(--v-glow) 0%, #141413 58%); color: #E3E1D8;
+  transition: background 0.6s;
+}
+.voice.v-rest, .voice.v-waking { --v-glow: rgba(213, 113, 81, 0.1); }
+.voice.v-listen { --v-glow: rgba(91, 155, 230, 0.13); }
+.voice.v-think { --v-glow: rgba(240, 238, 230, 0.06); }
+.voice.v-speak { --v-glow: rgba(213, 113, 81, 0.22); }
+.voice.v-error { --v-glow: rgba(229, 72, 77, 0.1); }
+.v-words { min-height: 120px; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 0 48px; }
+.v-word { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--v-word, #8F8D86); }
+.v-listen .v-word { --v-word: #B5D4F8; }
+.v-speak .v-word { --v-word: #F5C2AE; }
+.v-error .v-word { --v-word: #F2A7A9; }
+.v-line { font-family: var(--serif); font-size: 26px; line-height: 1.4; color: #F5F4EE; text-align: center; max-width: 820px; }
+/* Toi et Claude ne se ressemblent pas : toi en bleu, en écriture droite et plus petite, avec ton nom au-dessus ;
+   Claude en serif, blanc chaud, plus grand. */
+.v-line.you { font-family: var(--sans, inherit); font-size: 20px; line-height: 1.5; color: #B5D4F8; }
+.v-line.you:not(:empty)::before { content: 'Toi'; display: block; margin-bottom: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #5B9BE6; }
+.v-split .v-line.you { font-size: 17px; }
+.v-line.sys { font-family: var(--sans, inherit); font-size: 15px; color: #8F8D86; }
+.v-bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 10px; padding: 14px 20px; font-size: 12px; color: #8F8D86; }
+.v-bar .v-with { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; }
+.v-bar button { height: 28px; padding: 0 11px; border-radius: 8px; border: 0.5px solid rgba(240, 238, 230, 0.16); background: transparent; color: #D1CFC5; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.v-bar button:hover { background: rgba(240, 238, 230, 0.07); }
+.v-bar button[aria-pressed='true'] { background: #F0EEE6; color: #141413; border-color: transparent; }
+.v-seg { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(240, 238, 230, 0.07); }
+.v-seg button { border: none; height: 24px; }
+
+/* ---------- pastille (Claude montre autre chose) ---------- */
+.v-dock {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 60;
+  display: flex; align-items: center; gap: 12px; padding: 8px 10px 8px 8px; max-width: min(640px, calc(100vw - 120px));
+  border-radius: 999px; background: rgba(20, 20, 19, 0.92); border: 0.5px solid rgba(240, 238, 230, 0.14);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35); color: #E3E1D8; font-size: 13px; backdrop-filter: blur(8px);
+  animation: v-dock-in 0.4s cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes v-dock-in { from { transform: translate(-50%, 24px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+.v-dock .v-dock-mark { border: none; background: none; padding: 0; cursor: pointer; display: grid; place-items: center; }
+.v-dock .v-dock-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-dock .v-dock-st { color: #8F8D86; flex: none; }
+.v-dock .v-dock-x { flex: none; width: 26px; height: 26px; border-radius: 50%; border: none; background: transparent; color: #8F8D86; cursor: pointer; display: grid; place-items: center; }
+.v-dock .v-dock-x:hover { background: rgba(240, 238, 230, 0.08); color: #F0EEE6; }
+
+/* ---------- mode fractionné (planche 29) ---------- */
+.v-sun { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; }
+.voice.v-split { flex-direction: row; justify-content: flex-start; align-items: stretch; gap: 0; background: radial-gradient(ellipse at 20% 45%, var(--v-glow) 0%, #141413 50%); }
+.v-split .v-sun { width: 460px; flex: none; gap: 32px; padding: 0 36px 56px; }
+.v-split .v-line { font-size: 21px; }
+.v-stage { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; padding: 36px 44px 64px 4px; }
+.v-stage-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: flex-start; view-transition-name: v-body; }
+@keyframes v-slide { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.v-stage-info { display: flex; align-items: baseline; gap: 12px; font-size: 12px; color: #8F8D86; min-width: 0; }
+.v-stage-info .v-stage-t { font-size: 15px; color: #F0EEE6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v-stage-info button, .v-thumbs button { height: 28px; padding: 0 11px; border-radius: 8px; border: 0.5px solid rgba(240, 238, 230, 0.16); background: transparent; color: #D1CFC5; font: inherit; font-size: 12px; cursor: pointer; flex: none; }
+.v-stage-info button:hover { background: rgba(240, 238, 230, 0.07); }
+.v-thumbs { display: flex; gap: 10px; flex-wrap: wrap; }
+.v-thumbs button { height: 64px; min-width: 64px; max-width: 200px; padding: 0 12px; overflow: hidden; display: grid; place-items: center; }
+.v-thumbs button:has(img) { padding: 0; width: 104px; }
+.v-thumbs button img { width: 100%; height: 100%; object-fit: cover; }
+.v-thumbs button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-thumbs button[aria-pressed='true'] { box-shadow: 0 0 0 2px #D57151; }
+
+/* ---------- blocs de la scène (planche 30) ---------- */
+.sc-img { display: block; max-width: 100%; max-height: 100%; border-radius: 14px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(240, 238, 230, 0.14); }
+.sc-card { width: 100%; max-height: 100%; overflow: auto; border-radius: 14px; background: #1F1E1D; color: #E3E1D8; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(240, 238, 230, 0.14); }
+.sc-pad { padding: 26px 28px; }
+.sc-muted { color: #8F8D86; font-size: 13px; }
+.sc-strong { color: #F0EEE6; }
+.sc-ko { color: #F2A7A9; font-size: 13px; }
+.sc-big { font-family: var(--serif); font-size: 48px; line-height: 1; color: #F5F4EE; }
+.sc-bars { display: flex; flex-direction: column; gap: 18px; }
+.sc-bar-row { display: grid; grid-template-columns: minmax(120px, 220px) 1fr 80px; align-items: center; gap: 14px; }
+.sc-bar-l { font-size: 13px; color: #D1CFC5; }
+.sc-bar-track { height: 26px; border-radius: 6px; background: rgba(240, 238, 230, 0.05); overflow: hidden; }
+.sc-bar-fill { display: block; height: 100%; border-radius: 6px; background: #D57151; }
+.sc-bar-v { font-size: 15px; color: #F0EEE6; text-align: right; }
+.sc-donut { display: flex; align-items: center; gap: 40px; max-width: 720px; }
+.sc-legend { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.sc-legend-row { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #D1CFC5; }
+.sc-sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.sc-kpis { display: flex; gap: 16px; width: 100%; }
+.sc-kpi { flex: 1; padding: 26px 24px; display: flex; flex-direction: column; gap: 8px; }
+.sc-kpi-l { font-size: 14px; color: #D1CFC5; }
+.sc-ba-wrap { display: flex; gap: 32px; }
+.sc-ba { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.sc-tag { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8F8D86; }
+.sc-ba-track { height: 10px; border-radius: 5px; background: rgba(240, 238, 230, 0.06); }
+.sc-ba-track span { display: block; height: 100%; border-radius: 5px; }
+.sc-arrow { font-size: 30px; color: #D57151; align-self: center; }
+.sc-rows { padding: 8px 0; max-width: 720px; }
+.sc-row { display: flex; align-items: center; gap: 12px; padding: 12px 22px; font-size: 15px; }
+.sc-row.ko { background: rgba(229, 72, 77, 0.1); }
+.sc-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.sc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.sc-table th { text-align: left; font-weight: 500; color: #8F8D86; padding: 10px 18px; font-size: 12px; }
+.sc-table td { padding: 11px 18px; border-top: 0.5px solid rgba(240, 238, 230, 0.08); }
+.sc-gauge { display: flex; align-items: center; gap: 36px; max-width: 780px; }
+.sc-issues { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.sc-issue { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; background: rgba(229, 72, 77, 0.1); font-size: 14px; }
+.sc-box { width: 18px; height: 18px; flex: none; border-radius: 5px; border: 1.5px solid rgba(240, 238, 230, 0.3); display: grid; place-items: center; color: #141413; }
+.sc-step.done .sc-box { background: #D57151; border-color: #D57151; }
+.sc-step.done > span:last-child { color: #73726C; text-decoration: line-through; }
+.sc-step.work { background: rgba(91, 155, 230, 0.1); }
+.sc-step.work .sc-box { border-color: #5B9BE6; box-shadow: inset 0 0 0 3px #1F1E1D, inset 0 0 0 10px #5B9BE6; }
+.sc-diff { font-family: var(--mono, ui-monospace, Consolas, monospace); font-size: 13px; line-height: 1.6; padding: 10px 0; }
+.sc-dl { display: flex; gap: 12px; padding: 1px 16px; color: #A3A199; }
+.sc-dl.add { background: rgba(127, 179, 138, 0.14); color: #A8D5B0; }
+.sc-dl.del { background: rgba(229, 72, 77, 0.14); color: #F2A7A9; }
+.sc-dl-s { width: 10px; flex: none; opacity: 0.7; }
+.sc-dl-t { white-space: pre-wrap; word-break: break-word; }
+.sc-art { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; max-width: 560px; font-size: 16px; }
+
+/* ---------- mode fantôme : ce que Claude écrit, en texte ---------- */
+.v-ghost-claude { margin: 0; max-height: 42vh; overflow: auto; }
+
+/* ---------- bandeau du haut : projet et session ---------- */
+.v-top { position: absolute; top: 0; left: 0; right: 0; z-index: 2; display: flex; align-items: baseline; justify-content: center; gap: 10px; padding: 16px 24px; font-size: 14px; color: #8F8D86; pointer-events: none; }
+.v-top > * { pointer-events: auto; }
+.v-top-project { font-family: var(--serif); font-size: 18px; color: #F0EEE6; white-space: nowrap; }
+.v-top-session { color: #D1CFC5; max-width: 52ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-top-change { position: relative; margin-left: 6px; font-size: 12px; color: #8F8D86; padding: 3px 9px; border-radius: 7px; border: 0.5px solid rgba(240, 238, 230, 0.16); cursor: pointer; }
+.v-top-change:hover { color: #F0EEE6; background: rgba(240, 238, 230, 0.07); }
+.v-top-change select { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* ---------- transitions (API View Transitions) ---------- */
+/* Le soleil garde le même nom partout : grand au centre, à gauche quand la scène s'ouvre, petit dans la pastille. */
+.voice .v-sun > .cmark, .v-dock .v-dock-mark > .cmark { view-transition-name: v-mark; }
+.voice .v-words { view-transition-name: v-words; }
+.voice .v-stage { view-transition-name: v-stage; }
+.voice .v-top { view-transition-name: v-top; }
+::view-transition-group(*) { animation-duration: 0.45s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.3s; }
+/* La scène entre par la droite et repart par la droite. */
+/* Ouverture et fermeture : la scène (cadre et contenu ensemble) bouge au même rythme que le soleil, comme poussée
+   par lui : même durée, même courbe. */
+::view-transition-new(v-stage):only-child, ::view-transition-new(v-body):only-child { animation: v-stage-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+::view-transition-old(v-stage):only-child, ::view-transition-old(v-body):only-child { animation: v-stage-out 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes v-stage-in { from { transform: translateX(160px); opacity: 0; } }
+@keyframes v-stage-out { to { transform: translateX(160px); opacity: 0; } }
+/* Remplacement d'un bloc par un autre : l'ancien s'efface en glissant à gauche, le nouveau arrive de la droite un
+   instant après ; le cadre (v-body) passe d'une taille à l'autre en douceur pendant ce temps. */
+::view-transition-old(v-body) { animation: v-body-out 0.28s cubic-bezier(0.4, 0, 1, 1) both; }
+::view-transition-new(v-body) { animation: v-body-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s both; }
+@keyframes v-body-out { to { transform: translateX(-24px) scale(0.98); opacity: 0; filter: blur(2px); } }
+@keyframes v-body-in { from { transform: translateX(32px) scale(0.98); opacity: 0; filter: blur(2px); } }
+/* L'entrée en mode voix : le soleil se pose doucement. */
+.voice { animation: v-enter 0.4s ease-out both; }
+@keyframes v-enter { from { opacity: 0; } }
+
+/* ---------- texte : apparition et remplacement ---------- */
+.v-swap { display: grid; justify-items: center; }
+.v-swap > * { grid-area: 1 / 1; }
+.v-in { animation: v-line-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v-out { animation: v-line-out 0.3s cubic-bezier(0.4, 0, 1, 1) both; pointer-events: none; }
+@keyframes v-line-in { from { opacity: 0; transform: translateY(10px); filter: blur(5px); } }
+@keyframes v-line-out { to { opacity: 0; transform: translateY(-8px); filter: blur(5px); } }
+
+/* Réponse entière une fois le tour fini : plus petite, défilante, alignée à gauche si elle est longue. */
+.v-line.v-whole { font-size: 20px; line-height: 1.55; max-height: 42vh; overflow: auto; text-align: left; }
+.v-split .v-line.v-whole { font-size: 17px; }

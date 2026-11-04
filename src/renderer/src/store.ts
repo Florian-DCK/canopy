@@ -79,6 +79,7 @@ export type View =
   | { name: 'checklists'; id?: string }
   | { name: 'tiles' }
   | { name: 'tools' }
+  | { name: 'voice' }
 
 type State = {
   projects: Project[]

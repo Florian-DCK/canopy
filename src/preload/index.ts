@@ -88,7 +88,23 @@ const api: AtelierApi = {
     ipcRenderer.on('browser:request', h)
     return () => ipcRenderer.removeListener('browser:request', h)
   },
-  browserResult: (id, r) => ipcRenderer.send('browser:result', id, r)
+  browserResult: (id, r) => ipcRenderer.send('browser:result', id, r),
+  onUiRequest: (cb) => {
+    const h = (_: unknown, req: Parameters<typeof cb>[0]) => cb(req)
+    ipcRenderer.on('ui:request', h)
+    return () => ipcRenderer.removeListener('ui:request', h)
+  },
+  uiResult: (id, r) => ipcRenderer.send('ui:result', id, r),
+  voiceStart: (voice) => ipcRenderer.invoke('voice:start', voice),
+  companionSet: (state) => ipcRenderer.send('companion:set', state),
+  showWindow: () => ipcRenderer.send('win:show'),
+  actStop: () => ipcRenderer.send('act:stop'),
+  onCompanionCommand: (cb) => {
+    const h = (_: unknown, c: Parameters<typeof cb>[0]) => cb(c)
+    ipcRenderer.on('companion:command', h)
+    return () => ipcRenderer.removeListener('companion:command', h)
+  },
+  voiceStop: () => ipcRenderer.invoke('voice:stop')
 }
 
 const toast: ToastApi = {
@@ -99,6 +115,14 @@ const toast: ToastApi = {
   },
   action: (a) => ipcRenderer.send('toasts:action', a),
   size: (height) => ipcRenderer.send('toasts:size', height),
+  drag: (phase, x, y) => ipcRenderer.send('companion:drag', phase, x, y),
+  companion: (c) => ipcRenderer.send('companion:command', c),
+  mouse: (inside) => ipcRenderer.send('toasts:mouse', inside),
+  onLook: (cb) => {
+    const h = (_: unknown, title: string) => cb(title)
+    ipcRenderer.on('companion:look', h)
+    return () => ipcRenderer.removeListener('companion:look', h)
+  },
   ready: () => ipcRenderer.send('toasts:ready')
 }
 

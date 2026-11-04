@@ -333,6 +333,17 @@ const cut = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' 
 const counts = (c: { items: CheckItem[] }) => ({ done: c.items.filter((i) => i.state === 'done').length, total: c.items.length })
 const STATE_MARK: Record<CheckState, string> = { todo: '[ ]', work: '[~]', done: '[x]' }
 
+/** Checklist désignée par id ou titre (exact puis approximatif), projet donné d'abord. */
+export function findChecklist(store: Checklists, projectId: string, q: string): ChecklistSummary | undefined {
+  const all = store.list()
+  const n = norm(q)
+  for (const pool of [all.filter((c) => c.projectId === projectId), all]) {
+    const hit = pool.find((c) => c.id === q) ?? pool.find((c) => norm(c.title) === n) ?? pool.find((c) => norm(c.title).includes(n) || n.includes(norm(c.title)))
+    if (hit) return hit
+  }
+  return undefined
+}
+
 export function runChecklistTool(store: Checklists, ctx: { projectId: string; sdkSessionId?: string }, a: ChecklistToolArgs): { text: string; ok: boolean } {
   const fail = (text: string) => ({ text, ok: false })
   const head = (s: ChecklistToolSummary) => `<!--canopy-checklist ${JSON.stringify({ ...s, title: cut(s.title, 80), changes: s.changes?.slice(0, 8).map((c) => ({ ...c, text: cut(c.text, 80) })) })}-->`

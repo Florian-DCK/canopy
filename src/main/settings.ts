@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { NotifSettings, ThemeMode } from '../shared/types'
 
-type Settings = { theme: ThemeMode; notif?: Partial<NotifSettings> }
+type Settings = { theme: ThemeMode; notif?: Partial<NotifSettings>; /** Mode compagnon : coin bas-droit de la bulle. */ companionAnchor?: { x: number; y: number } }
 
 export const NOTIF_DEFAULT: NotifSettings = { corner: 'br', overFullscreen: true, sound: true, quiet: false, quietFrom: '22:00', quietTo: '08:00' }
 
@@ -43,4 +43,12 @@ export function setNotifSettings(patch: Partial<NotifSettings>): NotifSettings {
   const notif = { ...NOTIF_DEFAULT, ...cur.notif, ...patch }
   writeFileSync(file(), JSON.stringify({ ...cur, notif }, null, 2), 'utf8')
   return notif
+}
+
+export function getCompanionAnchor(): { x: number; y: number } | null {
+  return read().companionAnchor ?? null
+}
+
+export function setCompanionAnchor(p: { x: number; y: number }) {
+  writeFileSync(file(), JSON.stringify({ ...read(), companionAnchor: p }, null, 2), 'utf8')
 }

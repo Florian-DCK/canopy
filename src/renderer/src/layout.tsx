@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { UI_PANEL_EVENT, type UiPanelDetail } from '../../shared/ui'
 
 // Panneaux de la session, façon VS Code : ouverture/fermeture, largeur réglable, mémorisés.
 
@@ -48,6 +49,16 @@ export function useSessionLayout() {
     }
     return next
   }), [])
+
+  // Claude ouvre ou ferme le panneau de travail (outil interface).
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<UiPanelDetail>).detail
+      if (d.state) update({ rightOpen: d.state === 'open' })
+    }
+    window.addEventListener(UI_PANEL_EVENT, on)
+    return () => window.removeEventListener(UI_PANEL_EVENT, on)
+  }, [update])
 
   // Raccourcis VS Code : Ctrl+B (panneau gauche), Ctrl+Alt+B (panneau droit).
   useEffect(() => {

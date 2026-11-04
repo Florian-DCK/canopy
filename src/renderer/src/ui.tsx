@@ -5,8 +5,11 @@ import { NotifButton } from './NotifSettings'
 import { lastSeen, useChecklists } from './checklists'
 import { Icon } from './icons'
 import { InTitleBar } from './titlebar'
-import { resolve, useTiles } from './tiles'
+import { dropOnTiles, isTileDrag, resolve, useTiles } from './tiles'
 import { fxOfGroup, useFx } from './fx'
+import { CanopyMark } from './voice/CanopyMark'
+import { useVoice } from './voice/runtime'
+import { markOf } from './voice/VoiceView'
 
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
 
@@ -114,9 +117,11 @@ export function Rail() {
   const cells = useTiles((t) => t.cells)
   const tilesFx = view.name === 'tiles' ? '' : fxOfGroup(cells.map((c) => resolve(c, sessions)), doneFresh)
   const last = Object.values(sessions).sort((a, b) => b.updatedAt - a.updatedAt)[0]
-  const btn = (label: string, icon: ReactNode, v: View | null, active: boolean, badge = false, blue = false, fx = '') => (
+  const [dropping, setDropping] = useState<'' | 'over' | 'ok'>('')
+  const btn = (label: string, icon: ReactNode, v: View | null, active: boolean, badge = false, blue = false, fx = '', drop?: object) => (
     <button
       type="button"
+      {...drop}
       className={fx || undefined}
       aria-label={label}
       title={label}
@@ -132,11 +137,27 @@ export function Rail() {
     <nav className="rail" aria-label="Navigation principale">
       {btn('Cockpit', Icons.grid, { name: 'cockpit' }, view.name === 'cockpit' || view.name === 'project', waiting)}
       {btn('Dernière session', Icons.chat, last ? { name: 'session', sessionId: last.id } : null, view.name === 'session')}
-      {btn('Mosaïque (Ctrl+clic sur une session pour l’ajouter)', <Icon name="tiles" size={20} />, { name: 'tiles' }, view.name === 'tiles', tilesWaiting, false, tilesFx)}
+      {btn('Mosaïque (Ctrl+clic sur une session pour l’ajouter)', <Icon name="tiles" size={20} />, { name: 'tiles' }, view.name === 'tiles', tilesWaiting, false, `${tilesFx} ${dropping ? `drop-${dropping}` : ''}`.trim(), {
+        onDragOver: (e: React.DragEvent) => {
+          if (!isTileDrag(e)) return
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'copy'
+          setDropping('over')
+        },
+        onDragLeave: () => setDropping(''),
+        onDrop: (e: React.DragEvent) => {
+          e.preventDefault()
+          if (dropOnTiles(e)) {
+            setDropping('ok')
+            setTimeout(() => setDropping(''), 900)
+          } else setDropping('')
+        }
+      })}
       {btn('Historique', Icons.clock, { name: 'history' }, view.name === 'history')}
       {btn('Projets', Icons.folder, { name: 'projects' }, view.name === 'projects')}
       {btn('Checklists', <Icon name="todo" size={20} />, { name: 'checklists' }, view.name === 'checklists', fresh, true)}
       {btn('Outils de Claude (skills, MCP, agents)', <Icon name="plug" size={20} />, { name: 'tools' }, view.name === 'tools')}
+      {btn('Mode voix', <VoiceRailMark />, { name: 'voice' }, view.name === 'voice')}
       <span style={{ flex: 1 }} />
       <NotifButton />
       <ThemeToggle />
@@ -151,4 +172,11 @@ export function TopBar({ children }: { children: ReactNode; usage?: boolean }) {
       <div className="crumb tb-crumb">{children}</div>
     </InTitleBar>
   )
+}
+
+/** Bouton du mode voix : le logo, vivant pendant une conversation. */
+function VoiceRailMark() {
+  const phase = useVoice((v) => v.phase)
+  const speech = useVoice((v) => v.speech)
+  return <CanopyMark state={phase === 'off' ? 'rest' : markOf(phase, speech)} size={22} />
 }

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import type {
+import type { ActParams,
   AppEvent,
   ArtifactRef,
   Attachment,
@@ -19,9 +19,11 @@ import type {
   ToolsInventory
 } from '../shared/types'
 import type { BrowserParams, BrowserResult } from '../shared/browser'
+import type { UiParams, UiResult } from '../shared/ui'
+import type { SceneBlock } from '../shared/scene'
 import { findMediaPaths, type MediaStore } from './media'
 import { z } from 'zod'
-import { runChecklistTool, type Checklists, type ChecklistToolArgs } from './checklists'
+import { findChecklist, runChecklistTool, type Checklists, type ChecklistToolArgs } from './checklists'
 import { HARNESS } from './harness'
 import { defaultPermissionMode, getProject } from './projects'
 import { disabledMcp, disabledSkills, setMcpDisabled } from './tooling'
@@ -206,6 +208,8 @@ export class SessionManager {
   capture?: (sessionId: string, p: CaptureParams) => Promise<CaptureResult>
   /** Branché par le démon : action de Claude dans le navigateur intégré. */
   browser?: (sessionId: string, p: BrowserParams) => Promise<BrowserResult>
+  /** Branché par le démon : action de Claude sur l'interface de Canopy. */
+  ui?: (sessionId: string, p: UiParams) => Promise<UiResult>
   /** Branché par le démon : stockage des checklists du projet. */
   checklists?: Checklists
 
@@ -295,7 +299,90 @@ export class SessionManager {
         return { content: [{ type: 'text', text: `Question posée sans attendre. ${next}` }] }
       }
     )
-    return createSdkMcpServer({ name: 'atelier', version: '1.0.0', tools: [capture, browser, checklist, question] })
+    const ui = tool(
+      'interface',
+      "Agit sur ce que l'utilisateur voit dans Canopy : c'est le geste qui répond, pas une phrase. show : affiche une vue (target : session, cockpit, tiles = Mosaïque, tools = Outils de Claude, history, projects, checklist (+ checklist = id ou titre ; sans = toutes), artifact (+ url), browser = navigateur intégré de la session, voice = revenir au grand soleil du mode voix). panel : ouvre ou ferme le panneau de travail de la session (state open|closed, tab lists|files|media|ctx). highlight : fait défiler jusqu'à un élément (selector CSS) et le surligne quelques secondes. scroll : haut ou bas de la conversation (to top|bottom) ou jusqu'à un selector. back : revient à la vue précédente. Quand l'utilisateur demande de montrer, ouvrir ou afficher quelque chose, fais-le avec cet outil et ne le décris pas ensuite : un petit son lui confirme le geste. Rien d'irréversible ici.",
+      {
+        action: z.enum(['show', 'panel', 'highlight', 'scroll', 'back']),
+        target: z.enum(['session', 'cockpit', 'tiles', 'tools', 'history', 'projects', 'checklist', 'artifact', 'browser', 'voice']).optional(),
+        sessionId: z.string().optional(),
+        checklist: z.string().optional(),
+        url: z.string().optional(),
+        state: z.enum(['open', 'closed']).optional(),
+        tab: z.enum(['lists', 'files', 'media', 'ctx']).optional(),
+        selector: z.string().optional(),
+        to: z.enum(['top', 'bottom']).optional()
+      },
+      async ({ checklist: q, ...args }: UiParams & { checklist?: string }) => {
+        if (!this.ui) return { content: [{ type: 'text', text: "Interface indisponible (Canopy n'est pas ouvert)" }], isError: true }
+        const p: UiParams = { ...args }
+        if (args.action === 'show' && args.target === 'checklist' && q) {
+          const c = this.checklists ? findChecklist(this.checklists, s.meta.projectId, q) : undefined
+          if (!c) return { content: [{ type: 'text', text: `Checklist introuvable : « ${q} ».` }], isError: true }
+          p.checklistId = c.id
+        }
+        const r = await this.ui(s.meta.id, p)
+        return { content: [{ type: 'text', text: r.text }], isError: !r.ok }
+      }
+    )
+    const scene = tool(
+      'scene',
+      "Mode voix : pose à droite du soleil un bloc visuel qui illustre ce que tu dis. Ce qui est montré reste à l'écran jusqu'à ce qu'autre chose le remplace ; type clear (title vide) le retire, quand l'utilisateur le demande ou que ce n'est plus utile. Choisis la forme qui sert le propos. bar : comparer quelques valeurs (items label + value). line : une évolution (items dans l'ordre). donut : une part d'un tout (items label + value, center = texte au milieu). kpi : 2 ou 3 chiffres qui comptent (items label + display + note). before_after : l'effet d'un changement (items[0] = avant, items[1] = après, avec value, display, note). list : peu de résultats, une ligne chacun (items label + status ok|ko|warn + note). table : plusieurs colonnes (columns + rows). gauge : un score d'abord puis ce qui casse (value, max, items = problèmes). plan : des étapes (items label + status done|work|todo). display = valeur lisible (« 1,4 s ») ; unit = unité des value. Les images, fichiers modifiés et artefacts du tour s'affichent déjà seuls : pas besoin de scène pour eux. Ne décris pas le bloc à voix haute, commente seulement ce qu'il montre.",
+      {
+        type: z.enum(['clear', 'bar', 'line', 'donut', 'kpi', 'before_after', 'list', 'table', 'gauge', 'plan']),
+        title: z.string(),
+        subtitle: z.string().optional(),
+        unit: z.string().optional(),
+        items: z.array(z.object({ label: z.string(), value: z.number().optional(), display: z.string().optional(), status: z.enum(['ok', 'ko', 'warn', 'done', 'work', 'todo']).optional(), note: z.string().optional() })).optional(),
+        columns: z.array(z.string()).optional(),
+        rows: z.array(z.array(z.string())).optional(),
+        value: z.number().optional(),
+        max: z.number().optional(),
+        center: z.string().optional()
+      },
+      async (block: SceneBlock) => {
+        if (!this.ui) return { content: [{ type: 'text', text: "Interface indisponible (Canopy n'est pas ouvert)" }], isError: true }
+        const r = await this.ui(s.meta.id, { action: 'scene', scene: block })
+        return { content: [{ type: 'text', text: r.text }], isError: !r.ok }
+      }
+    )
+    const screenTool = tool(
+      'screen',
+      "Regarde l'écran de l'utilisateur, hors de Canopy : what « screen » (défaut) = l'écran où se trouve sa souris, « window » = seulement la fenêtre active. Donne aussi le titre de la fenêtre active. À utiliser quand il parle de ce qu'il a sous les yeux (« regarde », « tu vois ce menu ? », « qu'est-ce que tu en penses ? ») ; jamais par simple curiosité. La bulle du mode compagnon affiche un œil à chaque capture.",
+      { what: z.enum(['screen', 'window']).optional() },
+      async ({ what }: { what?: 'screen' | 'window' }) => {
+        if (!this.capture) return { content: [{ type: 'text', text: "Canopy n'est pas ouvert." }], isError: true }
+        const r = await this.capture(s.meta.id, { desktop: what ?? 'screen' })
+        return {
+          content: [...(r.image ? [{ type: 'image', data: r.image, mimeType: 'image/jpeg' }] : []), { type: 'text', text: r.info }],
+          isError: !r.ok
+        }
+      }
+    )
+    const actTool = tool(
+      'act',
+      "Agit sur l'écran de l'utilisateur (hors de Canopy), à sa demande explicite. find : liste les éléments visibles de la fenêtre active (type · nom · position) ; commence par là. invoke : déclenche un élément par son nom (target, et kind pour départager : Button, MenuItem, Hyperlink, TabItem…) — bouton, menu, lien, case. type : écrit text (dans target s'il est donné, sinon là où est le curseur). key : touches (keys, ex. « ctrl+l », « enter », « win », « alt+tab »). click : en dernier recours, clic en x,y (points de la capture de mcp__atelier__screen). look : joint une capture après le geste pour vérifier. Sa main (un autocollant argile) glisse à l'écran avant chaque geste. AVANT tout geste qui ne se défait pas (envoyer, supprimer, payer, publier, valider un achat ou un formulaire), demande et attends son « oui ». Si l'application a une voie directe plus fiable (API, connecteur Gmail, glab), préfère-la et dis-le.",
+      {
+        action: z.enum(['find', 'invoke', 'click', 'type', 'key']),
+        target: z.string().optional(),
+        kind: z.string().optional(),
+        x: z.number().optional(),
+        y: z.number().optional(),
+        text: z.string().optional(),
+        append: z.boolean().optional(),
+        keys: z.string().optional(),
+        look: z.boolean().optional()
+      },
+      async (args: ActParams) => {
+        if (!this.capture) return { content: [{ type: 'text', text: "Canopy n'est pas ouvert." }], isError: true }
+        const r = await this.capture(s.meta.id, { act: args })
+        return {
+          content: [...(r.image ? [{ type: 'image', data: r.image, mimeType: 'image/jpeg' }] : []), { type: 'text', text: r.info }],
+          isError: !r.ok
+        }
+      }
+    )
+    return createSdkMcpServer({ name: 'atelier', version: '1.0.0', tools: [capture, browser, checklist, question, ui, scene, screenTool, actTool] })
   }
 
   private emitMedia(m: MediaItem | null) {
@@ -580,7 +667,7 @@ export class SessionManager {
         ...(this.capture || this.browser
           ? {
               mcpServers: { atelier: this.atelierMcp(s, createSdkMcpServer, tool) },
-              allowedTools: [...(this.capture ? ['mcp__atelier__capture'] : []), ...(this.checklists ? ['mcp__atelier__checklist'] : []), 'mcp__atelier__question']
+              allowedTools: [...(this.capture ? ['mcp__atelier__capture'] : []), ...(this.checklists ? ['mcp__atelier__checklist'] : []), 'mcp__atelier__question', ...(this.ui ? ['mcp__atelier__interface', 'mcp__atelier__scene'] : []), ...(this.capture ? ['mcp__atelier__screen', 'mcp__atelier__act'] : [])]
             }
           : {}),
         canUseTool: (toolName, input, opts) => this.ask(s, toolName, input, opts)

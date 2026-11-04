@@ -3,13 +3,18 @@ import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { BROWSER_PARTITION, type BrowserResult } from '../shared/browser'
+import type { UiResult } from '../shared/ui'
+import type { CompanionState } from '../shared/companion'
 import { emptyState, reduce, type AppState } from '../shared/state'
 import type { AppEvent, Item, NotifInfo, NotifSettings, Project, ThemeMode } from '../shared/types'
 import { capture } from './capture'
+import { captureScreen } from './screen'
+import { runAct, stopActing } from './act'
 import { DaemonClient, type DaemonStatus } from './daemon'
 import { MediaServer, registerMediaScheme } from './media'
-import { applySavedTheme, getNotifSettings, getTheme, setNotifSettings, setTheme, windowBackground } from './settings'
+import { applySavedTheme, getCompanionAnchor, getNotifSettings, getTheme, setCompanionAnchor, setNotifSettings, setTheme, windowBackground } from './settings'
 import { inQuietHours, ToastCenter } from './toasts'
+import { startVoice, stopVoice } from './voice'
 
 // Electron n'est qu'un client du démon (src/daemon) : fenêtre, notifications, boîtes de dialogue,
 // serveur de médias. Il peut redémarrer (mode dev, modification du main…) sans couper les agents.
@@ -117,6 +122,40 @@ const toasts = new ToastCenter({
     win.show()
     win.focus()
     toRenderer('notif:open-settings')
+  },
+  anchor: getCompanionAnchor,
+  setAnchor: setCompanionAnchor,
+  // Gestes de la bulle : rouvrir Canopy (sur le mode voix), quitter le compagnon, couper Claude.
+  companion: (c) => {
+    if ((c === 'open' || c === 'quit') && win && !win.isDestroyed()) {
+      if (win.isMinimized()) win.restore()
+      win.show()
+      win.focus()
+    }
+    toRenderer('companion:command', c)
+  }
+})
+
+// Mode compagnon : la fenêtre principale envoie l'état de la bulle (null = quitter). En entrant, Canopy se range
+// dans la barre des tâches ; la voix continue (pas de ralentissement en arrière-plan, voir webPreferences).
+ipcMain.on('act:stop', () => stopActing())
+ipcMain.on('win:show', () => {
+  if (!win || win.isDestroyed()) return
+  if (win.isMinimized()) win.restore()
+  win.show()
+  win.focus()
+})
+
+ipcMain.on('companion:set', (_e, state: CompanionState | null) => {
+  const entering = !!state && !toasts.companionOn
+  const leaving = !state && toasts.companionOn
+  toasts.setCompanion(state)
+  if (!win || win.isDestroyed()) return
+  if (entering) win.minimize()
+  // En sortant (à la voix, depuis la bulle ou Canopy), Canopy revient.
+  if (leaving) {
+    if (win.isMinimized()) win.restore()
+    win.show()
   }
 })
 
@@ -210,7 +249,7 @@ const daemon = new DaemonClient(app.getPath('userData'), join(__dirname, 'daemon
       console.log('[atelier] capture demandée', e.id, Date.now() - e.at, 'ms', JSON.stringify(e.params))
       if (Date.now() - e.at < 15_000) {
         const { id, params } = e
-        void capture(win, params)
+        void (params.act ? runAct(params.act) : params.desktop ? captureScreen(params.desktop).then((r) => (toasts.look(r.title ?? ''), r)) : capture(win, params))
           .then((r) => {
             console.log('[atelier] capture prête', id, r.ok, r.info.slice(0, 120))
             return daemon.rpc('captureResult', id, r)
@@ -225,6 +264,15 @@ const daemon = new DaemonClient(app.getPath('userData'), join(__dirname, 'daemon
         const { id, sessionId, params } = e
         if (win && !win.isDestroyed()) toRenderer('browser:request', { id, sessionId, params })
         else void daemon.rpc('browserResult', id, { ok: false, text: "Canopy n'est pas ouvert." }).catch(() => {})
+      }
+      return
+    }
+    // Action de Claude sur l'interface : même relais que le navigateur.
+    if (e.type === 'ui:request') {
+      if (Date.now() - e.at < 30_000) {
+        const { id, sessionId, params } = e
+        if (win && !win.isDestroyed()) toRenderer('ui:request', { id, sessionId, params })
+        else void daemon.rpc('uiResult', id, { ok: false, text: "Canopy n'est pas ouvert." }).catch(() => {})
       }
       return
     }
@@ -270,10 +318,13 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       // Artefacts claude.ai affichés en direct (session persistante « persist:claude »).
-      webviewTag: true
+      webviewTag: true,
+      // Mode voix et compagnon : micro, voix et animations continuent fenêtre réduite.
+      backgroundThrottling: false
     }
   })
   win.on('closed', () => app.quit())
+  // Revenir dans Canopy (barre des tâches, Alt+Tab) met fin au mode compagnon : pas de bulle en double.
   // État de la fenêtre pour la barre maison (bouton Agrandir / Restaurer, barre atténuée sans le focus).
   const sendState = () => toRenderer('win:state', { maximized: !!win?.isMaximized(), focused: !!win?.isFocused() })
   for (const ev of ['maximize', 'unmaximize', 'focus', 'blur', 'enter-full-screen', 'leave-full-screen'] as const) win.on(ev as 'maximize', sendState)
@@ -339,8 +390,11 @@ function createWindow() {
 
 // --- IPC : état local, puis relais vers le démon ---
 ipcMain.on('browser:result', (_e, id: string, r: BrowserResult) => void daemon.rpc('browserResult', id, r).catch(() => {}))
+ipcMain.on('ui:result', (_e, id: string, r: UiResult) => void daemon.rpc('uiResult', id, r).catch(() => {}))
 ipcMain.handle('state:snapshot', () => mirror)
 ipcMain.handle('daemon:status', () => daemonStatus)
+ipcMain.handle('voice:start', (_e, voice: string) => startVoice(voice))
+ipcMain.handle('voice:stop', () => stopVoice())
 ipcMain.handle('daemon:restart', async (_e, force?: boolean) => daemon.restart(!!force))
 ipcMain.on('view:current', (_e, id: string | null) => {
   currentSession = id

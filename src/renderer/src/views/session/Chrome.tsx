@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { HistoryEntry, Item, Project, SessionMeta } from '../../../../shared/types'
+import { UI_PANEL_EVENT, type UiPanelDetail } from '../../../../shared/ui'
 import { ago, contextWindowOf } from '../../derive'
 import { Icon, Ring, STATUS_ICON, type IconName } from '../../icons'
 import { guessLocalUrl } from '../../browser/agent'
@@ -296,6 +297,15 @@ type FileEntry = { path: string; added: number; removed: number; edits: Tool[] }
 
 export function WorkPanel({ session, items, width }: { session: SessionMeta; items: Item[]; width: number }) {
   const [tab, setTab] = useState<'files' | 'media' | 'lists' | 'ctx'>('lists')
+  // Claude choisit l'onglet (outil interface).
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<UiPanelDetail>).detail
+      if (d.sessionId === session.id && d.tab) setTab(d.tab)
+    }
+    window.addEventListener(UI_PANEL_EVENT, on)
+    return () => window.removeEventListener(UI_PANEL_EVENT, on)
+  }, [session.id])
   const nLists = useSessionChecklists(session).length
   const mediaCount = useStore((s) => s.media[session.id]?.length ?? 0)
   const [showOut, setShowOut] = useState(false)

@@ -9,6 +9,7 @@ import { Palette } from './Palette'
 import { api, useStore } from './store'
 import { BrowserHost } from './browser/Host'
 import { startBrowserAgent } from './browser/agent'
+import { startUiAgent } from './uiAgent'
 import { Icon } from './icons'
 import { TitleBar } from './titlebar'
 import { Rail } from './ui'
@@ -21,6 +22,7 @@ import { ProjectView } from './views/ProjectView'
 import { SessionView } from './views/SessionView'
 import { TilesView } from './views/TilesView'
 import { ToolsView } from './views/ToolsView'
+import { VoiceDock, VoiceView } from './voice/VoiceView'
 import { resolve, useTiles } from './tiles'
 
 function App() {
@@ -49,9 +51,11 @@ function App() {
         {view.name === 'checklists' && <ChecklistsView id={view.id} />}
         {view.name === 'tiles' && <TilesView />}
         {view.name === 'tools' && <ToolsView />}
+        {view.name === 'voice' && <VoiceView />}
       </div>
       <BrowserHost />
       <ViewerOverlay />
+      <VoiceDock />
       <Palette />
     </div>
     </TitleBar>
@@ -94,6 +98,7 @@ function DaemonBanner() {
 }
 
 startBrowserAgent()
+startUiAgent()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

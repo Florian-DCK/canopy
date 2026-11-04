@@ -1,10 +1,12 @@
 import '@fontsource-variable/inter'
 import '@fontsource-variable/jetbrains-mono'
+import '@fontsource-variable/source-serif-4'
 import { StrictMode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Toast, ToastApi, ToastState } from '../../../shared/types'
 import { Icon, type IconName } from '../icons'
 import './toast.css'
+import { Companion } from './Companion'
 
 // Fenêtre des notifications (planche 9) : toujours sombre, posée au-dessus de tout, sans prendre le focus.
 
@@ -171,6 +173,7 @@ function App() {
   }, [])
 
   // La fenêtre épouse la pile : la hauteur part au main à chaque changement.
+  // On remesure quand on passe des cartes seules à la bulle (ce n'est plus le même élément racine).
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
@@ -179,7 +182,25 @@ function App() {
     const ro = new ResizeObserver(send)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [!!st.companion])
+
+  // Mode compagnon : hors de la bulle et des cartes, la souris traverse la fenêtre vers l'application dessous.
+  const companionOn = !!st.companion
+  useEffect(() => {
+    if (!companionOn) return
+    let inside = true
+    const check = (e: MouseEvent) => {
+      const now = !!(e.target as Element | null)?.closest?.('[data-hit], .card, .pill')
+      if (now !== inside) bridge.mouse((inside = now))
+    }
+    const leave = () => inside && bridge.mouse((inside = false))
+    window.addEventListener('mousemove', check)
+    document.addEventListener('mouseleave', leave)
+    return () => {
+      window.removeEventListener('mousemove', check)
+      document.removeEventListener('mouseleave', leave)
+    }
+  }, [companionOn])
 
   const [top, ...rest] = st.toasts
   const waiting = rest.filter((t) => t.kind === 'wait' || t.kind === 'plan' || t.kind === 'question').length
@@ -195,6 +216,25 @@ function App() {
       <Icon name="chevron" size={13} className={open ? 'up' : ''} />
     </button>
   )
+  if (st.companion)
+    return (
+      <div ref={ref} className="c-root">
+        {st.toasts.length > 0 && (
+          <div className="stack from-bottom right">
+            {top && (
+              <div className={`front ${rest.length && !open ? 'has-rest' : ''}`}>
+                <Card key={top.id} t={top} now={now} />
+                {rest.length > 0 && !open && <span className="ghost g1" />}
+                {rest.length > 1 && !open && <span className="ghost g2" />}
+              </div>
+            )}
+            {open && rest.map((t) => <Card key={t.id} t={t} now={now} />)}
+            {pill}
+          </div>
+        )}
+        <Companion c={st.companion} />
+      </div>
+    )
   return (
     <div ref={ref} className={`stack ${bottom ? 'from-bottom' : 'from-top'} ${st.corner.endsWith('r') ? 'right' : 'left'}`}>
       {!bottom && pill}

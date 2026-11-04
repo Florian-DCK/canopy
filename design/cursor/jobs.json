@@ -1,0 +1,26 @@
+[
+  {
+    "name": "main-a-trait",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo\\canopy-1024.png"],
+    "prompt": "Design a mouse cursor icon in the exact same graphic style as this logo: flat shapes, one terracotta clay color (#D57151) on a plain off-white background, no gradient, no shading, no highlights. The icon is a simple cartoon pointing hand (index finger pointing up and slightly left, other fingers folded into a rounded fist, short cuff at the wrist), drawn with very few smooth rounded shapes like a hand-cut paper silhouette, bold and readable at 32 pixels. Centered, generous margin, no text."
+  },
+  {
+    "name": "main-b-gant",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo\\canopy-1024.png"],
+    "prompt": "A minimal flat icon of a friendly cartoon glove hand pointing upward with its index finger, in the style of this logo: solid terracotta clay (#D57151) shape with a single thick dark outline (#141413), rounded chunky fingers, a simple cuff band at the wrist, absolutely no gradient, no texture, no detail lines inside except one line for the cuff. Plain off-white background, centered, readable as a 32 pixel cursor, no text."
+  },
+  {
+    "name": "main-c-decoupe",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo\\canopy-1024.png"],
+    "prompt": "Pointing hand cursor icon cut out of a solid terracotta clay disc, exactly like the trees are cut out of the sun in this logo: the hand (index finger pointing up-left, rounded fist, small cuff) is a dark negative shape (#141413) inside or overlapping a clay circle (#D57151). Flat, two colors only, smooth simple curves, no gradient, plain off-white background, centered, readable at 32 pixels, no text."
+  },
+  {
+    "name": "main-d-pastille",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo\\canopy-1024.png"],
+    "prompt": "Ultra simple cartoon pointing hand cursor, drawn in one continuous rounded dark line (#141413) with a solid terracotta clay fill (#D57151), like a playful sticker: plump index finger pointing up-left, three folded fingers suggested by two small curves, round cuff. Same flat warm style as this logo, no gradient, no shading, white sticker border around the whole shape, plain off-white background, centered, no text."
+  }
+]

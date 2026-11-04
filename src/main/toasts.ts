@@ -1,11 +1,14 @@
 import { BrowserWindow, globalShortcut, ipcMain, screen } from 'electron'
 import { randomUUID } from 'node:crypto'
+import type { CompanionCommand, CompanionState } from '../shared/companion'
 import type { NotifSettings, Toast, ToastAction, ToastState } from '../shared/types'
 
 // Notifications de Canopy (planche 9) : une fenêtre à nous, sans cadre, au-dessus du plein écran,
 // qui ne vole jamais le focus. Les cartes s'empilent (attentes d'abord) dans un coin de l'écran de la souris.
 
 const WIDTH = 392
+/** Mode compagnon : la fenêtre s'élargit pour la bulle et sa ligne de texte à côté. */
+const C_WIDTH = 520
 const MARGIN = 14
 const ORDER: Record<Toast['kind'], number> = { wait: 0, question: 0, plan: 1, error: 2, done: 3 }
 const REMIND_FIRST = 2 * 60_000
@@ -20,6 +23,10 @@ type Hooks = {
   silence: (minutes: number) => void
   mute: (sessionId: string) => void
   openSettings: () => void
+  /** Mode compagnon : coin bas-droit de la bulle (mémorisé) et gestes de la bulle. */
+  anchor: () => { x: number; y: number } | null
+  setAnchor: (p: { x: number; y: number }) => void
+  companion: (c: CompanionCommand) => void
 }
 
 export class ToastCenter {
@@ -29,6 +36,10 @@ export class ToastCenter {
   private ready = false
   private shortcuts = false
   private reminded = new Map<string, number>()
+  private comp: CompanionState | null = null
+  private anchorPt: { x: number; y: number } | null = null
+  private drag: { x: number; y: number; ax: number; ay: number } | null = null
+  private passThrough = false
 
   constructor(private h: Hooks) {
     ipcMain.on('toasts:size', (e, height: number) => {
@@ -45,7 +56,70 @@ export class ToastCenter {
       this.ready = true
       this.sync()
     })
+    ipcMain.on('companion:command', (e, c: CompanionCommand) => {
+      if (e.sender === this.win?.webContents) this.h.companion(c)
+    })
+    ipcMain.on('companion:drag', (e, phase: 'start' | 'move' | 'end', x: number, y: number) => {
+      if (e.sender !== this.win?.webContents || !this.comp) return
+      const a = this.anchor()
+      if (phase === 'start') this.drag = { x, y, ax: a.x, ay: a.y }
+      else if (this.drag) {
+        this.anchorPt = { x: this.drag.ax + (x - this.drag.x), y: this.drag.ay + (y - this.drag.y) }
+        if (phase === 'end') {
+          this.drag = null
+          this.anchorPt = this.clamp(this.anchorPt)
+          this.h.setAnchor(this.anchorPt)
+        }
+        this.place()
+      }
+    })
+    // Hors de la bulle et des cartes, les clics passent à l'application dessous.
+    ipcMain.on('toasts:mouse', (e, inside: boolean) => {
+      if (e.sender !== this.win?.webContents) return
+      this.setPassThrough(!!this.comp && !inside)
+    })
     setInterval(() => this.remind(), 30_000).unref?.()
+  }
+
+  /** Mode compagnon : afficher ou mettre à jour la bulle (null = la retirer). */
+  setCompanion(state: CompanionState | null) {
+    const was = !!this.comp
+    this.comp = state
+    if (!state) this.setPassThrough(false)
+    if (!!state !== was) this.height = 0
+    this.sync()
+  }
+
+  /** Outil écran : l'œil s'allume dans la bulle quelques secondes, avec la fenêtre regardée. */
+  look(title: string) {
+    if (!this.comp || !this.win || this.win.isDestroyed()) return
+    this.win.webContents.send('companion:look', title)
+  }
+
+  get companionOn() {
+    return !!this.comp
+  }
+
+  private setPassThrough(on: boolean) {
+    if (on === this.passThrough || !this.win || this.win.isDestroyed()) return
+    this.passThrough = on
+    this.win.setIgnoreMouseEvents(on, { forward: true })
+  }
+
+  /** Coin bas-droit de la bulle : mémorisé, sinon en bas à droite de l'écran principal. */
+  private anchor() {
+    if (!this.anchorPt) this.anchorPt = this.h.anchor()
+    if (!this.anchorPt) {
+      const a = screen.getPrimaryDisplay().workArea
+      this.anchorPt = { x: a.x + a.width - 24, y: a.y + a.height - 24 }
+    }
+    return this.anchorPt
+  }
+
+  /** La bulle reste entière sur l'écran où on l'a lâchée. */
+  private clamp(p: { x: number; y: number }) {
+    const a = screen.getDisplayNearestPoint(p).workArea
+    return { x: Math.min(Math.max(p.x, a.x + 96), a.x + a.width - 8), y: Math.min(Math.max(p.y, a.y + 96), a.y + a.height - 8) }
   }
 
   get all(): readonly Toast[] {
@@ -144,7 +218,7 @@ export class ToastCenter {
 
   private sync() {
     this.shortcutsFor(this.list.some((t) => t.kind === 'wait'))
-    if (!this.list.length) {
+    if (!this.list.length && !this.comp) {
       if (this.win && !this.win.isDestroyed()) this.win.hide()
       this.height = 0
       return
@@ -152,7 +226,7 @@ export class ToastCenter {
     const w = this.ensureWindow()
     if (!this.ready) return
     const s = this.h.settings()
-    const state: ToastState = { toasts: this.list, sound: s.sound, corner: s.corner }
+    const state: ToastState = { toasts: this.list, sound: s.sound, corner: this.comp ? 'br' : s.corner, companion: this.comp }
     w.webContents.send('toasts:state', state)
     this.place()
   }
@@ -160,7 +234,14 @@ export class ToastCenter {
   /** Coin choisi, sur l'écran où se trouve la souris. */
   private place() {
     const w = this.win
-    if (!w || w.isDestroyed() || !this.list.length || !this.height) return
+    if (!w || w.isDestroyed() || (!this.list.length && !this.comp) || !this.height) return
+    if (this.comp) {
+      // La fenêtre pend au-dessus et à gauche du coin de la bulle : les cartes s'empilent au-dessus d'elle.
+      const a = this.anchor()
+      w.setBounds({ x: Math.round(a.x - C_WIDTH), y: Math.round(a.y - this.height), width: C_WIDTH, height: this.height })
+      if (!w.isVisible()) w.showInactive()
+      return
+    }
     const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
     const corner = this.h.settings().corner
     const x = corner.endsWith('r') ? area.x + area.width - WIDTH - MARGIN : area.x + MARGIN

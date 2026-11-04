@@ -12,6 +12,7 @@ import { appendFileSync, existsSync, readFileSync, statSync, unlinkSync, writeFi
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { emptyState, reduce, type AppState } from '../shared/state'
 import type { BrowserResult } from '../shared/browser'
+import type { UiResult } from '../shared/ui'
 import type { AppEvent, CaptureResult, SessionMeta } from '../shared/types'
 import { Checklists } from './checklists'
 import { MediaStore } from './media'
@@ -96,6 +97,23 @@ sessions.browser = (sessionId, params) =>
       resolve(r)
     })
     emit({ type: 'browser:request', id, sessionId, params, at: Date.now() })
+  })
+// Interface : même courtier (événement ui:request, réponse par RPC uiResult).
+const uis = new Map<string, (r: UiResult) => void>()
+sessions.ui = (sessionId, params) =>
+  new Promise<UiResult>((resolve) => {
+    if (!clients.size) return resolve({ ok: false, text: 'Aucune fenêtre Canopy connectée : ouvre Canopy puis réessaie.' })
+    const id = randomBytes(8).toString('hex')
+    const timer = setTimeout(() => {
+      uis.delete(id)
+      resolve({ ok: false, text: "L'interface n'a pas répondu (15 s)." })
+    }, 15_000)
+    uis.set(id, (r) => {
+      clearTimeout(timer)
+      uis.delete(id)
+      resolve(r)
+    })
+    emit({ type: 'ui:request', id, sessionId, params, at: Date.now() })
   })
 // Checklists : fichiers du projet ; on notifie après chaque écriture (RPC, outil de Claude, fichier modifié à la main).
 sessions.checklists = new Checklists(listProjects, (ids) => emit({ type: 'checklists:changed', ids }))
@@ -245,6 +263,7 @@ const rpc: Record<string, (...a: any[]) => unknown> = {
   refreshUsage: () => usage.refresh(),
   captureResult: (id: string, r: CaptureResult) => captures.get(id)?.(r),
   browserResult: (id: string, r: BrowserResult) => browsers.get(id)?.(r),
+  uiResult: (id: string, r: UiResult) => uis.get(id)?.(r),
   // Capture sans passer par une session (scripts, tests).
   capture: (params: any) => sessions.capture!('', params ?? {}),
   shutdown: (force?: boolean) => shutdown(!!force)
