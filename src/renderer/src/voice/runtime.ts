@@ -28,6 +28,12 @@ export type StageEntry =
   | { id: string; kind: 'diff'; diff: FileDiff }
   | { id: string; kind: 'artifact'; url: string; title?: string }
   | { id: string; kind: 'scene'; block: SceneBlock }
+  /** Fichiers modifiés pendant le tour : ampleur et une phrase par fichier (pas de code). */
+  | { id: string; kind: 'changes'; files: ChangedFile[] }
+  /** Deux captures du même élément de Canopy pendant le tour : avant, après. */
+  | { id: string; kind: 'ba'; before: MediaItem; after: MediaItem; label: string }
+
+export type ChangedFile = { path: string; added: number; removed: number; note?: string }
 
 type VoiceState = {
   stage: StageEntry[]
@@ -333,15 +339,81 @@ function collectStage(sid: string, items: Item[], since: number) {
   const add: StageEntry[] = []
   for (const it of items) {
     if (it.at < since || it.kind !== 'tool') continue
-    // Les fichiers modifiés (diffs) ne vont pas à l'écran du mode voix : illisibles à distance, ils restent dans la session.
+    // Les fichiers modifiés ne vont pas à l'écran en code : ils forment le récap (voir plus bas).
     if (it.artifact && !have.has(it.id)) add.push({ id: it.id, kind: 'artifact', url: it.artifact.url, title: it.artifact.title })
   }
   const said = items.filter((i) => i.at >= since && i.kind === 'text').map((i) => (i as { text: string }).text.toLowerCase()).join('\n')
+  // Avant · après : les captures de Canopy faites avec les mêmes réglages (même vue, même élément) pendant le tour.
+  const tools = new Map(items.filter((i) => i.kind === 'tool' && i.at >= since).map((i) => [i.id, i as Extract<Item, { kind: 'tool' }>]))
+  const shots = new Map<string, MediaItem[]>()
+  for (const m of useStore.getState().media[sid] ?? []) {
+    const t = tools.get(m.itemId)
+    if (m.kind !== 'image' || t?.name !== 'mcp__atelier__capture') continue
+    shots.set(t.summary, [...(shots.get(t.summary) ?? []), m])
+  }
+  const paired = new Set<string>()
+  for (const [label, ms] of shots) {
+    if (ms.length < 2) continue
+    const id = `ba:${ms[0].id}`
+    ms.forEach((m) => paired.add(m.id))
+    const after = ms[ms.length - 1]
+    const old = cur.find((e) => e.id === id)
+    if (!old) add.push({ id, kind: 'ba', before: ms[0], after, label: baLabel(label) })
+    else if (old.kind === 'ba' && old.after.id !== after.id) set((v) => ({ stage: v.stage.map((e) => (e.id === id ? { ...old, after } : e)) }))
+  }
   for (const m of useStore.getState().media[sid] ?? []) {
     const cited = m.source === 'mention' && said.includes(m.path.toLowerCase())
-    if ((m.at >= since || cited) && (m.kind === 'image' || m.kind === 'video') && m.source !== 'attach' && !have.has(m.id)) add.push({ id: m.id, kind: m.kind, media: m })
+    if ((m.at >= since || cited) && (m.kind === 'image' || m.kind === 'video') && m.source !== 'attach' && !have.has(m.id) && !paired.has(m.id)) add.push({ id: m.id, kind: m.kind, media: m })
   }
+  // Une capture déjà montrée seule qui trouve sa paire : elle laisse la place à l'avant · après.
+  if (paired.size && cur.some((e) => paired.has(e.id))) set((v) => ({ stage: v.stage.filter((e) => !paired.has(e.id)) }))
+  collectChanges(items, since, add)
   if (add.length) setStage(add)
+}
+
+/** « {"mode":"current","selector":".v-bar"} » → « .v-bar » : de quoi nommer l'élément. */
+function baLabel(summary: string): string {
+  try {
+    const o = JSON.parse(summary)
+    return o.selector ?? o.view ?? 'Canopy'
+  } catch {
+    return /"selector":"([^"]+)"/.exec(summary)?.[1] ?? 'Canopy'
+  }
+}
+
+/** Récap des fichiers modifiés : une seule entrée par tour, mise à jour au fil des modifications. */
+let recapTimer: ReturnType<typeof setTimeout> | null = null
+function collectChanges(items: Item[], since: number, add: StageEntry[]) {
+  const by = new Map<string, { path: string; added: number; removed: number; lines: string[] }>()
+  for (const it of items) {
+    if (it.at < since || it.kind !== 'tool' || !it.diff) continue
+    const f = by.get(it.diff.path) ?? { path: it.diff.path, added: 0, removed: 0, lines: [] }
+    f.added += it.diff.added
+    f.removed += it.diff.removed
+    f.lines.push(...it.diff.lines.filter((l) => l.t !== ' ').slice(0, 40).map((l) => `${l.t}${l.s}`))
+    by.set(it.diff.path, f)
+  }
+  if (!by.size) return
+  const id = `changes:${since}`
+  const prev = useVoice.getState().stage.find((e) => e.id === id)
+  const notes = prev?.kind === 'changes' ? Object.fromEntries(prev.files.map((f) => [f.path, f.note])) : {}
+  const files: ChangedFile[] = [...by.values()].map((f) => ({ path: f.path, added: f.added, removed: f.removed, note: notes[f.path] }))
+  if (prev?.kind === 'changes') {
+    if (JSON.stringify(prev.files.map((f) => [f.path, f.added, f.removed])) === JSON.stringify(files.map((f) => [f.path, f.added, f.removed]))) return
+    set((v) => ({ stage: v.stage.map((e) => (e.id === id ? { id, kind: 'changes', files } : e)) }))
+  } else add.push({ id, kind: 'changes', files })
+  // Les phrases arrivent quand les modifications se calment (3 s sans nouveau changement).
+  if (recapTimer) clearTimeout(recapTimer)
+  recapTimer = setTimeout(() => {
+    const todo = [...by.values()].filter((f) => !notes[f.path]).map((f) => ({ path: f.path, lines: f.lines.join('\n') }))
+    if (!todo.length) return
+    void api
+      .summarizeChanges(todo)
+      .then((got) =>
+        set((v) => ({ stage: v.stage.map((e) => (e.id === id && e.kind === 'changes' ? { ...e, files: e.files.map((f) => ({ ...f, note: f.note ?? got[f.path] })) } : e)) }))
+      )
+      .catch(() => {})
+  }, 3000)
 }
 
 /** Premier ajout d'un tour : remplace la scène ; ensuite, s'y ajoute. */

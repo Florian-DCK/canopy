@@ -4,7 +4,7 @@ import { thumbUrl } from '../media'
 import { api, useStore } from '../store'
 import { CanopyMark, type MarkState } from './CanopyMark'
 import { clearStage, setMicMuted, hush, voiceLevels, selectStage, setVoiceSession, setMute, startVoice, stopVoice, useVoice, type StageEntry, type VoicePhase } from './runtime'
-import { StageBody, stageInfo } from './Scene'
+import { Changes, StageBody, stageInfo } from './Scene'
 import { Avatar } from './Avatar'
 import { useVoicePrefs } from './prefs'
 import { withTransition } from './transition'
@@ -227,6 +227,11 @@ function Stage({ entries, cur, sessionId }: { entries: StageEntry[]; cur: StageE
       <div key={cur.id} className="v-stage-body">
         <StageBody e={cur} />
       </div>
+      {/* Avant · après : le récap des fichiers se glisse juste dessous. */}
+      {cur.kind === 'ba' && (() => {
+        const ch = entries.find((x) => x.kind === 'changes')
+        return ch?.kind === 'changes' ? <Changes files={ch.files} compact /> : null
+      })()}
       <div className="v-stage-info">
         <span className="v-stage-t">{info.title}</span>
         <span>{info.meta}</span>

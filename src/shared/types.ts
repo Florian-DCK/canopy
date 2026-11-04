@@ -351,6 +351,8 @@ export type AtelierApi = {
   deleteAgent(path: string): Promise<void>
   setAgentEnabled(projectId: string, name: string, enabled: boolean): Promise<void>
   draftAgent(text: string): Promise<AgentDraft & { why: string }>
+  /** Mode voix : une phrase par fichier modifié (Haiku). */
+  summarizeChanges(files: { path: string; lines: string }[]): Promise<Record<string, string>>
   reconnectMcp(projectId: string, name: string): Promise<void>
   listMemory(projectId: string): Promise<MemoryList>
   writeMemory(projectId: string, file: string, raw: string): Promise<void>

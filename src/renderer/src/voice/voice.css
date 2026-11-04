@@ -248,3 +248,18 @@
 /* Les icônes du cadre ne prennent pas le style des anciens boutons texte. */
 .v-stage-info .v-tools .v-ibtn { width: 30px; height: 30px; padding: 0; border: none; border-radius: 50%; }
 .v-stage-info .v-tools { flex: none; }
+
+/* Récap des fichiers modifiés et avant · après (à la place des diffs de code). */
+.sc-changes { padding: 12px 16px; display: flex; flex-direction: column; gap: 9px; max-width: 760px; }
+.sc-changes.compact { padding: 10px 14px; gap: 7px; flex: none; }
+.sc-ch { display: grid; grid-template-columns: minmax(0, 190px) 70px minmax(0, 1fr); align-items: center; gap: 14px; font-size: 13.5px; }
+.sc-ch b { font-weight: 500; color: #F5F4EE; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-ch > span:last-child { color: #D1CFC5; line-height: 1.4; }
+.sc-ch-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(240, 238, 230, 0.08); }
+.sc-ch-bar .add { background: #7FB38A; }
+.sc-ch-bar .del { background: #D57151; }
+.sc-ba { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-height: 100%; min-height: 0; }
+.sc-ba-pane { margin: 0; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: #1F1E1D; box-shadow: 0 0 0 0.5px rgba(240, 238, 230, 0.14); }
+.sc-ba-pane figcaption { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #8F8D86; }
+.sc-ba-pane.after figcaption { color: #D57151; }
+.sc-ba-pane img { width: 100%; min-height: 0; object-fit: contain; border-radius: 8px; background: #141413; }

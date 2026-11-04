@@ -23,6 +23,7 @@ import { listCommands, listFiles } from './suggest'
 import { CLAUDE_DIR, setSkillEnabled } from './tooling'
 import { forgetMemory, listMemory, moveMemory, writeMemory } from './memory'
 import { deleteAgent, draftAgent, listAgents, saveAgent, setAgentEnabled } from './agents'
+import { summarizeChanges } from './recap'
 import { UsageProbe } from './usage'
 
 // Journal : le démon est lancé sans console, il écrit lui-même dans daemon.log.
@@ -241,6 +242,7 @@ const rpc: Record<string, (...a: any[]) => unknown> = {
   deleteAgent: (path: string) => deleteAgent(path),
   setAgentEnabled: (projectId: string, name: string, enabled: boolean) => setAgentEnabled(pathOf(projectId), name, enabled),
   draftAgent: (text: string) => draftAgent(text),
+  summarizeChanges: (files: { path: string; lines: string }[]) => summarizeChanges(files),
   listMemory: (projectId: string) => listMemory(pathOf(projectId)),
   writeMemory: (projectId: string, file: string, raw: string) => writeMemory(pathOf(projectId), file, raw),
   forgetMemory: (projectId: string, file: string) => forgetMemory(pathOf(projectId), file),

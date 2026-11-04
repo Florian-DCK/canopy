@@ -1,8 +1,8 @@
 import type { SceneBlock, SceneItem } from '../../../shared/scene'
-import type { FileDiff } from '../../../shared/types'
+import type { FileDiff, MediaItem } from '../../../shared/types'
 import { Icon } from '../icons'
 import { mediaUrl } from '../media'
-import type { StageEntry } from './runtime'
+import type { ChangedFile, StageEntry } from './runtime'
 
 // Scène du mode voix (planches 29 et 30) : ce qui s'affiche à droite du soleil.
 
@@ -237,6 +237,39 @@ function Diff({ d }: { d: FileDiff }) {
   )
 }
 
+/** Récap des fichiers modifiés : nom, ampleur (barre ajouts / retraits), une phrase. */
+export function Changes({ files, compact }: { files: ChangedFile[]; compact?: boolean }) {
+  const max = Math.max(1, ...files.map((f) => f.added + f.removed))
+  return (
+    <div className={`sc-card sc-changes${compact ? ' compact' : ''}`}>
+      {files.map((f) => (
+        <div key={f.path} className="sc-ch">
+          <b title={f.path}>{f.path.split(/[\\/]/).pop()}</b>
+          <span className="sc-ch-bar" style={{ width: `${Math.max(14, ((f.added + f.removed) / max) * 64)}px` }} title={`+${f.added} −${f.removed}`}>
+            <i className="add" style={{ flex: Math.max(f.added, 0.0001) }} />
+            <i className="del" style={{ flex: f.removed }} />
+          </span>
+          <span className={f.note ? '' : 'sc-muted'}>{f.note ?? 'Je résume…'}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Avant · après : deux captures du même élément, côte à côte. */
+function ShotsBeforeAfter({ e }: { e: Extract<StageEntry, { kind: 'ba' }> }) {
+  return (
+    <div className="sc-ba">
+      {[['Avant', e.before], ['Après', e.after]].map(([label, m]) => (
+        <figure key={label as string} className={`sc-ba-pane${label === 'Après' ? ' after' : ''}`}>
+          <figcaption>{label as string}</figcaption>
+          <img src={mediaUrl((m as MediaItem).id)} alt={`${label as string} : ${e.label}`} draggable={false} />
+        </figure>
+      ))}
+    </div>
+  )
+}
+
 /** Titre et précisions sous le bloc. */
 export function stageInfo(e: StageEntry): { title: string; meta: string } {
   switch (e.kind) {
@@ -245,6 +278,8 @@ export function stageInfo(e: StageEntry): { title: string; meta: string } {
     case 'diff': return { title: e.diff.path.split(/[\\/]/).pop() ?? e.diff.path, meta: `${e.diff.path} · +${e.diff.added} −${e.diff.removed}` }
     case 'artifact': return { title: e.title ?? 'Artefact', meta: 'Artefact claude.ai' }
     case 'scene': return { title: e.block.title, meta: e.block.subtitle ?? '' }
+    case 'changes': return { title: 'Ce que j’ai changé', meta: `${e.files.length} fichier${e.files.length > 1 ? 's' : ''}` }
+    case 'ba': return { title: 'Avant · après', meta: e.label }
   }
 }
 
@@ -255,5 +290,7 @@ export function StageBody({ e }: { e: StageEntry }) {
     case 'diff': return <Diff d={e.diff} />
     case 'artifact': return <div className="sc-card sc-pad sc-art"><Icon name="artifact" size={28} /><span>{e.title ?? 'Artefact publié'}</span><span className="sc-muted">{e.url}</span></div>
     case 'scene': return <SceneView b={e.block} />
+    case 'changes': return <Changes files={e.files} />
+    case 'ba': return <ShotsBeforeAfter e={e} />
   }
 }

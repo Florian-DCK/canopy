@@ -520,6 +520,7 @@ const RELAY: Record<string, string> = {
   'agents:delete': 'deleteAgent',
   'agents:enable': 'setAgentEnabled',
   'agents:draft': 'draftAgent',
+  'voice:recap': 'summarizeChanges',
   'memory:list': 'listMemory',
   'memory:write': 'writeMemory',
   'memory:forget': 'forgetMemory',

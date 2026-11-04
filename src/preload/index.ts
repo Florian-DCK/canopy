@@ -39,6 +39,7 @@ const api: AtelierApi = {
   deleteAgent: (path) => ipcRenderer.invoke('agents:delete', path),
   setAgentEnabled: (projectId, name, enabled) => ipcRenderer.invoke('agents:enable', projectId, name, enabled),
   draftAgent: (text) => ipcRenderer.invoke('agents:draft', text),
+  summarizeChanges: (files) => ipcRenderer.invoke('voice:recap', files),
   reconnectMcp: (projectId, name) => ipcRenderer.invoke('tools:reconnect', projectId, name),
   listMemory: (projectId) => ipcRenderer.invoke('memory:list', projectId),
   writeMemory: (projectId, file, raw) => ipcRenderer.invoke('memory:write', projectId, file, raw),
