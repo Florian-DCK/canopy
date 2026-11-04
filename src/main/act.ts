@@ -14,6 +14,12 @@ let hideTimer: ReturnType<typeof setTimeout> | null = null
 let stoppedUntil = 0
 let last = { x: 0, y: 0 }
 
+/** Rectangle (pixels physiques) d'un élément de la fenêtre active, ou null. */
+export async function locate(target: string, kind?: string) {
+  const r = await ps({ action: 'locate', target, kind })
+  return r.ok && r.rect ? r.rect : null
+}
+
 /** « Stop » : plus aucune action pendant quelques secondes, la main disparaît. */
 export function stopActing() {
   stoppedUntil = Date.now() + 8000

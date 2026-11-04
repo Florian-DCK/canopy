@@ -158,6 +158,7 @@ export type CaptureParams = {
   desktop?: 'screen' | 'window'
   /** Outil agir : un geste de Claude sur l'écran de l'utilisateur. */
   act?: ActParams
+  mark?: MarkParams
   view?: 'session' | 'cockpit' | 'history' | 'projects' | 'tiles' | 'tools'
   sessionId?: string
   theme?: 'light' | 'dark'
@@ -185,6 +186,33 @@ export type ActParams = {
   append?: boolean
   keys?: string
   look?: boolean
+}
+
+/** Une cible à mettre en évidence : un élément par son nom (accessibilité), ou une position en pixels de la capture d'écran. */
+export type MarkTarget = {
+  /** Nom d'un élément de la fenêtre active (comme pour act), et son type pour départager. */
+  target?: string
+  uiKind?: string
+  x?: number
+  y?: number
+  w?: number
+  h?: number
+  /** Forme : rect (défaut) ou ellipse ; points = contour libre ; lines = lignes d'un texte. */
+  shape?: 'rect' | 'ellipse'
+  points?: [number, number][]
+  lines?: { x: number; y: number; w: number; h: number }[]
+  /** Ce que c'est : décide du style en mode auto. */
+  kind?: 'text' | 'element' | 'chart' | 'image' | 'other'
+}
+export type MarkParams = {
+  targets?: MarkTarget[]
+  /** auto (défaut) : texte → souligner, élément ou graphique → entourer, photo ou image → projecteur. */
+  style?: 'auto' | 'circle' | 'underline' | 'spotlight'
+  kind?: MarkTarget['kind']
+  /** Étapes numérotées, dessinées l'une après l'autre. */
+  steps?: boolean
+  seconds?: number
+  clear?: boolean
 }
 
 export type CaptureResult = { ok: boolean; image?: string; info: string }

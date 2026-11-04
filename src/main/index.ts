@@ -10,6 +10,7 @@ import type { CompanionPrefs, CaptureResult, AppEvent, Item, NotifInfo, NotifSet
 import { capture } from './capture'
 import { captureScreen } from './screen'
 import { runAct, stopActing } from './act'
+import { runMark } from './mark'
 import { restoreDuck, setDuck } from './duck'
 import { DaemonClient, type DaemonStatus } from './daemon'
 import { MediaServer, registerMediaScheme } from './media'
@@ -259,7 +260,7 @@ const daemon = new DaemonClient(app.getPath('userData'), join(__dirname, 'daemon
         // Autorisations de la page Paramètres : regarder l'écran, agir dessus.
         const prefs = getCompanionPrefs()
         const denied = (what: string): Promise<CaptureResult> => Promise.resolve({ ok: false, info: `${what} est désactivé dans les Paramètres de Canopy (section Compagnon). Demande à l'utilisateur de l'activer s'il le souhaite.` })
-        void (params.act ? (prefs.act ? runAct(params.act) : denied('Agir à l’écran')) : params.desktop ? (prefs.screen ? captureScreen(params.desktop).then((r) => (toasts.look(r.title ?? ''), r)) : denied('Regarder l’écran')) : capture(win, params))
+        void (params.mark ? runMark(params.mark) : params.act ? (prefs.act ? runAct(params.act) : denied('Agir à l’écran')) : params.desktop ? (prefs.screen ? captureScreen(params.desktop).then((r) => (toasts.look(r.title ?? ''), r)) : denied('Regarder l’écran')) : capture(win, params))
           .then((r) => {
             console.log('[atelier] capture prête', id, r.ok, r.info.slice(0, 120))
             return daemon.rpc('captureResult', id, r)

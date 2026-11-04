@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync } from 'node:fs'
-import type { ActParams,
+import type { ActParams, MarkParams,
   AppEvent,
   ArtifactRef,
   Attachment,
@@ -387,7 +387,25 @@ export class SessionManager {
         }
       }
     )
-    return createSdkMcpServer({ name: 'atelier', version: '1.0.0', tools: [capture, browser, checklist, question, ui, scene, screenTool, actTool] })
+    const rect = { x: z.number(), y: z.number(), w: z.number(), h: z.number() }
+    const markTool = tool(
+      'mark',
+      "Met en évidence une zone de l'écran de l'utilisateur (hors de Canopy) : un trait argile dessiné à main levée par-dessus tout, que les clics traversent, effacé au bout de quelques secondes. Cible : target = nom d'un élément de la fenêtre active (comme act, + uiKind pour départager), ou position en pixels de la dernière capture de mcp__atelier__screen : x, y, w, h (+ shape ellipse pour un rond), points = contour libre (zone d'un graphique, région d'une photo), lines = rectangles des lignes d'un texte. kind dit ce que c'est et choisit le style (style auto) : text → souligner, element ou chart → entourer, image (photo, zone d'image) → projecteur (le reste s'assombrit). Force style seulement si l'utilisateur le demande. steps : plusieurs cibles numérotées, dessinées l'une après l'autre au rythme de ta voix. clear : effacer. Montre en même temps que tu en parles.",
+      {
+        targets: z.array(z.object({ target: z.string().optional(), uiKind: z.string().optional(), ...Object.fromEntries(Object.entries(rect).map(([k, v]) => [k, v.optional()])), shape: z.enum(['rect', 'ellipse']).optional(), points: z.array(z.tuple([z.number(), z.number()])).optional(), lines: z.array(z.object(rect)).optional(), kind: z.enum(['text', 'element', 'chart', 'image', 'other']).optional() })).max(8).optional(),
+        style: z.enum(['auto', 'circle', 'underline', 'spotlight']).optional(),
+        kind: z.enum(['text', 'element', 'chart', 'image', 'other']).optional(),
+        steps: z.boolean().optional(),
+        seconds: z.number().min(2).max(60).optional(),
+        clear: z.boolean().optional()
+      },
+      async (args: MarkParams) => {
+        if (!this.capture) return { content: [{ type: 'text', text: "Canopy n'est pas ouvert." }], isError: true }
+        const r = await this.capture(s.meta.id, { mark: args })
+        return { content: [{ type: 'text', text: r.info }], isError: !r.ok }
+      }
+    )
+    return createSdkMcpServer({ name: 'atelier', version: '1.0.0', tools: [capture, browser, checklist, question, ui, scene, screenTool, actTool, markTool] })
   }
 
   private emitMedia(m: MediaItem | null) {
@@ -712,7 +730,7 @@ export class SessionManager {
         ...(this.capture || this.browser
           ? {
               mcpServers: { atelier: this.atelierMcp(s, createSdkMcpServer, tool) },
-              allowedTools: [...(this.capture ? ['mcp__atelier__capture'] : []), ...(this.checklists ? ['mcp__atelier__checklist'] : []), 'mcp__atelier__question', ...(this.ui ? ['mcp__atelier__interface', 'mcp__atelier__scene'] : []), ...(this.capture ? ['mcp__atelier__screen', 'mcp__atelier__act'] : [])]
+              allowedTools: [...(this.capture ? ['mcp__atelier__capture'] : []), ...(this.checklists ? ['mcp__atelier__checklist'] : []), 'mcp__atelier__question', ...(this.ui ? ['mcp__atelier__interface', 'mcp__atelier__scene'] : []), ...(this.capture ? ['mcp__atelier__screen', 'mcp__atelier__act', 'mcp__atelier__mark'] : [])]
             }
           : {}),
         canUseTool: (toolName, input, opts) => this.ask(s, toolName, input, opts)
