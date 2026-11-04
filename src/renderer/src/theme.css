@@ -83,7 +83,7 @@ button { cursor: pointer; }
 .scroll { flex: 1; min-height: 0; overflow: auto; }
 
 /* Rail */
-.rail { width: 64px; flex: none; background: var(--g150); border-right: 0.5px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 0; }
+.rail { width: 64px; flex: none; background: var(--head); border-right: 0.5px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 0; }
 .rail .logo { width: 36px; height: 36px; display: block; margin-bottom: 14px; }
 .rail > button, .ns-wrap > button { width: 44px; height: 44px; border-radius: 10px; border: none; background: transparent; color: var(--g550); display: flex; align-items: center; justify-content: center; position: relative; }
 .rail > button[aria-current='page'] { background: var(--white); color: var(--slate); box-shadow: 0 0 0 0.5px var(--line); }

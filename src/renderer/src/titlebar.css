@@ -2,11 +2,13 @@
 #root { display: flex; flex-direction: column; }
 #root > .app { flex: 1; min-height: 0; height: auto; }
 
-.titlebar { height: 44px; flex: none; position: relative; z-index: 20; display: flex; align-items: center; background: var(--head); border-bottom: 0.5px solid var(--line); -webkit-app-region: drag; user-select: none; container-type: inline-size; }
+.titlebar { height: 44px; flex: none; position: relative; z-index: 20; display: flex; align-items: center; background: var(--head); -webkit-app-region: drag; user-select: none; container-type: inline-size; }
 /* Tout ce qui se clique échappe au glisser de la fenêtre. */
 .titlebar :is(button, input, a, select, [role='tab'], .menu, .menu-wrap, .usage-pop) { -webkit-app-region: no-drag; }
 
-.tb-logo { width: 64px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; border-right: 0.5px solid var(--line); }
+/* Barre latérale, coin du logo et barre du haut : une seule surface continue, en L. Le trait ne borde que le contenu. */
+.titlebar::after { content: ''; position: absolute; left: 64px; right: 0; bottom: 0; height: 0.5px; background: var(--line); pointer-events: none; }
+.tb-logo { width: 64px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; }
 .tb-logo img { width: 24px; height: 24px; display: block; }
 .tb-left { min-width: 0; display: flex; align-items: center; flex: 0 1 auto; overflow: hidden; }
 .tb-right { display: flex; align-items: center; flex: none; }
