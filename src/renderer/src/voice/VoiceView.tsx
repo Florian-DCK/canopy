@@ -3,7 +3,7 @@ import { Icon } from '../icons'
 import { thumbUrl } from '../media'
 import { api, useStore } from '../store'
 import { CanopyMark, type MarkState } from './CanopyMark'
-import { clearStage, setMicMuted, hush, voiceLevels, selectStage, setVoiceSession, setMute, setVoiceName, startVoice, stopVoice, useVoice, VOICES, type StageEntry, type VoicePhase } from './runtime'
+import { clearStage, setMicMuted, hush, voiceLevels, selectStage, setVoiceSession, setMute, startVoice, stopVoice, useVoice, type StageEntry, type VoicePhase } from './runtime'
 import { StageBody, stageInfo } from './Scene'
 import { Avatar } from './Avatar'
 import { useVoicePrefs } from './prefs'
@@ -91,26 +91,28 @@ export function VoiceView() {
       <div className="v-bar">
         {!session && <span className="v-with">Aucune session : ouvre-en une pour lui parler</span>}
         <span style={{ flex: 1 }} />
-        <MicButton />
-        <button type="button" aria-pressed={v.mute} onClick={() => setMute(!v.mute)} title="Mode fantôme : Claude travaille pareil mais ne répond plus à voix haute. À la voix : « passe en mode fantôme », « quitte le mode fantôme ».">{v.mute ? 'Mode fantôme' : 'Réponses à voix haute'}</button>
-        <span>Voix</span>
-        <div className="v-seg" role="group" aria-label="Voix">
-          {VOICES.map((x) => (
-            <button key={x.id} type="button" aria-pressed={v.voice === x.id} onClick={() => setVoiceName(x.id)}>{x.label}</button>
-          ))}
+        {/* Commandes en icônes ; leur nom apparaît au survol. Le choix de la voix est dans les Paramètres. */}
+        <div className="v-tools" role="toolbar" aria-label="Mode voix">
+          {v.phase === 'speak' && <VBtn label="Couper Claude (Échap)" onClick={hush}><Icon name="stop" size={16} /></VBtn>}
+          {v.phase === 'error' && <VBtn label="Réessayer" onClick={() => void startVoice()}><Icon name="restart" size={16} /></VBtn>}
+          <MicButton />
+          <VBtn label={v.mute ? 'Mode fantôme : Claude ne répond plus à voix haute' : 'Réponses à voix haute'} pressed={v.mute} className={v.mute ? 'warn' : ''} onClick={() => setMute(!v.mute)}>
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9.5h3l4.5-4v13L7 14.5H4z" />{v.mute ? <path d="M16 9.5l5 5M21 9.5l-5 5" /> : <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />}</svg>
+          </VBtn>
+          <VBtn label="Mode compagnon : une bulle reste sur ton bureau" onClick={() => setCompanion(true)}>
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2.5" /><circle cx="16.5" cy="13.5" r="3.2" fill="currentColor" stroke="none" /><path d="M8 21h8" /></svg>
+          </VBtn>
+          <span className="v-tools-sep" aria-hidden="true" />
+          <VBtn
+            label="Quitter le mode voix"
+            onClick={() => {
+              stopVoice()
+              go(v.sessionId ? { name: 'session', sessionId: v.sessionId } : { name: 'cockpit' })
+            }}
+          >
+            <Icon name="close" size={16} />
+          </VBtn>
         </div>
-        {v.phase === 'speak' && <button type="button" onClick={hush} title="Couper Claude (Échap)"><Icon name="stop" size={14} />Couper</button>}
-        {v.phase === 'error' && <button type="button" onClick={() => void startVoice()}><Icon name="restart" size={14} />Réessayer</button>}
-        <button type="button" onClick={() => setCompanion(true)} title="Canopy se range ; une bulle reste au-dessus de ton bureau et continue d'écouter">Mode compagnon</button>
-        <button
-          type="button"
-          onClick={() => {
-            stopVoice()
-            go(v.sessionId ? { name: 'session', sessionId: v.sessionId } : { name: 'cockpit' })
-          }}
-        >
-          <Icon name="close" size={14} />Quitter le mode voix
-        </button>
       </div>
     </main>
   )
@@ -223,9 +225,11 @@ function Stage({ entries, cur, sessionId }: { entries: StageEntry[]; cur: StageE
         <span>{info.meta}</span>
         <span style={{ flex: 1 }} />
         {entries.length > 1 && <span>{entries.indexOf(cur) + 1} / {entries.length}</span>}
-        {(cur.kind === 'image' || cur.kind === 'video' || cur.kind === 'artifact') && <button type="button" onClick={open}>Ouvrir en grand</button>}
-        {sessionId && <button type="button" onClick={() => st.go({ name: 'session', sessionId })}>Voir dans la session</button>}
-        <button type="button" onClick={clearStage} title="Retirer de l'écran"><Icon name="close" size={13} /></button>
+        <div className="v-tools small" role="toolbar" aria-label="Ce que Claude montre">
+          {(cur.kind === 'image' || cur.kind === 'video' || cur.kind === 'artifact') && <VBtn label="Ouvrir en grand" onClick={open}><Icon name="expand" size={15} /></VBtn>}
+          {sessionId && <VBtn label="Voir dans la session" onClick={() => st.go({ name: 'session', sessionId })}><Icon name="conversation" size={15} /></VBtn>}
+          <VBtn label="Retirer de l’écran" onClick={clearStage}><Icon name="close" size={15} /></VBtn>
+        </div>
       </div>
       {entries.length > 1 && (
         <div className="v-thumbs">
@@ -240,14 +244,22 @@ function Stage({ entries, cur, sessionId }: { entries: StageEntry[]; cur: StageE
   )
 }
 
+/** Bouton rond à icône ; son nom s'affiche au survol (bulle) et sert aux lecteurs d'écran. */
+function VBtn({ label, onClick, pressed, className, children }: { label: string; onClick: () => void; pressed?: boolean; className?: string; children: React.ReactNode }) {
+  return (
+    <button type="button" className={`v-ibtn ${className ?? ''}`} aria-label={label} aria-pressed={pressed} data-tip={label} onClick={onClick}>
+      {children}
+    </button>
+  )
+}
+
 /** Couper ou rendre ton micro : je n'entends plus rien tant qu'il est coupé. */
 function MicButton() {
   const muted = useVoice((v) => v.micMuted)
   return (
-    <button type="button" className={`v-mic${muted ? ' off' : ''}`} aria-pressed={muted} onClick={() => setMicMuted(!muted)} title={muted ? 'Réactiver le micro' : 'Couper le micro'}>
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />{muted && <path d="M4 4l16 16" />}</svg>
-      {muted ? 'Micro coupé' : 'Micro'}
-    </button>
+    <VBtn label={muted ? 'Micro coupé : clique pour le réactiver' : 'Couper le micro'} pressed={muted} className={`v-mic${muted ? ' off' : ''}`} onClick={() => setMicMuted(!muted)}>
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />{muted && <path d="M4 4l16 16" />}</svg>
+    </VBtn>
   )
 }
 

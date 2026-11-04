@@ -49,7 +49,7 @@
 
 /* ---------- vue voix ---------- */
 .voice {
-  flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px;
+  flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px;
   position: relative; background: radial-gradient(ellipse at 50% 40%, var(--v-glow) 0%, #141413 58%); color: #E3E1D8;
   transition: background 0.6s;
 }
@@ -225,3 +225,18 @@
 /* Micro coupé : le bouton passe en argile et le soleil s'estompe. */
 .v-bar .v-mic.off { background: rgba(213, 113, 81, 0.18); border-color: rgba(213, 113, 81, 0.6); color: #F5C2AE; }
 .voice:has(.v-mic.off) .v-sun > .cmark { opacity: 0.45; filter: saturate(0.6); transition: opacity 0.3s, filter 0.3s; }
+
+/* Commandes en icônes (barre du mode voix, cadre de ce que Claude montre) : nom en bulle au survol. */
+.v-tools { display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(240, 238, 230, 0.06); border: 0.5px solid rgba(240, 238, 230, 0.1); }
+.v-tools.small { padding: 3px; gap: 2px; }
+.v-tools-sep { width: 0.5px; height: 20px; margin: 0 3px; background: rgba(240, 238, 230, 0.16); }
+.v-bar .v-ibtn, .v-ibtn { position: relative; width: 36px; height: 36px; padding: 0; border-radius: 50%; border: none; background: transparent; color: #D1CFC5; display: grid; place-items: center; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.v-tools.small .v-ibtn { width: 30px; height: 30px; }
+.v-bar .v-ibtn:hover, .v-ibtn:hover { background: rgba(240, 238, 230, 0.1); color: #F5F4EE; }
+.v-bar .v-ibtn[aria-pressed='true'], .v-ibtn[aria-pressed='true'] { background: rgba(240, 238, 230, 0.14); color: #F5F4EE; }
+.v-bar .v-ibtn.warn[aria-pressed='true'] { background: rgba(229, 181, 103, 0.18); color: #F1D29A; }
+.v-bar .v-ibtn.v-mic.off { background: rgba(213, 113, 81, 0.22); color: #F5C2AE; border: none; }
+.v-ibtn::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translate(-50%, 4px); white-space: nowrap; padding: 5px 9px; border-radius: 7px; background: #F0EEE6; color: #141413; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.15s, transform 0.15s; z-index: 5; }
+.v-ibtn:hover::after, .v-ibtn:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+.v-tools .v-ibtn:last-child::after { left: auto; right: 0; transform: translate(0, 4px); }
+.v-tools .v-ibtn:last-child:hover::after, .v-tools .v-ibtn:last-child:focus-visible::after { transform: translate(0, 0); }
