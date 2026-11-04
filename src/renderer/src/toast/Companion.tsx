@@ -92,7 +92,9 @@ export function Companion({ c }: { c: CompanionState }) {
     else setOpen((o) => !o)
   }
 
-  const size = SIZE[c.phase]
+  // Personnage : pas de pastille ronde autour, juste lui, plus grand pour qu'on le voie bien.
+  const char = !!c.avatar && c.avatar !== 'canopy'
+  const size = char ? Math.round(SIZE[c.phase] * 1.5) : SIZE[c.phase]
   // Micro coupé : c'est ce qu'on voit d'abord à côté de la bulle, avec de quoi le réactiver.
   const muteLine = c.micMuted && (c.phase === 'rest' || c.phase === 'listen') ? (
     <div className="c-pill c-muted-mic" data-hit>
@@ -182,7 +184,7 @@ export function Companion({ c }: { c: CompanionState }) {
       <div className="c-row">
         {!open && line}
         <div
-          className={`c-bubble c-${c.phase}${look !== null ? ' c-looking' : ''}${c.micMuted ? ' c-mic-off' : ''}`}
+          className={`c-bubble c-${c.phase}${char ? ' c-char' : ''}${look !== null ? ' c-looking' : ''}${c.micMuted ? ' c-mic-off' : ''}`}
           style={{ width: size, height: size }}
           data-hit
           onPointerDown={down}
@@ -190,7 +192,7 @@ export function Companion({ c }: { c: CompanionState }) {
           onPointerUp={up}
           title="Clic : déplier · glisser : déplacer"
         >
-          <Avatar kind={c.avatar ?? 'canopy'} state={MARK[c.phase]} size={Math.round(size * 0.8)} />
+          <Avatar kind={c.avatar ?? 'canopy'} state={MARK[c.phase]} size={char ? size : Math.round(size * 0.8)} />
         </div>
       </div>
     </div>

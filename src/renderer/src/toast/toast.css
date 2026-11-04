@@ -119,4 +119,11 @@ kbd { font-family: 'JetBrains Mono Variable', Consolas, monospace; font-size: 10
 .c-page iframe { display: block; width: 100%; border: none; }
 .c-muted-mic { border-color: rgba(213, 113, 81, 0.5); color: #f5c2ae; }
 .c-bubble.c-mic-off { opacity: 0.6; filter: saturate(0.6); }
+/* Personnage : ni fond ni anneau ; l'état se lit à un halo autour de sa silhouette. */
+.c-bubble.c-char { background: none; border-radius: 0; box-shadow: none; animation: none; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45)); transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.3s; }
+.c-bubble.c-char.c-listen { filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 6px rgba(91, 155, 230, 0.75)); }
+.c-bubble.c-char.c-ask { filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 7px rgba(213, 113, 81, 0.8)); }
+.c-bubble.c-char.c-done { filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 7px rgba(127, 179, 138, 0.85)); }
+.c-bubble.c-char.c-looking { filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 6px rgba(213, 113, 81, 0.7)); }
+.c-bubble.c-char.c-mic-off { opacity: 0.6; filter: saturate(0.6) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45)); }
 .c-bubble.c-mic-off:hover { opacity: 1; filter: none; }
