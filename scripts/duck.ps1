@@ -2,7 +2,7 @@
 #   duck    : chaque application qui joue du son (sauf Canopy) passe à -Factor de son volume ; l'original est mémorisé
 #   restore : remet les volumes mémorisés
 # Le code Core Audio est compilé une fois dans une DLL (dossier temporaire) pour que chaque appel reste rapide.
-param([ValidateSet('duck', 'restore')][string]$Action, [double]$Factor = 0.3, [string]$Keep = 'electron,canopy')
+param([ValidateSet('duck', 'restore')][string]$Action, [double]$Factor = 0.3, [string]$Keep = 'electron,canopy', [int]$Steps = 15)
 $ErrorActionPreference = 'Stop'
 
 $dll = Join-Path $env:TEMP 'canopy-duck-v1.dll'
@@ -62,18 +62,33 @@ $sessions = [CanopyDuck.Mixer]::Sessions()
 if ($Action -eq 'duck') {
   if (Test-Path $state) { exit 0 } # déjà baissé
   $saved = @{}
+  $targets = @()
   foreach ($s in $sessions) {
     if ($keepList -contains $s.Name.ToLower() -or -not $s.Name) { continue }
     $saved[$s.Id] = $s.Volume
-    [CanopyDuck.Mixer]::Set($s, [float]($s.Volume * $Factor))
+    $targets += $s
   }
   $saved | ConvertTo-Json -Compress | Set-Content -Encoding UTF8 $state
+  # Fondu : le volume descend en douceur (environ 0,6 s) au lieu de tomber d'un coup.
+  for ($k = 1; $k -le $Steps; $k++) {
+    $t = $k / $Steps; $e = $t * $t * (3 - 2 * $t)
+    foreach ($s in $targets) { [CanopyDuck.Mixer]::Set($s, [float]($saved[$s.Id] * (1 - (1 - $Factor) * $e))) }
+    Start-Sleep -Milliseconds 40
+  }
 } else {
   if (-not (Test-Path $state)) { exit 0 }
   $saved = Get-Content -Raw -Encoding UTF8 $state | ConvertFrom-Json
+  $pairs = @()
   foreach ($s in $sessions) {
     $v = $saved.($s.Id)
-    if ($null -ne $v) { [CanopyDuck.Mixer]::Set($s, [float]$v) }
+    if ($null -ne $v) { $pairs += [pscustomobject]@{ s = $s; from = $s.Volume; to = [float]$v } }
+  }
+  # Fondu de remontée, un peu plus lent que la descente (environ 1 s) : le son revient sans à-coup.
+  $up = [int]($Steps * 1.6)
+  for ($k = 1; $k -le $up; $k++) {
+    $t = $k / $up; $e = $t * $t * (3 - 2 * $t)
+    foreach ($p in $pairs) { [CanopyDuck.Mixer]::Set($p.s, [float]($p.from + ($p.to - $p.from) * $e)) }
+    Start-Sleep -Milliseconds 40
   }
   Remove-Item $state
 }
