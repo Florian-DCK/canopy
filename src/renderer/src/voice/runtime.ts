@@ -457,11 +457,12 @@ function onMessage(ev: MessageEvent) {
       // transcription arrive ; un « fin de parole » avant annule tout.
       if (speechTimer) clearTimeout(speechTimer)
       speechTimer = null
-      if (m.on) speechTimer = setTimeout(() => set({ speech: true, ...(!turn ? { phase: 'listen' as const } : {}) }), 350)
+      if (m.on) speechTimer = setTimeout(() => set({ speech: true, ...(!turn ? { phase: 'listen' as const } : {}) }), 700)
       else set({ speech: false })
       break
     case 'partial':
-      if (!turn) set({ heard: m.text })
+      // Des mots transcrits : c'est bien toi qui parles, même si c'était bref.
+      if (!turn) set({ heard: m.text, ...(m.text ? { speech: true, phase: 'listen' as const } : {}) })
       break
     case 'final':
       // C'était bien toi : la réponse interrompue s'arrête là (elle reste écrite dans la session).
@@ -595,3 +596,14 @@ export function setMute(mute: boolean) {
   }
   set({ mute })
 }
+
+// Pendant que Claude parle, les autres applications baissent ; elles remontent 0,8 s après sa dernière phrase
+// (pas de va-et-vient entre deux phrases).
+let duckTimer: ReturnType<typeof setTimeout> | null = null
+useVoice.subscribe((v, p) => {
+  if (v.phase === p.phase) return
+  if (duckTimer) clearTimeout(duckTimer)
+  duckTimer = null
+  if (v.phase === 'speak') api.voiceDuck(true)
+  else duckTimer = setTimeout(() => api.voiceDuck(false), v.phase === 'off' ? 0 : 800)
+})

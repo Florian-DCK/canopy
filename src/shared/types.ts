@@ -354,6 +354,8 @@ export type AtelierApi = {
   companionSet(state: import('./companion').CompanionState | null): void
   /** « Stop » : Claude n'agit plus sur l'écran (quelques secondes), sa main disparaît. */
   actStop(): void
+  /** Baisser (ou remettre) le son des autres applications pendant que Claude parle. */
+  voiceDuck(on: boolean): void
   /** Ramener la fenêtre de Canopy au premier plan (Claude montre quelque chose pendant le mode compagnon). */
   showWindow(): void
   onCompanionCommand(cb: (c: import('./companion').CompanionCommand) => void): () => void

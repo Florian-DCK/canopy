@@ -210,3 +210,11 @@
 /* Réponse entière une fois le tour fini : plus petite, défilante, alignée à gauche si elle est longue. */
 .v-line.v-whole { font-size: 20px; line-height: 1.55; max-height: 42vh; overflow: auto; text-align: left; }
 .v-split .v-line.v-whole { font-size: 17px; }
+
+/* Réponse au rythme de la voix : la phrase entendue en clair, les autres estompées, défilement doux. */
+.v-line.v-karaoke { position: relative; max-height: 40vh; overflow: auto; scrollbar-width: none; text-align: center;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18%, #000 82%, transparent 100%); padding: 12vh 0; }
+.v-karaoke span { transition: color 0.4s ease; }
+.v-karaoke .k-now { color: #F5F4EE; }
+.v-karaoke .k-past { color: #73726C; }
+.v-karaoke .k-next { color: #4A4945; }

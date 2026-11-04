@@ -76,7 +76,11 @@ export function VoiceView() {
         ) : (
           <div className="v-words" aria-live="polite">
             <span className="v-word">{word}</span>
+            {v.phase === 'speak' && v.spoken.length > 0 ? (
+              <SpokenLines lines={v.spoken} speaking={v.speaking} />
+            ) : (
             <SwapLine k={!line ? 'empty' : fromClaude ? `c-${line}` : v.phase === 'waking' ? 'waking' : 'you'} className={`v-line${fromClaude ? (whole ? ' v-whole' : '') : v.phase === 'waking' || v.phase === 'error' ? ' sys' : ' you'}`} text={line ?? ''} />
+            )}
           </div>
         )}
       </div>
@@ -105,6 +109,25 @@ export function VoiceView() {
         </button>
       </div>
     </main>
+  )
+}
+
+/** Pendant que Claude parle : toute la réponse, la phrase entendue en clair et centrée, le texte défile au rythme
+ * de la voix (comme dans la bulle du compagnon). */
+function SpokenLines({ lines, speaking }: { lines: { id: string; text: string }[]; speaking: string | null }) {
+  const box = useRef<HTMLDivElement>(null)
+  const cur = lines.findIndex((l) => l.id === speaking)
+  useEffect(() => {
+    const b = box.current
+    const el = b?.querySelector<HTMLElement>('.k-now')
+    if (b && el) b.scrollTo({ top: el.offsetTop - b.clientHeight / 2 + el.offsetHeight / 2, behavior: 'smooth' })
+  }, [cur, lines.length])
+  return (
+    <div ref={box} className="v-line v-karaoke">
+      {lines.map((l, k) => (
+        <span key={l.id} className={k === cur ? 'k-now' : k < cur ? 'k-past' : 'k-next'}>{l.text} </span>
+      ))}
+    </div>
   )
 }
 

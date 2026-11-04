@@ -10,6 +10,7 @@ import type { AppEvent, Item, NotifInfo, NotifSettings, Project, ThemeMode } fro
 import { capture } from './capture'
 import { captureScreen } from './screen'
 import { runAct, stopActing } from './act'
+import { restoreDuck, setDuck } from './duck'
 import { DaemonClient, type DaemonStatus } from './daemon'
 import { MediaServer, registerMediaScheme } from './media'
 import { applySavedTheme, getCompanionAnchor, getNotifSettings, getTheme, setCompanionAnchor, setNotifSettings, setTheme, windowBackground } from './settings'
@@ -139,6 +140,7 @@ const toasts = new ToastCenter({
 // Mode compagnon : la fenêtre principale envoie l'état de la bulle (null = quitter). En entrant, Canopy se range
 // dans la barre des tâches ; la voix continue (pas de ralentissement en arrière-plan, voir webPreferences).
 ipcMain.on('act:stop', () => stopActing())
+ipcMain.on('voice:duck', (_e, on: boolean) => setDuck(!!on))
 ipcMain.on('win:show', () => {
   if (!win || win.isDestroyed()) return
   if (win.isMinimized()) win.restore()
@@ -551,6 +553,7 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => app.quit())
 app.on('will-quit', () => {
   toasts.dispose()
+  restoreDuck()
   globalShortcut.unregisterAll()
 })
 
