@@ -213,6 +213,8 @@ export type MarkParams = {
   steps?: boolean
   seconds?: number
   clear?: boolean
+  /** Joint une capture une fois la marque dessinée, pour vérifier qu'elle tombe juste. */
+  look?: boolean
 }
 
 export type CaptureResult = { ok: boolean; image?: string; info: string }

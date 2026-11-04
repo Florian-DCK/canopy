@@ -1,6 +1,7 @@
 import { BrowserWindow, screen } from 'electron'
 import type { CaptureResult, MarkParams, MarkTarget } from '../shared/types'
 import { locate } from './act'
+import { captureScreen } from './screen'
 
 // Mode compagnon (planche 37) : Claude met en évidence une zone de l'écran. Une fenêtre transparente au-dessus de tout,
 // que les clics traversent, où l'on dessine à main levée : entourer, souligner, projecteur, étapes numérotées.
@@ -149,8 +150,10 @@ export async function runMark(p: MarkParams): Promise<CaptureResult> {
   const secs = Math.max(2, Math.min(60, p.seconds ?? (p.steps ? 7 + targets.length * 1.5 : 10)))
   hideTimer = setTimeout(clearMarks, secs * 1000)
   const styles = [...new Set(targets.map((t) => (t as { style: string }).style))].join(', ')
-  return {
-    ok: true,
-    info: `Mis en évidence (${styles}) pendant ${Math.round(secs)} s.${missing.length ? ` Introuvable : ${missing.join(', ')}.` : ''}`
-  }
+  const info = `Mis en évidence (${styles}) pendant ${Math.round(secs)} s.${missing.length ? ` Introuvable : ${missing.join(', ')}.` : ''}`
+  if (!p.look) return { ok: true, info }
+  // Le premier tracé est complet vers 1 s : la capture montre la marque en place.
+  await new Promise((r) => setTimeout(r, 1100))
+  const shot = await captureScreen('screen')
+  return { ok: true, info: `${info} Capture jointe : vérifie que la marque tombe juste, sinon recommence avec la position corrigée.`, image: shot.image }
 }
