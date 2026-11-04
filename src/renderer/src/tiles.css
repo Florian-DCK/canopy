@@ -27,6 +27,10 @@
 }
 .tl-acts { flex: none; display: flex; }
 .tl-cell-b { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* Zoom commun : le fil et la saisie se recalculent (plus de lignes visibles en dézoomant) ; l'en-tête garde sa taille. */
+.tl-cell-b .focus-chat { zoom: var(--tl-zoom, 1); }
+.tl-view > .composer-wrap { zoom: var(--tl-zoom, 1); }
+.tl-zoom button { min-width: 30px; justify-content: center; font-variant-numeric: tabular-nums; }
 .tl-view, .tl-view-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .tl-view .composer-wrap, .tl-cell-b .focus-chat .composer-wrap { padding: 6px 10px 10px; }
 .tl-add { background: transparent; box-shadow: none; }

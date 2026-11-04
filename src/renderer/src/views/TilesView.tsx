@@ -1,13 +1,13 @@
 import '../session.css'
 import '../tiles.css'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Item, SessionMeta } from '../../../shared/types'
 import { BrowserTabView } from '../browser/View'
 import { hostOf, useBrowser } from '../browser/store'
 import { Icon, type IconName } from '../icons'
 import { addProjectDialog, useStore } from '../store'
 import { fxClass, useFx } from '../fx'
-import { addHint, dragSession, DRAG_TYPE, MAX_TILES, newSessionInTile, resolve, useTiles, type DragData } from '../tiles'
+import { addHint, dragSession, DRAG_TYPE, MAX_TILES, newSessionInTile, resolve, useTiles, ZOOM_MAX, ZOOM_MIN, type DragData } from '../tiles'
 import { InTitleBar } from '../titlebar'
 import { Tile } from '../ui'
 import { ArtifactFrame, useArtifactTabs, useArtifactTitle, type SessionArtifact } from './Artifacts'
@@ -54,9 +54,29 @@ export function TilesView() {
     }
   }, [])
 
-  // Ctrl+1…4 : aller à une case (et à sa saisie).
+  // Ctrl + molette : zoom du contenu de toutes les cases (écouteur natif non passif, pour bloquer le zoom de la page).
+  const grid = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = grid.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return
+      e.preventDefault()
+      const st = useTiles.getState()
+      st.setZoom(st.zoom + (e.deltaY < 0 ? 0.1 : -0.1))
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // Ctrl+1…4 : aller à une case (et à sa saisie). Ctrl+0 : zoom à 100 %.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key === '0') {
+        e.preventDefault()
+        useTiles.getState().setZoom(1)
+        return
+      }
       if (!e.ctrlKey || e.altKey || e.shiftKey || !/^[1-4]$/.test(e.key)) return
       const st = useTiles.getState()
       const all = useStore.getState().sessions
@@ -77,6 +97,11 @@ export function TilesView() {
         <div className="tl-head">
           <b className="tl-title">Mosaïque</b>
           <span className="small muted">{items.length} session{items.length > 1 ? 's' : ''}</span>
+          <span className="seg tl-zoom" role="group" aria-label="Zoom du contenu des cases">
+            <button type="button" aria-label="Dézoomer (Ctrl + molette)" title="Dézoomer (Ctrl + molette)" disabled={t.zoom <= ZOOM_MIN} onClick={() => t.setZoom(t.zoom - 0.1)}>−</button>
+            <button type="button" title="Revenir à 100 % (Ctrl+0)" onClick={() => t.setZoom(1)}>{Math.round(t.zoom * 100)} %</button>
+            <button type="button" aria-label="Zoomer (Ctrl + molette)" title="Zoomer (Ctrl + molette)" disabled={t.zoom >= ZOOM_MAX} onClick={() => t.setZoom(t.zoom + 0.1)}>+</button>
+          </span>
           <Menu label="Ajouter une session" className="btn sm" align="left" button={<><Icon name="plus" size={14} />Ajouter une session</>}>
             {(done) => (
               <>
@@ -107,6 +132,8 @@ export function TilesView() {
       <div className="tl-body">
         <div
           className={`tl-grid n${n}`}
+          style={{ ['--tl-zoom' as string]: t.zoom }}
+          ref={grid}
           onDragOver={(e) => {
             if (canAdd && !adding && e.dataTransfer.types.includes(DRAG_TYPE)) setAdding(true)
           }}

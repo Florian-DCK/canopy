@@ -11,8 +11,9 @@ export type TileView = string
 export type Cell = { sessionId: string; sdk?: string; view: TileView }
 export const MAX_TILES = 4
 
-type Saved = { cells: Cell[]; active: number; panel: boolean }
+type Saved = { cells: Cell[]; active: number; panel: boolean; /** Zoom du contenu des cases (fil et saisie), commun à toute la mosaïque. */ zoom: number }
 type State = Saved & {
+  setZoom: (z: number) => void
   setActive: (i: number) => void
   setView: (i: number, view: TileView) => void
   togglePanel: (i: number) => void
@@ -25,7 +26,9 @@ type State = Saved & {
 }
 
 const KEY = 'atelier.tiles'
-const EMPTY: Saved = { cells: [], active: 0, panel: false }
+const EMPTY: Saved = { cells: [], active: 0, panel: false, zoom: 1 }
+export const ZOOM_MIN = 0.6
+export const ZOOM_MAX = 1.3
 
 function load(): Saved {
   // La fenêtre de capture relit la mosaïque (sans jamais l'écrire, voir plus bas).
@@ -47,6 +50,7 @@ const live = (cells: Cell[]) => {
 export const useTiles = create<State>((set, get) => ({
   ...load(),
   setActive: (active) => set({ active }),
+  setZoom: (z) => set({ zoom: Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)) * 10) / 10 }),
   setView: (i, view) => set((s) => ({ cells: s.cells.map((c, k) => (k === i ? { ...c, view } : c)) })),
   togglePanel: (i) => set((s) => ({ active: i, panel: !(s.panel && s.active === i) })),
   place: (i, cell) =>
@@ -118,11 +122,33 @@ export function dragSession(e: DragEvent, data: DragData) {
   e.dataTransfer.effectAllowed = 'copyMove'
 }
 
+/** Glisser une session fermée (historique) : déposée sur la Mosaïque, elle y est reprise. */
+export const HISTORY_DRAG_TYPE = 'application/x-canopy-history'
+export function dragHistory(e: DragEvent, h: HistoryEntry) {
+  e.dataTransfer.setData(HISTORY_DRAG_TYPE, JSON.stringify(h))
+  e.dataTransfer.effectAllowed = 'copy'
+}
+
+/** Dépose sur l'icône Mosaïque de la barre de gauche : la session rejoint la mosaïque, sans changer de vue. */
+export function dropOnTiles(e: DragEvent): boolean {
+  const live = e.dataTransfer.getData(DRAG_TYPE)
+  const hist = e.dataTransfer.getData(HISTORY_DRAG_TYPE)
+  try {
+    if (live) useTiles.getState().add(JSON.parse(live).sessionId)
+    else if (hist) void resumeIntoTiles(JSON.parse(hist))
+    else return false
+  } catch {
+    return false
+  }
+  return true
+}
+export const isTileDrag = (e: DragEvent) => e.dataTransfer.types.includes(DRAG_TYPE) || e.dataTransfer.types.includes(HISTORY_DRAG_TYPE)
+
 if (!CAPTURE)
   useTiles.subscribe((s, prev) => {
-    if (s.cells === prev.cells && s.active === prev.active && s.panel === prev.panel) return
+    if (s.cells === prev.cells && s.active === prev.active && s.panel === prev.panel && s.zoom === prev.zoom) return
     try {
-      localStorage.setItem(KEY, JSON.stringify({ cells: s.cells, active: s.active, panel: s.panel }))
+      localStorage.setItem(KEY, JSON.stringify({ cells: s.cells, active: s.active, panel: s.panel, zoom: s.zoom }))
     } catch {
       /* stockage indisponible */
     }
