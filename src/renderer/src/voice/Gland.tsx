@@ -123,10 +123,23 @@ const MOUTH = { x: 1000, y: 1218 }
 // Bouche : sourire et largeur au repos selon l'état (au repos, un petit trait, comme sur le dessin).
 const SMILE: Record<GlandState, number> = { rest: 4, intro: 3, listen: 8, think: -4, speak: 4 }
 const MOUTH_W: Record<GlandState, number> = { rest: 20, intro: 20, listen: 24, think: 16, speak: 20 }
-// Carnet du travail, tenu devant le ventre : sombre pour que les mains s'y détachent ; des lignes s'y écrivent.
-const TOOL = { x: 1000, y: 1462, w: 420, h: 230 }
+// Carnet du travail : un petit écran sombre (les mains s'y détachent) tenu à deux mains. Il est dessiné autour de son
+// centre et placé à chaque image entre les deux paumes ; des lignes s'y écrivent caractère par caractère.
+const TOOL = { x: 1000, y: 1450, w: 310, h: 200 }
 const TOOL_LINES = 4
-const LINE_MAX = 280
+const LINE_MAX = 200
+const LINE_X = -TOOL.w / 2 + 42
+// Mots des lignes (tirets et espaces), pour que le texte se lise comme du texte.
+const WORDS = ['44 30 28 30 62 30 22 30 50 30', '30 30 56 30 26 30 42 30 66 30', '60 30 22 30 38 30 32 30 54 30', '36 30 46 30 24 30 64 30 30 30']
+const SCREEN = CREAM
+/** Distance de l'épaule au creux de la paume. */
+const HAND = 250
+/** Centre du carnet sous la ligne des prises (repère du carnet). */
+const GRIP_Y = 18
+/** Inclinaison quand une main le lâche (degrés) : il pivote sur l'autre main et penche sous son poids. */
+const DROOP = 12
+/** Une frappe abaisse le bras de quelques degrés. */
+const TAP_DEG = 3.5
 
 type Pose = {
   lean: number
@@ -153,14 +166,16 @@ type Pose = {
   tool: number
   /** Taille des joues. */
   blush: number
+  /** Travail : le crayon sorti pour écrire (0 à 1). */
+  pen: number
 }
 
 const POSES: Record<GlandState, Pose> = {
-  rest: { lean: 2, squash: 0.975, bob: 8, eyeOpen: 0, eyeSize: 1, armL: 12, armR: -12, perk: 0.99, canY: 16, hatTilt: 4, gazeX: 0, gazeY: 6, tilt: 3, footL: 0, footR: 0, tongue: 0, tool: 0, blush: 1 },
-  intro: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1, armL: 16, armR: -16, perk: 1, canY: 0, hatTilt: 0, gazeX: 0, gazeY: 0, tilt: 0, footL: 0, footR: 0, tongue: 0, tool: 0, blush: 1 },
-  listen: { lean: -4, squash: 1.015, bob: -6, eyeOpen: 1.05, eyeSize: 1.16, armL: 24, armR: -22, perk: 1.02, canY: -14, hatTilt: -3, gazeX: -4, gazeY: 2, tilt: 5, footL: 0, footR: 0, tongue: 0, tool: 0, blush: 1.12 },
-  think: { lean: -2, squash: 0.99, bob: 2, eyeOpen: 0.8, eyeSize: 0.97, armL: -58, armR: 58, perk: 1, canY: 6, hatTilt: 0, gazeX: 0, gazeY: 18, tilt: 0, footL: 0, footR: 0, tongue: 0, tool: 1, blush: 0.92 },
-  speak: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1.06, armL: 20, armR: -18, perk: 1.02, canY: -4, hatTilt: 0, gazeX: 0, gazeY: 0, tilt: 0, footL: 0, footR: 0, tongue: 0, tool: 0, blush: 1.1 }
+  rest: { lean: 2, squash: 0.975, bob: 8, eyeOpen: 0, eyeSize: 1, armL: 12, armR: -12, perk: 0.99, canY: 16, hatTilt: 4, gazeX: 0, gazeY: 6, tilt: 3, footL: 0, footR: 0, tongue: 0, tool: 0, blush: 1, pen: 0 },
+  intro: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1, armL: 16, armR: -16, perk: 1, canY: 0, hatTilt: 0, gazeX: 0, gazeY: 0, tilt: 0, footL: 0, footR: 0, tongue: 0, tool: 0, blush: 1, pen: 0 },
+  listen: { lean: -4, squash: 1.015, bob: -6, eyeOpen: 1.05, eyeSize: 1.16, armL: 24, armR: -22, perk: 1.02, canY: -14, hatTilt: -3, gazeX: -4, gazeY: 2, tilt: 5, footL: 0, footR: 0, tongue: 0, tool: 0, blush: 1.12, pen: 0 },
+  think: { lean: -2, squash: 0.99, bob: 2, eyeOpen: 0.8, eyeSize: 0.97, armL: -48, armR: 48, perk: 1, canY: 6, hatTilt: 0, gazeX: 0, gazeY: 18, tilt: 0, footL: 0, footR: 0, tongue: 0, tool: 1, blush: 0.92, pen: 0 },
+  speak: { lean: 0, squash: 1, bob: 0, eyeOpen: 1, eyeSize: 1.06, armL: 20, armR: -18, perk: 1.02, canY: -4, hatTilt: 0, gazeX: 0, gazeY: 0, tilt: 0, footL: 0, footR: 0, tongue: 0, tool: 0, blush: 1.1, pen: 0 }
 }
 const KEYS = Object.keys(POSES.rest) as (keyof Pose)[]
 // Raideur et amortissement par réglage : le corps avec un léger dépassement, le regard vif, les bras souples.
@@ -192,6 +207,10 @@ type Fx = {
   side: number
   /** Travail : intensité de la frappe des mains (0 : posées, 1 : normal, plus : rafale). */
   typing: number
+  /** Travail : la main lâche le carnet ([gauche, droite], 0 à 1) même si elle reste près du bord (écrire). */
+  free: [number, number]
+  /** Travail : la main libre écrit sur la face (0 à 1). */
+  write: number
 }
 type Act = { name: string; dur: number; run: (k: number, t: Pose, fx: Fx) => void }
 const ss = (x: number) => {
@@ -373,10 +392,13 @@ const ACTS: Partial<Record<GlandState, Act[]>> = {
       name: 'écrit',
       dur: 2600,
       run: (k, t, fx) => {
+        // La main gauche tient le carnet, la droite le lâche et y écrit au crayon, par petits traits.
         const e = env(k, 0.2, 0.2)
         fx.typing = 1 - e
-        t.armR = mix(t.armR, 64 + Math.sin(k * 90) * 7 + Math.cos(k * 57) * 5, e)
-        t.armL = mix(t.armL, -50, e)
+        fx.free[1] = e
+        fx.write = e
+        t.pen = e
+        t.armR = mix(t.armR, 55 + Math.sin(k * 90) * 4 + Math.cos(k * 57) * 3, e)
         fx.gaze = true
         t.gazeX = mix(t.gazeX, 9 + Math.sin(k * 20) * 3, e)
         t.gazeY = mix(t.gazeY, 18, e)
@@ -408,10 +430,11 @@ const ACTS: Partial<Record<GlandState, Act[]>> = {
       name: 'se frotte les mains',
       dur: 1300,
       run: (k, t, fx) => {
+        // Sans lâcher le carnet : les mains frottent ses bords, vite, l'une contre l'autre.
         const e = env(k, 0.2, 0.25)
         fx.typing = 1 - e
-        t.armL = mix(t.armL, -74 + Math.sin(k * 70) * 6, e)
-        t.armR = mix(t.armR, 74 + Math.sin(k * 70) * 6, e)
+        t.armL += Math.sin(k * 70) * 5 * e
+        t.armR += Math.sin(k * 70) * 5 * e
         t.eyeSize += 0.12 * e
         t.gazeY -= 10 * e
         t.lean -= 2 * e
@@ -554,6 +577,16 @@ const stepSpring = (s: Spring, target: number, k: number, c: number, dt: number)
   }
 }
 const rnd = (a: number, b: number) => a + Math.random() * (b - a)
+type Pt = { x: number; y: number }
+const lerpP = (a: Pt, b: Pt, e: number): Pt => ({ x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e })
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
+// Paume au bout d'un bras : l'épaule (déplacée par la courbure du corps), puis le bras tourné de `a` degrés.
+const palm = (sh: Pt, d: Pt, a: number): Pt => {
+  const r = (a * Math.PI) / 180
+  return { x: sh.x + d.x - HAND * Math.sin(r), y: sh.y + d.y + HAND * Math.cos(r) }
+}
+// Enfoncement d'une frappe (ms depuis le coup) : appui vif, relâchement un peu plus lent.
+const press = (e: number) => (e < 0 ? 0 : e < 45 ? e / 45 : e < 150 ? 1 - (e - 45) / 105 : 0)
 // Limite douce : au-delà de `lim`, la valeur ne progresse plus qu'au quart (le chapeau ne descend jamais sur les yeux).
 const soft = (v: number, lim: number) => (v > lim ? lim + (v - lim) * 0.25 : v)
 
@@ -622,7 +655,12 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
       tongueOut: all('.g-tout'),
       tool: all('.g-tool'),
       pencil: all('.g-pencil'),
-      lines: Array.from({ length: TOOL_LINES }, (_, i) => all(`.g-line${i}`))
+      lines: Array.from({ length: TOOL_LINES }, (_, i) => all(`.g-line${i}`)),
+      caret: all('.g-caret'),
+      thumbs: [all('.g-thumbL'), all('.g-thumbR')],
+      dots: [all('.g-dotL'), all('.g-dotR')],
+      glow: all('.g-glow'),
+      glints: all('.g-glint')
     }
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
     const first = stateRef.current
@@ -646,8 +684,30 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
     let actAt = last + rnd(1200, 2400)
     let lastAct = ''
     let voice = 0
-    // Lignes du carnet : la dernière s'allonge en tapant ; pleine, tout remonte d'un cran.
-    const lines = [220, 150, 250, 30]
+    // Lignes du carnet : chaque frappe ajoute un caractère à la dernière ; pleine, tout remonte d'un cran.
+    const lines = [170, 110, 190, 20]
+    // Chaque ligne garde ses mots en remontant.
+    const words = [0, 1, 2, 3]
+    let lineEnd = LINE_MAX * 0.8
+    // Le carnet suit les prises à travers un ressort : la frappe le secoue sans le faire trembler.
+    const tool = { x: spring(TOOL.x), y: spring(TOOL.y), a: spring(0) }
+    const taps = [-1e9, -1e9]
+    let tapHand = 0
+    let tapAt = last
+    let writeAt = last
+    let lastKey = -1e9
+    let flash = 0
+    const typeKey = (now: number) => {
+      lines[TOOL_LINES - 1] += rnd(12, 24)
+      if (lines[TOOL_LINES - 1] > lineEnd) {
+        lines.shift()
+        lines.push(0)
+        words.push(words.shift() ?? 0)
+        lineEnd = LINE_MAX * rnd(0.6, 1)
+      }
+      lastKey = now
+      flash = 1
+    }
     // Débit de parole inventé quand on n'a pas le volume réel : syllabes de longueur et de forme variées, petites pauses.
     const nextSyllable = (at: number) => {
       const pause = Math.random() < 0.12
@@ -698,7 +758,7 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
       if (st === 'speak') t.lean += Math.sin(s * 1.3) * 2.5
 
       // Geste en cours, ou tirage du suivant.
-      const fx: Fx = { gaze: false, mouth: null, rustle: 0, once: () => false, push: () => {}, hat: () => {}, side: 1, typing: 1 }
+      const fx: Fx = { gaze: false, mouth: null, rustle: 0, once: () => false, push: () => {}, hat: () => {}, side: 1, typing: 1, free: [0, 0], write: 0 }
       const list = reduce ? undefined : ACTS[st]
       if (!act && list && now > actAt) {
         const pool = list.filter((x) => x.name !== lastAct)
@@ -726,21 +786,6 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
           cur.a.run(k, t, fx)
         }
       }
-      // Travail : les mains tapent en alternance (avec de petites pauses irrégulières), le corps suit la cadence.
-      if (st === 'think' && !reduce) {
-        const hz = 13 + fx.typing * 4
-        const burst = 0.55 + 0.45 * Math.max(0, Math.sin(s * 1.7) * Math.sin(s * 0.63 + 1))
-        const a = 9 * fx.typing * burst
-        t.armL += Math.sin(s * hz) * a
-        t.armR += Math.sin(s * hz + Math.PI) * a
-        t.bob += Math.abs(Math.sin(s * hz)) * 3 * fx.typing * burst
-        lines[TOOL_LINES - 1] += dt * 120 * fx.typing * burst
-        if (lines[TOOL_LINES - 1] > LINE_MAX * (0.55 + 0.45 * Math.abs(Math.sin(s * 7.3)))) {
-          lines.shift()
-          lines.push(0)
-        }
-      }
-
       // Voix : l'énergie ouvre la bouche, le timbre lui donne sa forme (graves : ronde, aigus : étirée).
       // Sans volume réel, le débit inventé : attaque nette, tenue, relâchement, petites pauses.
       let say = 0
@@ -879,18 +924,113 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
         const lift = Math.max(0, i === 0 ? P.footL : P.footR)
         ls.forEach((g) => g.setAttribute('transform', `translate(0 ${-lift})`))
       })
-      const DT = warp(TOOL.x, TOOL.y)
+      // Carnet porté : sa place vient des mains. Les paumes sont calculées depuis les bras (angle, épaule, légère courbure
+      // du corps), sans la frappe ; une main loin de sa prise l'a lâché.
       const tl = Math.max(0, Math.min(1.1, P.tool))
-      el.tool.forEach((g) => {
-        g.setAttribute('opacity', tl < 0.03 ? '0' : String(Math.min(1, tl * 1.5)))
-        g.setAttribute('transform', `translate(${DT.x} ${DT.y}) rotate(${slope(TOOL.y) * 0.6} ${TOOL.x} ${TOOL.y}) translate(${TOOL.x} ${TOOL.y + TOOL.h / 2}) scale(${0.6 + 0.4 * tl} ${tl}) translate(${-TOOL.x} ${-TOOL.y - TOOL.h / 2})`)
-      })
-      el.lines.forEach((ls, i) => ls.forEach((g) => g.setAttribute('width', String(Math.max(0, lines[i])))))
-      el.pencil.forEach((g) => g.setAttribute('opacity', tl < 0.3 ? '0' : String(Math.min(1, (tl - 0.3) * 2))))
       const DL = warp(ARM_L.x, ARM_L.y)
       const DR = warp(ARM_R.x, ARM_R.y)
-      el.armL.forEach((g) => g.setAttribute('transform', `translate(${ARM_L.x + DL.x} ${ARM_L.y + DL.y}) rotate(${P.armL + slope(ARM_L.y)})`))
-      el.armR.forEach((g) => g.setAttribute('transform', `translate(${ARM_R.x + DR.x} ${ARM_R.y + DR.y}) rotate(${P.armR + slope(ARM_R.y)})`))
+      const aL = P.armL + slope(ARM_L.y)
+      const aR = P.armR + slope(ARM_R.y)
+      const hL = palm(ARM_L, DL, aL)
+      const hR = palm(ARM_R, DR, aR)
+      const oL = palm(ARM_L, DL, POSES.think.armL + slope(ARM_L.y))
+      const oR = palm(ARM_R, DR, POSES.think.armR + slope(ARM_R.y))
+      const awayL = clamp01((Math.hypot(hL.x - oL.x, hL.y - oL.y) - 20) / 45)
+      const awayR = clamp01((Math.hypot(hR.x - oR.x, hR.y - oR.y) - 20) / 45)
+      const offL = Math.max(awayL, fx.free[0])
+      const offR = Math.max(awayR, fx.free[1])
+      // Deux mains : entre les deux. Une seule : il pivote sur celle qui reste et penche du côté lâché. Aucune
+      // (il arrive ou repart) : à sa place contre le ventre.
+      const both = offL * offR
+      // Il n'apparaît vraiment qu'une fois dans les mains (il grandit à mesure qu'elles arrivent).
+      const tv = tl * (1 - 0.85 * both)
+      let gL = lerpP(hL, oL, both)
+      let gR = lerpP(hR, oR, both)
+      const a0 = Math.atan2(oR.y - oL.y, oR.x - oL.x)
+      const W = Math.hypot(oR.x - oL.x, oR.y - oL.y)
+      const dR = a0 + (DROOP * awayR * Math.PI) / 180
+      gR = lerpP(gR, { x: gL.x + W * Math.cos(dR), y: gL.y + W * Math.sin(dR) }, offR * (1 - offL))
+      const dL = a0 - (DROOP * awayL * Math.PI) / 180
+      gL = lerpP(gL, { x: gR.x - W * Math.cos(dL), y: gR.y - W * Math.sin(dL) }, offL * (1 - offR))
+      const ang = Math.atan2(gR.y - gL.y, gR.x - gL.x)
+      stepSpring(tool.x, (gL.x + gR.x) / 2 - Math.sin(ang) * GRIP_Y, 240, 24, dt)
+      stepSpring(tool.y, (gL.y + gR.y) / 2 + Math.cos(ang) * GRIP_Y, 240, 24, dt)
+      stepSpring(tool.a, (ang * 180) / Math.PI, 240, 24, dt)
+
+      // Frappe : les mains qui tiennent tapent la face du pouce, par petits coups, surtout en alternance et par
+      // rafales. Chaque coup secoue le carnet et ajoute un caractère ; le crayon qui écrit en ajoute aussi.
+      if (st === 'think' && !reduce && tl > 0.6) {
+        if (fx.typing > 0.1 && now > tapAt) {
+          const off = [offL, offR]
+          let hnd = Math.random() < 0.8 ? 1 - tapHand : tapHand
+          if (off[hnd] > 0.3) hnd = 1 - hnd
+          if (off[hnd] <= 0.3) {
+            tapHand = hnd
+            taps[hnd] = now
+            tool.y.vel += 70
+            tool.a.vel += hnd ? 12 : -12
+            p.bob.vel += 12
+            typeKey(now)
+          }
+          const burst = 0.55 + 0.45 * Math.max(0, Math.sin(s * 1.7) * Math.sin(s * 0.63 + 1))
+          tapAt = now + (Math.random() < 0.07 ? rnd(300, 650) : rnd(85, 170) / Math.min(1.9, fx.typing) / burst)
+        }
+        if (fx.write > 0.5 && now > writeAt) {
+          tool.y.vel += 25
+          typeKey(now)
+          writeAt = now + rnd(130, 230)
+        }
+      }
+      flash = Math.max(0, flash - dt * 7)
+      const dTap = [press(now - taps[0]), press(now - taps[1])]
+      const tux = Math.cos((tool.a.v * Math.PI) / 180)
+      const tuy = Math.sin((tool.a.v * Math.PI) / 180)
+      el.tool.forEach((g) => {
+        g.setAttribute('opacity', String(clamp01((tv - 0.08) * 2)))
+        g.setAttribute('transform', `translate(${tool.x.v} ${tool.y.v}) rotate(${tool.a.v}) translate(0 ${-GRIP_Y}) scale(${0.6 + 0.4 * tv} ${tv}) translate(0 ${GRIP_Y})`)
+      })
+      const curLine = TOOL_LINES - 1
+      el.lines.forEach((ls, i) =>
+        ls.forEach((g) => {
+          g.setAttribute('x2', String(LINE_X + Math.max(0, lines[i])))
+          g.setAttribute('stroke-dasharray', WORDS[words[i]])
+          g.setAttribute('visibility', lines[i] < 2 ? 'hidden' : 'visible')
+        })
+      )
+      // Curseur au bout de la ligne en cours : plein juste après un caractère, puis il clignote.
+      el.caret.forEach((g) => {
+        g.setAttribute('x', String(LINE_X + lines[curLine] + 15))
+        g.setAttribute('opacity', now - lastKey < 500 || Math.sin(s * 9) > 0 ? '0.9' : '0')
+      })
+      // Le crayon n'est sorti que pour écrire.
+      el.pencil.forEach((g) => g.setAttribute('opacity', String(Math.min(1, Math.max(0, P.pen) * 1.5) * Math.min(1, tl))))
+      const rL = aL + TAP_DEG * dTap[0]
+      const rR = aR - TAP_DEG * dTap[1]
+      el.armL.forEach((g) => g.setAttribute('transform', `translate(${ARM_L.x + DL.x} ${ARM_L.y + DL.y}) rotate(${rL})`))
+      el.armR.forEach((g) => g.setAttribute('transform', `translate(${ARM_R.x + DR.x} ${ARM_R.y + DR.y}) rotate(${rR})`))
+      // Pouces devant la face (cernés tant qu'ils tiennent le carnet) : ils plongent sur l'écran à chaque coup.
+      const hands = [palm(ARM_L, DL, rL), palm(ARM_R, DR, rR)]
+      ;[1, -1].forEach((inner, i) => {
+        const d = dTap[i]
+        const show = tv * (1 - (i ? offR : offL))
+        el.thumbs[i].forEach((g) => {
+          g.setAttribute('transform', `rotate(${-inner * (28 + 26 * d)} ${inner * 36} 232) translate(0 ${10 * d})`)
+          if (g.getAttribute('fill') !== 'black') g.setAttribute('stroke-width', String(6 * Math.min(1, show * 1.5)))
+        })
+        const H = hands[i]
+        const tip = 58
+        el.dots[i].forEach((g) => {
+          g.setAttribute('transform', `translate(${H.x + inner * tux * tip + tuy * 8} ${H.y + inner * tuy * tip - tux * 8})`)
+          g.setAttribute('opacity', String(0.75 * d * show))
+        })
+      })
+      // L'écran éclaire le bas du visage et se reflète dans les yeux.
+      const lit = tv * (0.85 + 0.15 * flash)
+      el.glow.forEach((g) => {
+        g.setAttribute('opacity', String(0.3 * lit))
+        g.setAttribute('transform', `translate(${tool.x.v + tuy * 210} ${tool.y.v - tux * 210}) rotate(${tool.a.v})`)
+      })
+      el.glints.forEach((g) => g.setAttribute('opacity', String(0.85 * lit)))
 
       // Clignement : fermeture rapide, réouverture plus douce ; parfois deux d'affilée.
       if (blinkStart < 0 && now > blinkAt) {
@@ -972,7 +1112,7 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
         </g>
       )}
       <path d={mask ? ARM_GAP : ARM} fill={mask ? 'black' : COLOR} {...(mask ? gap : {})} />
-      <ellipse cx={inner * 36} cy={232} rx={16} ry={26} fill={mask ? 'black' : COLOR} transform={`rotate(${-inner * 28} ${inner * 36} 232)`} {...(mask ? gap : {})} />
+      <ellipse className={inner > 0 ? 'g-thumbL' : 'g-thumbR'} cx={inner * 36} cy={232} rx={16} ry={26} fill={mask ? 'black' : COLOR} transform={`rotate(${-inner * 28} ${inner * 36} 232)`} {...(mask ? gap : { stroke: INK, strokeWidth: 0 })} />
     </g>
   )
   const legs = (fill: string) =>
@@ -999,6 +1139,17 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
             <circle cx={e.x} cy={e.y} r={EYE_R} />
           </clipPath>
         ))}
+        <clipPath id={`${id}v`}>
+          <path className="g-body" d={BODY} />
+        </clipPath>
+        <radialGradient id={`${id}g`}>
+          <stop offset="0" stopColor={SCREEN} stopOpacity="1" />
+          <stop offset="1" stopColor={SCREEN} stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id={`${id}s`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#4A3A33" />
+          <stop offset="1" stopColor="#2E2421" />
+        </linearGradient>
         <mask id={`${id}b`} maskUnits="userSpaceOnUse" {...box}>
           <rect {...box} fill="white" />
           {arm('g-armL', ARM_L, P0.armL, 1, true)}
@@ -1026,6 +1177,7 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
                       <circle cx={e.x} cy={e.y} r={EYE_R - 1.5} fill={CREAM} />
                       <g className="g-pupil">
                         <circle cx={e.x} cy={e.y} r={EYE_R * 0.55} fill={INK} />
+                        <rect className="g-glint" x={e.x - 15} y={e.y + 17} width={30} height={10} rx={5} fill={SCREEN} opacity="0" />
                       </g>
                     </g>
                     <path className={`g-lidU${i}`} d={l.up} fill={COLOR} stroke={INK} strokeWidth={12} strokeLinejoin="round" />
@@ -1040,13 +1192,21 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
               <ellipse className="g-tongue" cx={0} cy={0} rx={0} ry={0} fill={TONGUE} clipPath={`url(#${id}m)`} opacity="0" />
             </g>
           </g>
+          <g clipPath={`url(#${id}v)`}>
+            <ellipse className="g-glow" cx={0} cy={0} rx={330} ry={220} fill={`url(#${id}g)`} opacity="0" />
+          </g>
         </g>
-        <g className="g-tool" opacity="0">
-          <rect x={TOOL.x - TOOL.w / 2} y={TOOL.y - TOOL.h / 2} width={TOOL.w} height={TOOL.h} rx={24} fill="#2A211D" />
+        <g className="g-tool" opacity="0" transform={`translate(${TOOL.x} ${TOOL.y})`}>
+          <rect x={-TOOL.w / 2} y={-TOOL.h / 2} width={TOOL.w} height={TOOL.h} rx={26} fill="#231B18" />
+          <rect x={-TOOL.w / 2 + 15} y={-TOOL.h / 2 + 15} width={TOOL.w - 30} height={TOOL.h - 30} rx={16} fill={`url(#${id}s)`} />
           {Array.from({ length: TOOL_LINES }, (_, i) => (
-            <rect key={i} className={`g-line${i}`} x={TOOL.x - TOOL.w / 2 + 50} y={TOOL.y - TOOL.h / 2 + 42 + i * 42} width={0} height={16} rx={8} fill={CREAM} opacity={i === TOOL_LINES - 1 ? 0.95 : 0.55} />
+            <line key={i} className={`g-line${i}`} x1={LINE_X} x2={LINE_X} y1={-54 + i * 36} y2={-54 + i * 36} stroke={SCREEN} strokeWidth={15} strokeLinecap="round" strokeDasharray={WORDS[i]} opacity={i === TOOL_LINES - 1 ? 0.95 : 0.55} visibility="hidden" />
           ))}
+          <rect className="g-caret" x={LINE_X} y={-54 + (TOOL_LINES - 1) * 36 - 13} width={6} height={26} rx={3} fill={SCREEN} opacity="0" />
         </g>
+        {[0, 1].map((i) => (
+          <circle key={i} className={i ? 'g-dotR' : 'g-dotL'} cx={0} cy={0} r={14} fill={SCREEN} opacity="0" />
+        ))}
         {arm('g-armL', ARM_L, P0.armL, 1, false)}
         {arm('g-armR', ARM_R, P0.armR, -1, false)}
         <g className="g-hat" transform={`translate(0 ${P0.canY + (init === 'intro' ? -420 : 0)})`}>
