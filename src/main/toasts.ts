@@ -40,6 +40,8 @@ export class ToastCenter {
   private anchorPt: { x: number; y: number } | null = null
   private drag: { x: number; y: number; ax: number; ay: number } | null = null
   private passThrough = false
+  /** Canopy est au premier plan : la bulle s'efface (le mode voix est sous tes yeux), elle revient dès que tu en sors. */
+  private hidden = false
 
   constructor(private h: Hooks) {
     ipcMain.on('toasts:size', (e, height: number) => {
@@ -60,7 +62,7 @@ export class ToastCenter {
       if (e.sender === this.win?.webContents) this.h.companion(c)
     })
     ipcMain.on('companion:drag', (e, phase: 'start' | 'move' | 'end', x: number, y: number) => {
-      if (e.sender !== this.win?.webContents || !this.comp) return
+      if (e.sender !== this.win?.webContents || !this.shown) return
       const a = this.anchor()
       if (phase === 'start') this.drag = { x, y, ax: a.x, ay: a.y }
       else if (this.drag) {
@@ -76,23 +78,39 @@ export class ToastCenter {
     // Hors de la bulle et des cartes, les clics passent à l'application dessous.
     ipcMain.on('toasts:mouse', (e, inside: boolean) => {
       if (e.sender !== this.win?.webContents) return
-      this.setPassThrough(!!this.comp && !inside)
+      this.setPassThrough(!!this.shown && !inside)
     })
     setInterval(() => this.remind(), 30_000).unref?.()
   }
 
   /** Mode compagnon : afficher ou mettre à jour la bulle (null = la retirer). */
   setCompanion(state: CompanionState | null) {
-    const was = !!this.comp
+    const was = !!this.shown
     this.comp = state
-    if (!state) this.setPassThrough(false)
-    if (!!state !== was) this.height = 0
+    if (!this.shown) this.setPassThrough(false)
+    if (!!this.shown !== was) this.height = 0
     this.sync()
+  }
+
+  /** Canopy au premier plan (vrai) ou non : la bulle se cache ou revient, sans quitter le mode compagnon. */
+  setCompanionHidden(hidden: boolean) {
+    if (hidden === this.hidden) return
+    const was = !!this.shown
+    this.hidden = hidden
+    if (!this.shown) this.setPassThrough(false)
+    if (!!this.shown === was) return
+    this.height = 0
+    this.sync()
+  }
+
+  /** La bulle telle qu'elle est affichée (rien quand Canopy est au premier plan). */
+  private get shown() {
+    return this.hidden ? null : this.comp
   }
 
   /** Outil écran : l'œil s'allume dans la bulle quelques secondes, avec la fenêtre regardée. */
   look(title: string) {
-    if (!this.comp || !this.win || this.win.isDestroyed()) return
+    if (!this.shown || !this.win || this.win.isDestroyed()) return
     this.win.webContents.send('companion:look', title)
   }
 
@@ -225,8 +243,8 @@ export class ToastCenter {
   private sync() {
     this.shortcutsFor(this.list.some((t) => t.kind === 'wait'))
     const s = this.h.settings()
-    const state: ToastState = { toasts: this.list, sound: s.sound, corner: this.comp ? 'br' : s.corner, companion: this.comp }
-    if (!this.list.length && !this.comp) {
+    const state: ToastState = { toasts: this.list, sound: s.sound, corner: this.shown ? 'br' : s.corner, companion: this.shown }
+    if (!this.list.length && !this.shown) {
       if (this.win && !this.win.isDestroyed()) {
         // La page doit oublier la bulle avant d'être cachée : sinon, au retour du compagnon, elle croit l'afficher
         // déjà, ne renvoie pas sa taille, et la fenêtre reste invisible.
@@ -245,8 +263,8 @@ export class ToastCenter {
   /** Coin choisi, sur l'écran où se trouve la souris. */
   private place() {
     const w = this.win
-    if (!w || w.isDestroyed() || (!this.list.length && !this.comp) || !this.height) return
-    if (this.comp) {
+    if (!w || w.isDestroyed() || (!this.list.length && !this.shown) || !this.height) return
+    if (this.shown) {
       // La fenêtre pend au-dessus et à gauche du coin de la bulle : les cartes s'empilent au-dessus d'elle.
       const a = this.anchor()
       w.setBounds({ x: Math.round(a.x - C_WIDTH), y: Math.round(a.y - this.height), width: C_WIDTH, height: this.height })

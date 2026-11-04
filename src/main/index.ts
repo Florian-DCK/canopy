@@ -340,7 +340,10 @@ function createWindow() {
     }
   })
   win.on('closed', () => app.quit())
-  // Revenir dans Canopy (barre des tâches, Alt+Tab) met fin au mode compagnon : pas de bulle en double.
+  // Mode compagnon : Canopy au premier plan, la bulle s'efface (tu as le mode voix sous les yeux) ;
+  // dès que tu passes à autre chose (Alt+Tab, réduite), elle revient. Le mode compagnon, lui, continue.
+  const front = () => toasts.setCompanionHidden(!!win && !win.isDestroyed() && win.isVisible() && !win.isMinimized() && win.isFocused())
+  for (const ev of ['focus', 'blur', 'minimize', 'restore', 'show', 'hide'] as const) win.on(ev as 'focus', front)
   // État de la fenêtre pour la barre maison (bouton Agrandir / Restaurer, barre atténuée sans le focus).
   const sendState = () => toRenderer('win:state', { maximized: !!win?.isMaximized(), focused: !!win?.isFocused() })
   for (const ev of ['maximize', 'unmaximize', 'focus', 'blur', 'enter-full-screen', 'leave-full-screen'] as const) win.on(ev as 'maximize', sendState)
