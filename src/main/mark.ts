@@ -152,8 +152,8 @@ export async function runMark(p: MarkParams): Promise<CaptureResult> {
   const styles = [...new Set(targets.map((t) => (t as { style: string }).style))].join(', ')
   const info = `Mis en évidence (${styles}) pendant ${Math.round(secs)} s.${missing.length ? ` Introuvable : ${missing.join(', ')}.` : ''}`
   if (!p.look) return { ok: true, info }
-  // Le premier tracé est complet vers 1 s : la capture montre la marque en place.
-  await new Promise((r) => setTimeout(r, 1100))
+  // Le premier tracé est complet vers 1,7 s : la capture montre la marque en place.
+  await new Promise((r) => setTimeout(r, 1900))
   const shot = await captureScreen('screen')
   return { ok: true, info: `${info} Capture jointe : vérifie que la marque tombe juste, sinon recommence avec la position corrigée.`, image: shot.image }
 }
