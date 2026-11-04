@@ -53,14 +53,16 @@ export function Character({ kind, state, size, levels }: { kind: CharacterKind; 
   const target = useRef<Params>(TARGETS[state])
   target.current = TARGETS[state]
   const levelsRef = useRef(levels)
+  const sim = useRef<{ cur: Params; vel: Record<keyof Params, number> } | null>(null)
   levelsRef.current = levels
 
   useEffect(() => {
     const svg = root.current
     if (!svg) return
     const q = (sel: string) => svg.querySelectorAll<SVGGElement>(sel)
-    const cur: Params = { ...target.current }
-    const vel = Object.fromEntries(KEYS.map((k) => [k, 0])) as Record<keyof Params, number>
+    // La pose en cours survit aux changements d'état : les ressorts repartent d'où ils en sont, jamais de saut.
+    sim.current ??= { cur: { ...target.current }, vel: Object.fromEntries(KEYS.map((k) => [k, 0])) as Record<keyof Params, number> }
+    const { cur, vel } = sim.current
     let blinkUntil = 0
     let nextBlink = performance.now() + 2500
     let last = performance.now()
