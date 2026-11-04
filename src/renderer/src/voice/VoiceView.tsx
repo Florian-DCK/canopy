@@ -6,7 +6,7 @@ import { CanopyMark, type MarkState } from './CanopyMark'
 import { clearStage, setMicMuted, hush, voiceLevels, selectStage, setVoiceSession, setMute, setVoiceName, startVoice, stopVoice, useVoice, VOICES, type StageEntry, type VoicePhase } from './runtime'
 import { StageBody, stageInfo } from './Scene'
 import { withTransition } from './transition'
-import { setCompanion } from './companion'
+import { setCompanion, useCompanion } from './companion'
 import './voice.css'
 
 /** État du logo selon la phase : il écoute (arbres au vent) seulement quand tu parles vraiment. */
@@ -253,7 +253,9 @@ export function VoiceDock() {
   const v = useVoice()
   const view = useStore((s) => s.view)
   const go = useStore((s) => s.go)
-  if (v.phase === 'off' || view.name === 'voice') return null
+  // En mode compagnon, la bulle suffit : pas de seconde barre dans Canopy.
+  const companion = useCompanion((c) => c.on)
+  if (v.phase === 'off' || view.name === 'voice' || companion) return null
   const st = v.phase === 'speak' ? 'Claude parle' : v.phase === 'think' ? 'Je réfléchis' : v.gesture ? 'Montré sans parler' : 'Je t’écoute'
   const txt = v.phase === 'speak' ? v.said : v.heard ? `« ${v.heard} »` : ''
   return (
