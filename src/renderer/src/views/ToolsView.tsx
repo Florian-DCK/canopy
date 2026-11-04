@@ -1,12 +1,13 @@
 import '../session.css'
 import '../tools.css'
 import { useEffect, useMemo, useState } from 'react'
-import type { MemoryList, ToolsInventory } from '../../../shared/types'
+import type { AgentFile, MemoryList, ToolsInventory } from '../../../shared/types'
 import { Icon } from '../icons'
 import { api, useStore } from '../store'
 import { Tile, TopBar } from '../ui'
 import { FocusChat } from './SessionView'
 import { MemoryDetail, MemoryPane } from './MemoryTab'
+import { AgentSide, AgentsPane, type AgentSel } from './AgentsTab'
 
 // « Outils de Claude » (planche 20) : ce que Claude charge avant ton premier mot, skill par skill et
 // serveur par serveur, mesuré sur une session ouverte du projet ; activer / couper ; une mini-session par élément.
@@ -87,6 +88,27 @@ export function ToolsView() {
     if (tab === 'memory') loadMem()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, tab])
+  // Agents custom : lus dans les fichiers (les miens et ceux du projet), avec leur état pour ce projet.
+  const [agents, setAgents] = useState<AgentFile[] | null>(null)
+  const [agentSel, setAgentSel] = useState<AgentSel | null>(null)
+  const loadAgents = async (keep?: AgentFile) => {
+    if (!projectId) return
+    const list = await api.listAgents(projectId).catch(() => [] as AgentFile[])
+    setAgents(list)
+    if (keep) setAgentSel({ kind: 'file', agent: list.find((a) => a.path === keep.path) ?? keep })
+  }
+  useEffect(() => {
+    setAgents(null)
+    setAgentSel(null)
+    void loadAgents()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId])
+  const toggleAgent = async (a: AgentFile) => {
+    if (!projectId) return
+    await api.setAgentEnabled(projectId, a.name, !a.enabled)
+    setAgents((cur) => cur && cur.map((x) => (x.path === a.path ? { ...x, enabled: !a.enabled } : x)))
+    setAgentSel((s) => (s?.kind === 'file' && s.agent.path === a.path ? { kind: 'file', agent: { ...s.agent, enabled: !a.enabled } } : s))
+  }
 
   const measure = async (id = projectId, force = false) => {
     if (!id) return
@@ -204,7 +226,7 @@ export function ToolsView() {
             <span className="seg" role="tablist" aria-label="Catégorie">
               {(['skills', 'mcp', 'agents', 'memory'] as Tab[]).map((t) => (
                 <button key={t} type="button" role="tab" aria-selected={tab === t} aria-pressed={tab === t} onClick={() => { setTab(t); setSel(null) }}>
-                  {t === 'skills' ? 'Skills' : t === 'mcp' ? 'Serveurs MCP' : t === 'agents' ? 'Agents' : 'Mémoire'} <span className="muted">{t === 'memory' ? (mem?.items.length ?? '') : inv ? (t === 'skills' ? inv.skills.length : t === 'mcp' ? inv.mcp.length : inv.agents.length) : ''}</span>
+                  {t === 'skills' ? 'Skills' : t === 'mcp' ? 'Serveurs MCP' : t === 'agents' ? 'Agents' : 'Mémoire'} <span className="muted">{t === 'memory' ? (mem?.items.length ?? '') : t === 'agents' ? (agents ? agents.length + (inv?.agents.filter((a) => !agents.some((f) => f.name === a.name)).length ?? 0) : '') : inv ? (t === 'skills' ? inv.skills.length : inv.mcp.length) : ''}</span>
                 </button>
               ))}
             </span>
@@ -218,7 +240,10 @@ export function ToolsView() {
           {tab === 'memory' && (
             <MemoryPane mem={mem} inv={inv} filter={filter} sel={memCur?.file} onSel={setSel} projectName={project?.name ?? 'ce projet'} />
           )}
-          {tab !== 'memory' && (
+          {tab === 'agents' && (
+            <AgentsPane agents={agents} inv={inv} filter={filter} sel={agentSel ?? (agents?.[0] ? { kind: 'file', agent: agents[0] } : null)} onSel={setAgentSel} onToggle={(a) => void toggleAgent(a)} />
+          )}
+          {tab !== 'memory' && tab !== 'agents' && (
           <div className="tools-table" role="list" aria-label="Éléments">
             {rows.length === 0 && <div className="empty">{loading ? 'Mesure en cours…' : 'Rien à afficher.'}</div>}
             {rows.map((r) => (
@@ -246,7 +271,10 @@ export function ToolsView() {
           )}
         </main>
 
-        {tab !== 'memory' && cur && inv && <ToolDetail key={cur.key} row={cur} tab={tab} inv={inv} projectId={projectId} />}
+        {tab !== 'memory' && tab !== 'agents' && cur && inv && <ToolDetail key={cur.key} row={cur} tab={tab} inv={inv} projectId={projectId} />}
+        {tab === 'agents' && projectId && (agentSel ?? (agents?.[0] ? { kind: 'file' as const, agent: agents[0] } : null)) && (
+          <AgentSide sel={(agentSel ?? { kind: 'file', agent: agents![0] }) as AgentSel} projectId={projectId} projectName={project?.name ?? 'ce projet'} onSel={setAgentSel} onChanged={(keep) => void loadAgents(keep)} />
+        )}
         {tab === 'memory' && memCur && projectId && (
           <aside className="tools-side" aria-label={`Souvenir ${memCur.name}`}>
             <MemoryDetail key={memCur.file} m={memCur} projectId={projectId} onChanged={() => loadMem()} />

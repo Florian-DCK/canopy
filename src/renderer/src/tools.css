@@ -97,3 +97,30 @@
 .tools-mini-start p { margin: 0; padding: 0 18px; line-height: 1.5; }
 .tools-ask { display: flex; gap: 6px; margin: 0 18px; padding: 6px 6px 6px 12px; border-radius: 12px; border: 0.5px solid var(--line-strong); background: var(--white); }
 .tools-ask input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: var(--slate); font: inherit; }
+
+/* Agents custom (planche 38) */
+.ag-head { display: flex; align-items: center; gap: 10px; }
+.ag-group { display: flex; flex-direction: column; gap: 6px; }
+.ag-row { flex: 1; min-width: 0; display: grid; grid-template-columns: 28px minmax(0, 1fr) 120px 170px 56px; align-items: center; gap: 12px; padding: 9px 14px 9px 0; border: none; background: transparent; color: var(--slate); font: inherit; text-align: left; cursor: pointer; }
+.ag-mark { display: grid; place-items: center; border-radius: 8px; font-family: var(--serif, Georgia, serif); font-size: 15px; flex: none; }
+.ag-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ag-txt b { font-weight: 600; }
+.ag-txt span { font-size: 12.5px; color: var(--g600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-chip { justify-self: start; height: 22px; padding: 0 8px; border-radius: 6px; background: var(--g150); font-size: 11.5px; color: var(--g700, var(--slate)); display: inline-flex; align-items: center; }
+.ag-tools { font-size: 12px; color: var(--g550); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-tok { font-size: 12px; color: var(--g600); text-align: right; font-variant-numeric: tabular-nums; }
+.ag-side { width: 520px; }
+.ag-sheet { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; padding: 16px 18px; overflow: auto; }
+.ag-title { display: flex; align-items: center; gap: 10px; }
+.ag-name { flex: 1; min-width: 0; border: none; background: transparent; font-family: var(--serif, Georgia, serif); font-size: 22px; color: var(--slate); padding: 2px 0; outline: none; border-bottom: 1px solid transparent; }
+.ag-name:focus { border-bottom-color: var(--line-strong); }
+.ag-why { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--clay-tint); color: var(--clay-text); font-size: 12.5px; }
+.ag-field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--g600); }
+.ag-field > span { display: flex; align-items: baseline; gap: 8px; }
+.ag-field small { font-size: 11.5px; color: var(--g550); overflow: hidden; text-overflow: ellipsis; }
+.ag-field textarea, .ag-field input, .ag-describe textarea { font: inherit; font-size: 13.5px; line-height: 1.5; color: var(--slate); padding: 8px 10px; border-radius: 9px; border: 0.5px solid var(--line-strong); background: var(--white); resize: vertical; }
+.ag-seg { align-self: flex-start; flex-wrap: wrap; }
+.ag-seg button[aria-pressed='true'] { background: var(--white); color: var(--slate); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.ag-prompt { flex: 1; min-height: 220px; }
+.ag-prompt textarea { flex: 1; min-height: 200px; font-size: 13px; }
+.btn.danger { color: var(--st-err, #b4462e); border-color: color-mix(in srgb, var(--st-err, #b4462e) 50%, transparent); }

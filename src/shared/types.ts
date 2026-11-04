@@ -217,6 +217,10 @@ export type MarkParams = {
   look?: boolean
 }
 
+/** Agent custom (fichier .md de Claude Code) : à moi (tous projets) ou au projet. */
+export type AgentDraft = { name: string; description: string; model?: string; tools?: string[]; prompt: string }
+export type AgentFile = AgentDraft & { scope: 'user' | 'project'; path: string; enabled: boolean }
+
 export type CaptureResult = { ok: boolean; image?: string; info: string }
 
 export type MediaKind = 'image' | 'video' | 'audio'
@@ -342,6 +346,11 @@ export type AtelierApi = {
   toolsInventory(projectId: string, force?: boolean): Promise<ToolsInventory>
   setSkillEnabled(name: string, enabled: boolean): Promise<void>
   setMcpEnabled(projectId: string, name: string, enabled: boolean): Promise<void>
+  listAgents(projectId: string): Promise<AgentFile[]>
+  saveAgent(projectId: string, agent: AgentDraft & { scope: AgentFile['scope'] }, oldPath?: string): Promise<AgentFile>
+  deleteAgent(path: string): Promise<void>
+  setAgentEnabled(projectId: string, name: string, enabled: boolean): Promise<void>
+  draftAgent(text: string): Promise<AgentDraft & { why: string }>
   reconnectMcp(projectId: string, name: string): Promise<void>
   listMemory(projectId: string): Promise<MemoryList>
   writeMemory(projectId: string, file: string, raw: string): Promise<void>

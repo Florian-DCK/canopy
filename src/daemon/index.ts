@@ -22,6 +22,7 @@ import { loadSdk, SessionManager } from './sessions'
 import { listCommands, listFiles } from './suggest'
 import { CLAUDE_DIR, setSkillEnabled } from './tooling'
 import { forgetMemory, listMemory, moveMemory, writeMemory } from './memory'
+import { deleteAgent, draftAgent, listAgents, saveAgent, setAgentEnabled } from './agents'
 import { UsageProbe } from './usage'
 
 // Journal : le démon est lancé sans console, il écrit lui-même dans daemon.log.
@@ -235,6 +236,11 @@ const rpc: Record<string, (...a: any[]) => unknown> = {
   setSkillEnabled: (name: string, enabled: boolean) => setSkillEnabled(name, enabled),
   setMcpEnabled: (projectId: string, name: string, enabled: boolean) => sessions.setMcpEnabled(projectId, name, enabled),
   reconnectMcp: (projectId: string, name: string) => sessions.reconnectMcp(projectId, name),
+  listAgents: (projectId: string) => listAgents(pathOf(projectId)),
+  saveAgent: (projectId: string, a: any, oldPath?: string) => saveAgent(pathOf(projectId), a, oldPath),
+  deleteAgent: (path: string) => deleteAgent(path),
+  setAgentEnabled: (projectId: string, name: string, enabled: boolean) => setAgentEnabled(pathOf(projectId), name, enabled),
+  draftAgent: (text: string) => draftAgent(text),
   listMemory: (projectId: string) => listMemory(pathOf(projectId)),
   writeMemory: (projectId: string, file: string, raw: string) => writeMemory(pathOf(projectId), file, raw),
   forgetMemory: (projectId: string, file: string) => forgetMemory(pathOf(projectId), file),
