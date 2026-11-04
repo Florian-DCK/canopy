@@ -1,0 +1,45 @@
+/* Cockpit (planche 22) : une ligne par projet, pleine largeur */
+.ck { padding: 28px 36px 40px; display: flex; flex-direction: column; gap: 14px; }
+.ck-head { display: flex; align-items: center; gap: 12px; }
+.ck-head .h1 { flex: 1; margin: 0; }
+.ck-search { height: 34px; min-width: 260px; display: flex; align-items: center; gap: 7px; padding: 0 12px; border-radius: 9px; border: 0.5px solid var(--line-strong); color: var(--g550); }
+.ck-search input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: var(--slate); font: inherit; }
+.ck-hint { margin: -6px 0 4px; }
+.ck-list { display: flex; flex-direction: column; gap: 8px; }
+.ck-row { border-radius: 12px; background: var(--white); border: 0.5px solid var(--line); }
+.ck-row.quiet { background: var(--g100); }
+.ck-row.wait { background: var(--wait-bg); }
+.ck-line { min-height: 60px; display: grid; grid-template-columns: minmax(180px, 240px) 130px minmax(0, 1fr) 90px 110px 36px; align-items: center; gap: 14px; padding: 0 10px 0 16px; }
+.ck-proj { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ck-proj b { font-family: var(--serif); font-size: 17px; font-weight: 500; color: var(--slate); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ck-state { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--g550); white-space: nowrap; }
+.ck-state i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--g400); }
+.ck-state.run { color: var(--blue-text); }
+.ck-state.run i { background: var(--blue); }
+.ck-state.wait { color: var(--clay-text); font-weight: 500; }
+.ck-state.wait i { border-radius: 1px; transform: rotate(45deg); background: var(--clay); }
+.ck-state.error { color: var(--st-err); }
+.ck-state.error i { background: var(--st-err); }
+.ck-state.idle i { background: var(--st-ok); }
+.ck-state.past i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--g400); }
+.ck-state.ext i { background: var(--g550); }
+.ck-title { min-width: 0; height: 40px; padding: 0 10px; border: none; border-radius: 8px; background: transparent; color: var(--slate); font: inherit; font-size: 14.5px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.ck-row.quiet .ck-title { color: var(--g600); }
+.ck-title:hover, .ck-sub:hover { background: var(--g150); }
+.ck-ago { font-size: 12.5px; color: var(--g550); text-align: right; white-space: nowrap; }
+.ck-none { grid-column: span 3; font-size: 13px; }
+.ck-more { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; border: none; border-radius: 7px; background: var(--g150); color: var(--g600); font: inherit; font-size: 12.5px; cursor: pointer; justify-self: start; }
+.ck-more[aria-expanded='true'] .a-chev { transform: none; }
+.ck-rest { display: flex; flex-direction: column; gap: 1px; padding: 0 10px 10px calc(16px + min(240px, max(180px, 22%)) + 14px); }
+.ck-sub { height: 36px; display: grid; grid-template-columns: 130px minmax(0, 1fr) 90px; align-items: center; gap: 14px; padding: 0 10px; border: none; border-radius: 8px; background: transparent; color: var(--slate); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.ck-sub-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ck-older { align-self: flex-start; padding: 6px 10px; border: none; background: transparent; color: var(--blue-text); font: inherit; font-size: 12.5px; cursor: pointer; }
+.ck-strays { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.ck-stray { display: flex; align-items: center; gap: 12px; font-size: 12.5px; }
+/* Dépose sur l'icône Mosaïque de la barre de gauche. */
+.rail button.drop-over { box-shadow: 0 0 0 2px var(--blue); background: var(--blue-tint); }
+.rail button.drop-ok { animation: ck-drop 0.9s ease-out; }
+@keyframes ck-drop { 0% { box-shadow: 0 0 0 2px var(--st-ok), 0 0 18px 4px color-mix(in srgb, var(--st-ok) 50%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (max-width: 1100px) {
+  .ck-line { grid-template-columns: minmax(140px, 180px) 110px minmax(0, 1fr) 70px 90px 36px; }
+}

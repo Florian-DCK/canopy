@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react'
-import type { ExternalSession, Project } from '../../../shared/types'
-import { ago, treeOf, type Tree } from '../derive'
+import '../cockpit.css'
+import { useEffect, useMemo, useState } from 'react'
+import type { ExternalSession, HistoryEntry, SessionMeta } from '../../../shared/types'
+import { ago, type Tree } from '../derive'
+import { Icon } from '../icons'
 import { thumbUrl } from '../media'
-import { addProjectDialog, api, openExternal, openSession, useStore } from '../store'
+import { addProjectDialog, api, openExternal, openSession, resumeFromHistory, useStore } from '../store'
 import { useLastImage } from './Media'
 import { Icons, Tile, TopBar } from '../ui'
 import { fxClass, useFx } from '../fx'
-import { dragSession, openOrTile } from '../tiles'
+import { dragHistory, dragSession, openOrTile, resumeIntoTiles } from '../tiles'
 
 export async function newSession(projectId: string) {
   openSession(await api.createSession(projectId))
@@ -66,51 +68,76 @@ export function TreeView({ tree }: { tree: Tree }) {
   )
 }
 
+
+// ---------- Cockpit (planche 22) : une ligne par projet, sa session à voir en premier, les autres dépliables ----------
+
+type Entry =
+  | { kind: 'open'; key: string; title: string; at: number; s: SessionMeta }
+  | { kind: 'external'; key: string; title: string; at: number; x: ExternalSession }
+  | { kind: 'history'; key: string; title: string; at: number; h: HistoryEntry }
+
+const RANK: Record<string, number> = { wait: 0, run: 1, error: 2, idle: 3 }
+const SHOWN = 5
+
+const stateOf = (e: Entry): { word: string; cls: string } =>
+  e.kind === 'external'
+    ? { word: 'Dans un terminal', cls: 'ext' }
+    : e.kind === 'history'
+      ? { word: 'Fermée', cls: 'past' }
+      : { word: e.s.status === 'wait' ? 'T’attend' : e.s.status === 'run' ? 'Au travail' : e.s.status === 'error' ? 'Erreur' : 'Terminée', cls: e.s.status }
+
 export function Cockpit() {
   const projects = useStore((s) => s.projects)
   const sessions = useStore((s) => s.sessions)
-  const items = useStore((s) => s.items)
-  const go = useStore((s) => s.go)
-
+  const history = useStore((s) => s.history)
+  const loadHistory = useStore((s) => s.loadHistory)
   const external = useStore((s) => s.external)
+  const go = useStore((s) => s.go)
+  const fresh = useFx((f) => f.fresh)
+  const [open, setOpen] = useState<Record<string, boolean>>({})
+  const [q, setQ] = useState('')
+  const [busy, setBusy] = useState<string | null>(null)
 
-  const bands = useMemo(() => {
-    const rows: BandData[] = projects.map((p) => ({
-      p,
-      registered: true,
-      trees: Object.values(sessions)
-        .filter((s) => s.projectId === p.id)
-        .sort((a, b) => a.startedAt - b.startedAt)
-        .map((s) => treeOf(s, items[s.id] ?? [])),
-      externals: external.filter((x) => x.projectId === p.id),
-      alert: false
-    }))
-    // Dossiers pas encore ajoutés : une bande par dossier de travail.
-    const byCwd = new Map<string, BandData>()
-    for (const x of external.filter((x) => !x.projectId)) {
-      const key = x.cwd.toLowerCase()
-      if (!byCwd.has(key)) {
-        const name = x.cwd.split(/[\\/]/).filter(Boolean).pop() ?? x.cwd
-        byCwd.set(key, {
-          p: { id: `ext:${key}`, name, path: x.cwd, color: '#B0AEA5' }, // gris chaud moyen : lisible en clair comme en sombre
-          registered: false,
-          trees: [],
-          externals: [],
-          alert: false
-        })
-      }
-      byCwd.get(key)!.externals.push(x)
+  useEffect(() => {
+    if (!history.length) void loadHistory()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase()
+    return projects
+      .map((p) => {
+        const live = Object.values(sessions)
+          .filter((s) => s.projectId === p.id)
+          .sort((a, b) => (RANK[a.status] ?? 9) - (RANK[b.status] ?? 9) || b.updatedAt - a.updatedAt)
+        const liveSdk = new Set(live.map((s) => s.sdkSessionId).filter(Boolean))
+        const entries: Entry[] = [
+          ...live.map((s): Entry => ({ kind: 'open', key: s.id, title: s.title, at: s.updatedAt, s })),
+          ...external.filter((x) => x.projectId === p.id && !liveSdk.has(x.sdkSessionId)).map((x): Entry => ({ kind: 'external', key: `x:${x.sdkSessionId}`, title: x.title, at: x.lastModified, x })),
+          ...history
+            .filter((h) => h.projectId === p.id && !liveSdk.has(h.sdkSessionId) && !external.some((x) => x.sdkSessionId === h.sdkSessionId))
+            .sort((a, b) => b.lastModified - a.lastModified)
+            .map((h): Entry => ({ kind: 'history', key: `h:${h.sdkSessionId}`, title: h.title, at: h.lastModified, h }))
+        ].filter((e) => !needle || e.title.toLowerCase().includes(needle))
+        return { p, entries, last: Math.max(0, ...entries.map((e) => e.at)) }
+      })
+      .filter((r) => !needle || r.entries.length)
+      .sort((a, b) => b.last - a.last)
+  }, [projects, sessions, history, external, q])
+
+  const openEntry = async (e: Entry, ev: { ctrlKey: boolean; metaKey: boolean }) => {
+    if (e.kind === 'open') return openOrTile(ev, e.s.id)
+    setBusy(e.key)
+    try {
+      if (e.kind === 'external') await openExternal(e.x)
+      else if (ev.ctrlKey || ev.metaKey) await resumeIntoTiles(e.h)
+      else await resumeFromHistory(e.h)
+    } finally {
+      setBusy(null)
     }
-    return [...rows, ...byCwd.values()]
-      .map((r) => ({ ...r, alert: r.trees.some((t) => t.status === 'wait') }))
-      .filter((r) => r.trees.length || r.externals.length)
-      .sort((a, b) => Number(b.alert) - Number(a.alert) || Number(b.registered) - Number(a.registered))
-  }, [projects, sessions, items, external])
-
-  const idle = projects.filter((p) => !bands.some((b) => b.p.id === p.id))
-  const all = Object.values(sessions)
-  const waiting = all.filter((s) => s.status === 'wait').length
-  const running = all.filter((s) => s.status === 'run').length
+  }
+  const drag = (e: Entry) => (ev: React.DragEvent) => (e.kind === 'open' ? dragSession(ev, { sessionId: e.s.id }) : e.kind === 'history' ? dragHistory(ev, e.h) : undefined)
+  const strays = external.filter((x) => !x.projectId)
 
   return (
     <div className="main">
@@ -118,163 +145,101 @@ export function Cockpit() {
         Canopy / <b>Cockpit</b>
       </TopBar>
       <div className="scroll">
-        <div className="page">
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 320px' }}>
-              <h1 className="h1">
-                {bands.length ? `${bands.length} projet${bands.length > 1 ? 's' : ''} actif${bands.length > 1 ? 's' : ''}` : 'Rien ne tourne'}
-              </h1>
-              <p className="sub">
-                {all.length} session{all.length > 1 ? 's' : ''} dans Canopy · {running} en cours
-                {external.length > 0 && ` · ${external.length} active${external.length > 1 ? 's' : ''} ailleurs`}
-                {waiting > 0 && (
-                  <>
-                    {' · '}
-                    <span style={{ color: 'var(--clay-text)' }}>
-                      {waiting} attend{waiting > 1 ? 'ent' : ''} ta réponse
-                    </span>
-                  </>
-                )}
-              </p>
-            </div>
-            <div role="list" aria-label="Projets actifs" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {bands.map(({ p, alert }) => (
-                <span role="listitem" key={p.id} className="btn" style={{ paddingLeft: 6, fontWeight: 500 }}>
-                  <Tile project={p} size={24} />
-                  {p.name}
-                  {alert && <span className="dot wait" aria-label="attend ta réponse" />}
-                </span>
-              ))}
-              <button type="button" className="btn ghost" onClick={() => void addProjectDialog()} title="Choisir un dossier à ajouter comme projet">
-                {Icons.plus}
-                Projet
-              </button>
-            </div>
+        <div className="ck">
+          <div className="ck-head">
+            <h1 className="h1">Projets</h1>
+            <label className="ck-search">
+              <span className="sr-only">Chercher une session</span>
+              <Icon name="search" size={15} />
+              <input value={q} placeholder="Chercher une session…" onChange={(e) => setQ(e.target.value)} />
+            </label>
+            <button type="button" className="btn primary" onClick={() => void addProjectDialog()}>{Icons.plus}Projet</button>
           </div>
+          <p className="small muted ck-hint">Glisse une session sur l’icône Mosaïque de la barre de gauche (ou Ctrl+clic) pour l’ajouter à la mosaïque sans quitter cette page.</p>
 
           {projects.length === 0 && (
             <div className="band" style={{ padding: 28, flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
               <h2 className="h2">Ajoute ton premier projet</h2>
               <p className="muted" style={{ margin: 0 }}>Un projet = un dossier de ton disque. Les sessions Claude Code y tournent avec ta config habituelle.</p>
-              <button type="button" className="btn primary" onClick={() => void addProjectDialog()}>
-                Ajouter un projet
-              </button>
+              <button type="button" className="btn primary" onClick={() => void addProjectDialog()}>Ajouter un projet</button>
             </div>
           )}
 
-          {bands.map((b) => (
-            <Band key={b.p.id} data={b} />
-          ))}
+          <div className="ck-list">
+            {rows.map(({ p, entries }) => {
+              const top = entries[0]
+              const rest = entries.slice(1, SHOWN + 1)
+              const older = entries.length - 1 - rest.length
+              const isOpen = !!open[p.id] || !!q.trim()
+              const st = top && stateOf(top)
+              return (
+                <section key={p.id} className={`ck-row ${top?.kind === 'open' ? fxClass(top.s, fresh) : ''} ${st?.cls === 'wait' ? 'wait' : ''} ${top && top.kind !== 'open' ? 'quiet' : ''}`} aria-label={p.name}>
+                  <div className="ck-line">
+                    <span className="ck-proj">
+                      <Tile project={p} size={26} />
+                      <b>{p.name}</b>
+                    </span>
+                    {top ? (
+                      <>
+                        <span className={`ck-state ${st!.cls}`}><i aria-hidden="true" />{st!.word}</span>
+                        <button type="button" className="ck-title" draggable={top.kind !== 'external'} onDragStart={drag(top)} disabled={busy === top.key} title={`${top.title} — Ctrl+clic : Mosaïque`} onClick={(ev) => void openEntry(top, ev)}>
+                          {busy === top.key ? 'Ouverture…' : top.title}
+                        </button>
+                        <span className="ck-ago">{ago(top.at)}</span>
+                      </>
+                    ) : (
+                      <span className="ck-none muted">Aucune session pour l’instant</span>
+                    )}
+                    {entries.length > 1 ? (
+                      <button type="button" className="ck-more" aria-expanded={isOpen} onClick={() => setOpen({ ...open, [p.id]: !open[p.id] })}>
+                        <Icon name="chevron" size={13} className="a-chev" />
+                        {entries.length - 1} autre{entries.length > 2 ? 's' : ''}
+                      </button>
+                    ) : (
+                      <span />
+                    )}
+                    <button type="button" className="icon-btn" aria-label={`Nouvelle session dans ${p.name}`} title={`Nouvelle session dans ${p.name}`} onClick={() => void newSession(p.id)}>
+                      <Icon name="plus" size={16} />
+                    </button>
+                  </div>
+                  {isOpen && rest.length > 0 && (
+                    <div className="ck-rest">
+                      {rest.map((e) => {
+                        const s = stateOf(e)
+                        return (
+                          <button key={e.key} type="button" className="ck-sub" draggable={e.kind !== 'external'} onDragStart={drag(e)} disabled={busy === e.key} title={`${e.title} — Ctrl+clic : Mosaïque`} onClick={(ev) => void openEntry(e, ev)}>
+                            <span className={`ck-state ${s.cls}`}><i aria-hidden="true" />{s.word}</span>
+                            <span className="ck-sub-t">{busy === e.key ? 'Ouverture…' : e.title}</span>
+                            <span className="ck-ago">{ago(e.at)}</span>
+                          </button>
+                        )
+                      })}
+                      {older > 0 && (
+                        <button type="button" className="ck-older" onClick={() => go({ name: 'history' })}>
+                          Voir les {older} plus anciennes dans l’historique →
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </section>
+              )
+            })}
+          </div>
 
-          {idle.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13 }} className="muted">
-              <span>{bands.length ? 'Sans session :' : 'Tes projets :'}</span>
-              {idle.map((p) => (
-                <button key={p.id} type="button" className="btn ghost sm" onClick={() => newSession(p.id)} title="Nouvelle session">
-                  <Tile project={p} size={18} />
-                  {p.name}
-                  {Icons.plus}
-                </button>
+          {strays.length > 0 && (
+            <div className="ck-strays">
+              <span className="side-h">Sessions dans un terminal, hors projets</span>
+              {[...new Map(strays.map((x) => [x.cwd.toLowerCase(), x])).values()].map((x) => (
+                <span key={x.cwd} className="ck-stray">
+                  <span className="mono">{x.cwd}</span>
+                  <span className="muted">{x.title}</span>
+                  <button type="button" className="btn sm" onClick={() => void api.addProjectPath(x.cwd).then(() => useStore.getState().loadProjects())}>Ajouter ce projet</button>
+                </span>
               ))}
             </div>
           )}
         </div>
       </div>
     </div>
-  )
-}
-
-type BandData = { p: Project; registered: boolean; trees: Tree[]; externals: ExternalSession[]; alert: boolean }
-
-/** Carte d'une session qui tourne hors de Canopy (terminal, VS Code…). */
-function ExternalCard({ x }: { x: ExternalSession }) {
-  const [busy, setBusy] = useState(false)
-  const active = Date.now() - x.lastModified < 45_000
-  return (
-    <button
-      type="button"
-      className="root"
-      disabled={busy}
-      title="Ouvrir en lecture"
-      onClick={async () => {
-        setBusy(true)
-        try {
-          await openExternal(x)
-        } finally {
-          setBusy(false)
-        }
-      }}
-      style={{ borderStyle: 'dashed' }}
-    >
-      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span className={`dot ${active ? 'run' : ''}`} aria-hidden="true" />
-        <span style={{ fontSize: 12, fontWeight: 600 }}>Terminal</span>
-        <span className="tag">hors Canopy</span>
-        <span style={{ flex: 1 }} />
-        <span className="small muted" style={{ whiteSpace: 'nowrap' }}>{ago(x.lastModified)}</span>
-      </span>
-      <span className="task">{x.title}</span>
-      <span className="small" style={{ color: active ? 'var(--blue-text)' : 'var(--g550)' }}>
-        {busy ? 'Ouverture…' : active ? 'Actif à l’instant · ouvrir en lecture' : `Calme depuis ${ago(x.lastModified)} · ouvrir en lecture`}
-      </span>
-    </button>
-  )
-}
-
-function Band({ data }: { data: BandData }) {
-  const { p, trees, externals, alert, registered } = data
-  const go = useStore((s) => s.go)
-  const loadProjects = useStore((s) => s.loadProjects)
-  const agents = trees.reduce((n, t) => n + t.kids.filter((k) => !k.agent.startsWith('Étape')).length, 0)
-  const count = trees.length + externals.length
-  return (
-    <section className={`band ${alert ? 'alert' : ''}`} aria-label={p.name} style={registered ? undefined : { borderStyle: 'dashed' }}>
-      <div className="band-head">
-        <Tile project={p} />
-        <span style={{ fontFamily: 'var(--serif)', fontSize: 24, fontWeight: 500, lineHeight: 1.2, overflowWrap: 'anywhere' }}>{p.name}</span>
-        <span className="small" style={{ color: 'var(--g600)' }}>
-          {count} session{count > 1 ? 's' : ''}
-          {externals.length ? ` · ${externals.length} hors Canopy` : ''}
-          {agents ? ` · ${agents} sous-agent${agents > 1 ? 's' : ''}` : ''}
-        </span>
-        {registered ? (
-          p.branch && <span className="mono small muted">{p.branch}</span>
-        ) : (
-          <span className="mono small muted" style={{ overflowWrap: 'anywhere' }}>{p.path}</span>
-        )}
-        <span style={{ flex: 1 }} />
-        <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {registered ? (
-            <>
-              <button type="button" className="btn sm" onClick={() => go({ name: 'project', projectId: p.id })}>
-                Ouvrir
-              </button>
-              <button type="button" className="btn sm" onClick={() => newSession(p.id)}>
-                + Session
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              className="btn sm"
-              onClick={async () => {
-                await api.addProjectPath(p.path)
-                await loadProjects()
-              }}
-            >
-              Ajouter ce projet
-            </button>
-          )}
-        </span>
-      </div>
-      <div className="band-trees">
-        {trees.map((t) => (
-          <TreeView key={t.session.id} tree={t} />
-        ))}
-        {externals.map((x) => (
-          <ExternalCard key={x.sdkSessionId} x={x} />
-        ))}
-      </div>
-    </section>
   )
 }
