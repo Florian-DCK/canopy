@@ -69,7 +69,8 @@ _pipe = ov.WhisperPipeline(snapshot_download("OpenVINO/whisper-large-v3-int8-ov"
 GHOSTS = re.compile(
     r"sous-titr\w*[^.!?]*?(radio-canada|communaut\w* d'amara(\.org)?|amara(\.org)?)\s*[.!?]?"
     r"|merci d'avoir regard\w*[^.!?]*[.!?]?"
-    r"|abonnez-vous[^.!?]*[.!?]?",
+    r"|abonnez-vous[^.!?]*[.!?]?"
+    r"|merci,? (madame|monsieur) (la |le )?pr[ée]sident\w*[.!?]?",
     re.I,
 )
 
