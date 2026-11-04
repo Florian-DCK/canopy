@@ -3,6 +3,7 @@ import { create } from 'zustand'
 // Réglages de la voix (page Paramètres) : gardés dans le navigateur de Canopy et envoyés au service voix.
 
 export type EndMode = 'fast' | 'normal' | 'patient'
+export type Avatar = 'canopy' | 'esprit' | 'gland'
 type Prefs = {
   /** 0 = très sensible, 1 = très tolérant aux bruits. */
   tolerance: number
@@ -10,11 +11,13 @@ type Prefs = {
   duck: boolean
   /** Volume laissé aux autres applications pendant que Claude parle (0,1 à 0,8). */
   duckLevel: number
+  /** Apparence de la voix : le soleil Canopée ou un personnage. */
+  avatar: Avatar
   set: (p: Partial<Omit<Prefs, 'set'>>) => void
 }
 
 const KEY = 'atelier.voice.prefs'
-const DEF = { tolerance: 0.5, end: 'normal' as EndMode, duck: true, duckLevel: 0.3 }
+const DEF = { tolerance: 0.5, end: 'normal' as EndMode, duck: true, duckLevel: 0.3, avatar: 'canopy' as Avatar }
 
 export const useVoicePrefs = create<Prefs>((set) => ({
   ...DEF,
@@ -29,7 +32,7 @@ export const useVoicePrefs = create<Prefs>((set) => ({
     set((s) => {
       const next = { ...s, ...p }
       try {
-        localStorage.setItem(KEY, JSON.stringify({ tolerance: next.tolerance, end: next.end, duck: next.duck, duckLevel: next.duckLevel }))
+        localStorage.setItem(KEY, JSON.stringify({ tolerance: next.tolerance, end: next.end, duck: next.duck, duckLevel: next.duckLevel, avatar: next.avatar }))
       } catch {
         /* stockage indisponible */
       }

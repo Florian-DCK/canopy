@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { CompanionState } from '../../../shared/companion'
 import type { ToastApi } from '../../../shared/types'
 import { Icon } from '../icons'
-import { CanopyMark, type MarkState } from '../voice/CanopyMark'
+import { type MarkState } from '../voice/CanopyMark'
+import { Avatar } from '../voice/Avatar'
 import '../voice/voice.css'
 
 // Mode compagnon (planche 32) : la bulle, en bas à droite de cette fenêtre ; à sa gauche, une seule ligne
@@ -158,7 +159,7 @@ export function Companion({ c }: { c: CompanionState }) {
       {open && (
         <div className="c-card" data-hit>
           <div className="c-card-head">
-            <CanopyMark state={MARK[c.phase]} size={30} />
+            <Avatar kind={c.avatar ?? 'canopy'} state={MARK[c.phase]} size={30} />
             <div className="c-card-title">
               <span className="c-card-project">{c.project ?? 'Canopy'}</span>
               <span className="c-card-session">{c.session ?? 'Aucune session'}</span>
@@ -189,7 +190,7 @@ export function Companion({ c }: { c: CompanionState }) {
           onPointerUp={up}
           title="Clic : déplier · glisser : déplacer"
         >
-          <CanopyMark state={MARK[c.phase]} size={Math.round(size * 0.8)} />
+          <Avatar kind={c.avatar ?? 'canopy'} state={MARK[c.phase]} size={Math.round(size * 0.8)} />
         </div>
       </div>
     </div>

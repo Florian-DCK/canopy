@@ -1,0 +1,38 @@
+[
+  {
+    "name": "r2-esprit-face",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-c-esprit.png"],
+    "prompt": "Redraw exactly this forest spirit character (same shapes, proportions and terracotta color #D57151) as ONE large clean front view, neutral pose, eyes open, mouth closed, centered on a perfectly flat plain background color #141413, no shadow, no text, no extra elements. Crisp flat vector shapes with clean edges, consistent outline-free style, so it can be traced into separate parts."
+  },
+  {
+    "name": "r2-esprit-pieces",
+    "aspect_ratio": "16:9",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-c-esprit.png"],
+    "prompt": "Animation parts sheet (exploded view) for exactly this forest spirit character, same style and terracotta color #D57151, on a perfectly flat plain background #141413, no text. Lay out separately with space between them: 1 the body alone (no face), 2 the tree-canopy head foliage alone, 3 left and right arms alone, 4 a row of eye pairs: open, half-closed, closed (a curved line), looking up, wide surprised, 5 a row of mouth shapes: none, small closed line, small round 'o', medium open, wide open talking, smile. Flat vector shapes, near-black #141413 facial features, clean edges, everything at the same scale as on the character."
+  },
+  {
+    "name": "r2-esprit-etats",
+    "aspect_ratio": "16:9",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-c-esprit.png"],
+    "prompt": "Redraw exactly this forest spirit character, identical in every pose (same size, shapes and color), in four states in a row on a perfectly flat plain background #141413, no text, no shadows: resting (eyes closed, slightly squashed), listening (tilted toward the viewer, eyes wide, canopy leaves perked up), thinking (eyes looking up, a single small leaf floating above), speaking (mouth open mid-word, canopy slightly bouncing). Clean flat vector look, crisp edges."
+  },
+  {
+    "name": "r2-gland-face",
+    "aspect_ratio": "1:1",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-f-gland.png"],
+    "prompt": "Redraw exactly this acorn character (same shapes, proportions, terracotta body #D57151 and dark textured cap) as ONE large clean front view, standing, neutral pose, eyes open, mouth closed, arms down, centered on a perfectly flat plain background #141413, no shadow, no text, no extra elements. Crisp flat vector shapes with clean edges so it can be traced into separate parts."
+  },
+  {
+    "name": "r2-gland-pieces",
+    "aspect_ratio": "16:9",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-f-gland.png"],
+    "prompt": "Animation parts sheet (exploded view) for exactly this acorn character, same style and colors, on a perfectly flat plain background #141413, no text. Lay out separately with space between them: 1 the body alone without face, 2 the cap alone (with its stem), 3 left arm and right arm alone, 4 legs alone, 5 a row of eye pairs: open, half-closed, closed (curved lines), looking up, wide surprised, 6 a row of mouth shapes: small closed, small round 'o', medium open, wide open talking, smile, 7 the two cheek blushes. Flat vector shapes, clean edges, same scale as on the character."
+  },
+  {
+    "name": "r2-gland-etats",
+    "aspect_ratio": "16:9",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-f-gland.png"],
+    "prompt": "Redraw exactly this acorn character, identical in every pose (same size, shapes and colors), in four states in a row on a perfectly flat plain background #141413, no text, no shadows: resting (sitting, eyes closed), listening (lifting its cap with one hand, eyes wide), thinking (eyes up, cap spinning above one finger), speaking (mouth open mid-word, one arm raised). Clean flat vector look, crisp edges."
+  }
+]

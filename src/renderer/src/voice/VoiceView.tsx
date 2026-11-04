@@ -5,6 +5,8 @@ import { api, useStore } from '../store'
 import { CanopyMark, type MarkState } from './CanopyMark'
 import { clearStage, setMicMuted, hush, voiceLevels, selectStage, setVoiceSession, setMute, setVoiceName, startVoice, stopVoice, useVoice, VOICES, type StageEntry, type VoicePhase } from './runtime'
 import { StageBody, stageInfo } from './Scene'
+import { Avatar } from './Avatar'
+import { useVoicePrefs } from './prefs'
 import { withTransition } from './transition'
 import { setCompanion, useCompanion } from './companion'
 import './voice.css'
@@ -30,6 +32,7 @@ const WORD: Record<VoicePhase, string> = {
 /** Vue Canopée : le grand soleil, ce que tu dis, ce que Claude répond. */
 export function VoiceView() {
   const v = useVoice()
+  const avatarKind = useVoicePrefs((p) => p.avatar)
   const session = useStore((s) => (v.sessionId ? s.sessions[v.sessionId] : undefined))
   const go = useStore((s) => s.go)
 
@@ -66,7 +69,7 @@ export function VoiceView() {
     <main className={`voice v-${cls}${split ? ' v-split' : ''}`} aria-label="Mode voix">
       <VoiceHeader sessionId={v.sessionId} />
       <div className="v-sun">
-        <CanopyMark state={markOf(v.phase, v.speech)} size={split ? 240 : 340} levels={voiceLevels} />
+        <Avatar kind={avatarKind} state={markOf(v.phase, v.speech)} size={split ? 240 : 340} levels={voiceLevels} />
         {v.mute && v.phase !== 'waking' && v.phase !== 'error' ? (
           <div className="v-words v-ghost" aria-live="polite">
             <span className="v-word">{v.speech ? 'Je t’écoute' : v.phase === 'think' ? activity ?? 'Je travaille' : 'Mode fantôme'}</span>
@@ -251,6 +254,7 @@ function MicButton() {
 /** Pastille quand Claude a montré autre chose : le soleil continue d'écouter en bas de l'écran. */
 export function VoiceDock() {
   const v = useVoice()
+  const avatarKind = useVoicePrefs((p) => p.avatar)
   const view = useStore((s) => s.view)
   const go = useStore((s) => s.go)
   // En mode compagnon, la bulle suffit : pas de seconde barre dans Canopy.
@@ -261,7 +265,7 @@ export function VoiceDock() {
   return (
     <div className="v-dock" role="status">
       <button type="button" className="v-dock-mark" title="Revenir au mode voix" onClick={() => withTransition(() => go({ name: 'voice' }))}>
-        <CanopyMark state={markOf(v.phase, v.speech)} size={44} />
+        <Avatar kind={avatarKind} state={markOf(v.phase, v.speech)} size={44} />
       </button>
       {txt && <span className="v-dock-txt">{txt}</span>}
       <span className="v-dock-st">{st}</span>

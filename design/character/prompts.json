@@ -1,0 +1,242 @@
+[
+  {
+    "name": "perso-a-pousse",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "16:9",
+      "output_format": "png",
+      "prompt": "Original character design sheet for a voice assistant mascot, in the same flat warm graphic style as this logo (terracotta clay #D57151, warm off-white #FAF9F5, near-black #141413, simple rounded shapes, no gradients, no text). The character is a tiny living sapling: a round seed head with a calm friendly face, a thin stem body and two leaf arms, standing on a short horizon line. Show it four times in a row on a plain dark #141413 background, same size, labelled only by pose: 1 resting (eyes softly closed, relaxed), 2 listening (leaning forward, one leaf cupped like an ear, eyes wide), 3 thinking (looking up, leaf tapping its head, tiny dots above), 4 speaking (mouth open mid-word, leaves gesturing). Clean vector look, very readable at small size, cute but sober, not childish.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1256b/HOel6P84NtwIPnWHNlWRA_1793816118416.png"
+      ]
+    },
+    "requestId": "01a1a7c5-cacd-7561-8303-d10b70e9c142",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-a-pousse.png",
+        "url": "https://v3b.fal.media/files/b/0ab1256c/V7AlxLafHd2Dscy5Oqs5P_EkMVJPt1.png"
+      }
+    ]
+  },
+  {
+    "name": "perso-b-soleil",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "16:9",
+      "output_format": "png",
+      "prompt": "Original character design sheet: the terracotta sun from this logo becomes a small living character with a minimal face (two oval eyes, small mouth) and three tiny tree silhouettes on its belly like in the logo. Flat vector style matching the logo, colors terracotta #D57151, near-black #141413, off-white accents, no gradients, no text. Four poses in a row on a plain dark #141413 background: resting (half-closed eyes, gentle glow), listening (rays raised like antennae, leaning in), thinking (eyes up, rays curling, small orbit dot circling), speaking (mouth open, rays pulsing outward). Simple, iconic, readable at 48 pixels.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1256b/HOel6P84NtwIPnWHNlWRA_1793816118416.png"
+      ]
+    },
+    "requestId": "01a1a7c5-cad5-7593-9146-d2df01ccdcbd",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-b-soleil.png",
+        "url": "https://v3b.fal.media/files/b/0ab1256c/WZ6HtdnLoWpbuQ6YXGxiN_eYqL40dY.png"
+      }
+    ]
+  },
+  {
+    "name": "perso-c-esprit",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "16:9",
+      "output_format": "png",
+      "prompt": "Original character design sheet for a calm forest spirit mascot inspired by this logo: a small soft blob-shaped creature whose head is a rounded tree canopy (like the trees cut in the logo), terracotta clay body #D57151, near-black #141413 details, tiny dot eyes, no mouth when silent. Flat vector, no gradients, no text, plain dark #141413 background. Four poses in a row: resting (floating, eyes closed), listening (canopy leaves perked up, body tilted toward the viewer), thinking (looking up, a small leaf orbiting above), speaking (a small round mouth appears, canopy bouncing). Elegant, quiet, distinctive, readable at small size.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1256b/HOel6P84NtwIPnWHNlWRA_1793816118416.png"
+      ]
+    },
+    "requestId": "01a1a7c5-cad0-7703-aef0-92555b03ad8a",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-c-esprit.png",
+        "url": "https://v3b.fal.media/files/b/0ab1256c/tYqDr1GNUKSppk2zsDFW3_UghL4Q77.png"
+      }
+    ]
+  },
+  {
+    "name": "perso-d-lucioles",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "16:9",
+      "output_format": "png",
+      "prompt": "Original character design sheet: a tiny glowing firefly-like companion, round terracotta body #D57151 with a soft warm glow, two translucent wings, short antennae, a minimal kind face. Flat illustration matching the style and palette of this logo, no text, plain dark #141413 background. Four poses in a row: resting (glow dimmed, wings folded), listening (flying closer, big attentive eyes, glow brighter), thinking (circling, little sparkles trailing), speaking (glow pulsing with the voice, mouth open). Simple shapes, premium app mascot quality, readable at small size.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1256b/HOel6P84NtwIPnWHNlWRA_1793816118416.png"
+      ]
+    },
+    "requestId": "01a1a7c5-cad5-73b2-85c2-f0c0ae21a850",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-d-lucioles.png",
+        "url": "https://v3b.fal.media/files/b/0ab1256c/TCSjC9m87LX6M7DBrJ4qK_NX919Ert.png"
+      }
+    ]
+  },
+  {
+    "name": "perso-e-graine",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "16:9",
+      "output_format": "png",
+      "prompt": "Original character design sheet for a minimal abstract mascot: a smooth terracotta pebble or seed shape #D57151 with only two small near-black eyes, no limbs, expressive only through squash and stretch and eye shape, in the flat style of this logo. No text, plain dark #141413 background, a short terracotta horizon line under it. Four poses in a row: resting (slightly flattened, sleepy eyes), listening (stretched tall, eyes round and wide, tilted), thinking (eyes looking up-right, body twisted slightly), speaking (body bouncing, eyes happy crescents). Ultra simple, iconic like a high-end app mascot.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1256b/HOel6P84NtwIPnWHNlWRA_1793816118416.png"
+      ]
+    },
+    "requestId": "01a1a7c5-cad8-7b51-b297-cf1c834f733e",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-e-graine.png",
+        "url": "https://v3b.fal.media/files/b/0ab1256c/MrAtJeN0wHdrVj7P3-JTS_tINHcvOV.png"
+      }
+    ]
+  },
+  {
+    "name": "perso-f-gland",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "16:9",
+      "output_format": "png",
+      "prompt": "Original character design sheet: a small acorn character with a terracotta body #D57151 and a dark brown textured cap, tiny stubby arms, friendly minimal face, in a flat vector style that matches this logo's palette (clay, near-black, off-white), no gradients, no text, plain dark #141413 background. Four poses in a row: resting (sitting, eyes closed), listening (lifting its cap with one hand like tipping a hat to hear better), thinking (spinning the cap on one finger, eyes up), speaking (mouth open, one arm raised explaining). Charming, sober, readable at small size.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1256b/HOel6P84NtwIPnWHNlWRA_1793816118416.png"
+      ]
+    },
+    "requestId": "01a1a7c5-cad2-7e30-ad3f-2e19f4d41606",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\perso-f-gland.png",
+        "url": "https://v3b.fal.media/files/b/0ab1256c/nfUIbbFQyaOqvZ78boOVR_gKWH0721.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-esprit-face",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Redraw exactly this forest spirit character (same shapes, proportions and terracotta color #D57151) as ONE large clean front view, neutral pose, eyes open, mouth closed, centered on a perfectly flat plain background color #141413, no shadow, no text, no extra elements. Crisp flat vector shapes with clean edges, consistent outline-free style, so it can be traced into separate parts.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1258d/N94lTD_L_tgQuhKB-dN4z_1793816452173.png"
+      ]
+    },
+    "requestId": "01a1a7ca-e42b-7ac3-bb33-7f13077cb6f1",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\r2-esprit-face.png",
+        "url": "https://v3b.fal.media/files/b/0ab1258d/CzGXtlP9GOeIa_D3ZHS-n_XevZ16nd.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-esprit-pieces",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "16:9",
+      "output_format": "png",
+      "prompt": "Animation parts sheet (exploded view) for exactly this forest spirit character, same style and terracotta color #D57151, on a perfectly flat plain background #141413, no text. Lay out separately with space between them: 1 the body alone (no face), 2 the tree-canopy head foliage alone, 3 left and right arms alone, 4 a row of eye pairs: open, half-closed, closed (a curved line), looking up, wide surprised, 5 a row of mouth shapes: none, small closed line, small round 'o', medium open, wide open talking, smile. Flat vector shapes, near-black #141413 facial features, clean edges, everything at the same scale as on the character.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1258d/N94lTD_L_tgQuhKB-dN4z_1793816452173.png"
+      ]
+    },
+    "requestId": "01a1a7ca-e421-7d91-b61a-68c07e51ed20",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\r2-esprit-pieces.png",
+        "url": "https://v3b.fal.media/files/b/0ab1258d/CzTBRHBtSayjlknTE3e_7_I5afLDH8.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-esprit-etats",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "16:9",
+      "output_format": "png",
+      "prompt": "Redraw exactly this forest spirit character, identical in every pose (same size, shapes and color), in four states in a row on a perfectly flat plain background #141413, no text, no shadows: resting (eyes closed, slightly squashed), listening (tilted toward the viewer, eyes wide, canopy leaves perked up), thinking (eyes looking up, a single small leaf floating above), speaking (mouth open mid-word, canopy slightly bouncing). Clean flat vector look, crisp edges.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1258d/N94lTD_L_tgQuhKB-dN4z_1793816452173.png"
+      ]
+    },
+    "requestId": "01a1a7ca-e429-78e2-956d-6498915a12f8",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\r2-esprit-etats.png",
+        "url": "https://v3b.fal.media/files/b/0ab1258d/2k1WlY38NdibHp_3UsJJa_GGYW4hv8.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-gland-face",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "prompt": "Redraw exactly this acorn character (same shapes, proportions, terracotta body #D57151 and dark textured cap) as ONE large clean front view, standing, neutral pose, eyes open, mouth closed, arms down, centered on a perfectly flat plain background #141413, no shadow, no text, no extra elements. Crisp flat vector shapes with clean edges so it can be traced into separate parts.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1258d/8FmBDtPhdsbGAO1t3sqWy_1793816452112.png"
+      ]
+    },
+    "requestId": "01a1a7ca-e422-7111-a874-22aa9954c042",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\r2-gland-face.png",
+        "url": "https://v3b.fal.media/files/b/0ab1258d/t09fD1S9OJt-nHlgCV52m_R7l1Yd0m.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-gland-pieces",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "16:9",
+      "output_format": "png",
+      "prompt": "Animation parts sheet (exploded view) for exactly this acorn character, same style and colors, on a perfectly flat plain background #141413, no text. Lay out separately with space between them: 1 the body alone without face, 2 the cap alone (with its stem), 3 left arm and right arm alone, 4 legs alone, 5 a row of eye pairs: open, half-closed, closed (curved lines), looking up, wide surprised, 6 a row of mouth shapes: small closed, small round 'o', medium open, wide open talking, smile, 7 the two cheek blushes. Flat vector shapes, clean edges, same scale as on the character.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1258d/8FmBDtPhdsbGAO1t3sqWy_1793816452112.png"
+      ]
+    },
+    "requestId": "01a1a7ca-e427-75a0-ad79-c7017210ab46",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\r2-gland-pieces.png",
+        "url": "https://v3b.fal.media/files/b/0ab1258d/nCke3SslKuyOGwECTkINw_inrL6ZtG.png"
+      }
+    ]
+  },
+  {
+    "name": "r2-gland-etats",
+    "endpoint": "google/nano-banana-2.1/edit",
+    "input": {
+      "resolution": "2K",
+      "aspect_ratio": "16:9",
+      "output_format": "png",
+      "prompt": "Redraw exactly this acorn character, identical in every pose (same size, shapes and colors), in four states in a row on a perfectly flat plain background #141413, no text, no shadows: resting (sitting, eyes closed), listening (lifting its cap with one hand, eyes wide), thinking (eyes up, cap spinning above one finger), speaking (mouth open mid-word, one arm raised). Clean flat vector look, crisp edges.",
+      "image_urls": [
+        "https://v3b.fal.media/files/b/0ab1258d/8FmBDtPhdsbGAO1t3sqWy_1793816452112.png"
+      ]
+    },
+    "requestId": "01a1a7ca-e428-74a0-bc84-f62459c59f91",
+    "files": [
+      {
+        "file": "C:\\Users\\fdonc\\Documents\\Atelier\\design\\character\\r2-gland-etats.png",
+        "url": "https://v3b.fal.media/files/b/0ab1258d/x2lqe4WdYseIl7nmXKXrQ_Hc6oewWX.png"
+      }
+    ]
+  }
+]

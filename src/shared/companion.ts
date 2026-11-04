@@ -24,6 +24,8 @@ export type CompanionState = {
   page?: { src: string; title: string; height: number }
   /** Micro coupé : la bulle le montre et propose de le réactiver. */
   micMuted?: boolean
+  /** Apparence de la voix (soleil ou personnage). */
+  avatar?: 'canopy' | 'esprit' | 'gland'
 }
 
 /** open : rouvrir Canopy sur le mode voix ; quit : quitter le compagnon ; hush : couper Claude. */

@@ -1,0 +1,38 @@
+[
+  {
+    "name": "perso-a-pousse",
+    "aspect_ratio": "16:9",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo\\canopy-1024.png"],
+    "prompt": "Original character design sheet for a voice assistant mascot, in the same flat warm graphic style as this logo (terracotta clay #D57151, warm off-white #FAF9F5, near-black #141413, simple rounded shapes, no gradients, no text). The character is a tiny living sapling: a round seed head with a calm friendly face, a thin stem body and two leaf arms, standing on a short horizon line. Show it four times in a row on a plain dark #141413 background, same size, labelled only by pose: 1 resting (eyes softly closed, relaxed), 2 listening (leaning forward, one leaf cupped like an ear, eyes wide), 3 thinking (looking up, leaf tapping its head, tiny dots above), 4 speaking (mouth open mid-word, leaves gesturing). Clean vector look, very readable at small size, cute but sober, not childish."
+  },
+  {
+    "name": "perso-b-soleil",
+    "aspect_ratio": "16:9",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo\\canopy-1024.png"],
+    "prompt": "Original character design sheet: the terracotta sun from this logo becomes a small living character with a minimal face (two oval eyes, small mouth) and three tiny tree silhouettes on its belly like in the logo. Flat vector style matching the logo, colors terracotta #D57151, near-black #141413, off-white accents, no gradients, no text. Four poses in a row on a plain dark #141413 background: resting (half-closed eyes, gentle glow), listening (rays raised like antennae, leaning in), thinking (eyes up, rays curling, small orbit dot circling), speaking (mouth open, rays pulsing outward). Simple, iconic, readable at 48 pixels."
+  },
+  {
+    "name": "perso-c-esprit",
+    "aspect_ratio": "16:9",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo\\canopy-1024.png"],
+    "prompt": "Original character design sheet for a calm forest spirit mascot inspired by this logo: a small soft blob-shaped creature whose head is a rounded tree canopy (like the trees cut in the logo), terracotta clay body #D57151, near-black #141413 details, tiny dot eyes, no mouth when silent. Flat vector, no gradients, no text, plain dark #141413 background. Four poses in a row: resting (floating, eyes closed), listening (canopy leaves perked up, body tilted toward the viewer), thinking (looking up, a small leaf orbiting above), speaking (a small round mouth appears, canopy bouncing). Elegant, quiet, distinctive, readable at small size."
+  },
+  {
+    "name": "perso-d-lucioles",
+    "aspect_ratio": "16:9",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo\\canopy-1024.png"],
+    "prompt": "Original character design sheet: a tiny glowing firefly-like companion, round terracotta body #D57151 with a soft warm glow, two translucent wings, short antennae, a minimal kind face. Flat illustration matching the style and palette of this logo, no text, plain dark #141413 background. Four poses in a row: resting (glow dimmed, wings folded), listening (flying closer, big attentive eyes, glow brighter), thinking (circling, little sparkles trailing), speaking (glow pulsing with the voice, mouth open). Simple shapes, premium app mascot quality, readable at small size."
+  },
+  {
+    "name": "perso-e-graine",
+    "aspect_ratio": "16:9",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo\\canopy-1024.png"],
+    "prompt": "Original character design sheet for a minimal abstract mascot: a smooth terracotta pebble or seed shape #D57151 with only two small near-black eyes, no limbs, expressive only through squash and stretch and eye shape, in the flat style of this logo. No text, plain dark #141413 background, a short terracotta horizon line under it. Four poses in a row: resting (slightly flattened, sleepy eyes), listening (stretched tall, eyes round and wide, tilted), thinking (eyes looking up-right, body twisted slightly), speaking (body bouncing, eyes happy crescents). Ultra simple, iconic like a high-end app mascot."
+  },
+  {
+    "name": "perso-f-gland",
+    "aspect_ratio": "16:9",
+    "image_files": ["C:\\Users\\fdonc\\Documents\\Atelier\\design\\logo\\canopy-1024.png"],
+    "prompt": "Original character design sheet: a small acorn character with a terracotta body #D57151 and a dark brown textured cap, tiny stubby arms, friendly minimal face, in a flat vector style that matches this logo's palette (clay, near-black, off-white), no gradients, no text, plain dark #141413 background. Four poses in a row: resting (sitting, eyes closed), listening (lifting its cap with one hand like tipping a hat to hear better), thinking (spinning the cap on one finger, eyes up), speaking (mouth open, one arm raised explaining). Charming, sober, readable at small size."
+  }
+]

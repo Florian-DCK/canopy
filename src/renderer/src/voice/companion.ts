@@ -3,6 +3,7 @@ import type { CompanionPhase, CompanionState } from '../../../shared/companion'
 import { api, useStore } from '../store'
 import { hush, setMicMuted, startVoice, useVoice } from './runtime'
 import { withTransition } from './transition'
+import { useVoicePrefs } from './prefs'
 
 // Mode compagnon (planche 32) : la voix reste ici ; on envoie à la bulle (fenêtre des notifications) ce qu'elle
 // doit montrer, et on reçoit ses gestes.
@@ -79,6 +80,7 @@ function stateNow(): CompanionState {
     activity: act ? { label, since: actSince } : undefined,
     summary: phase === 'done' ? summary : undefined,
     micMuted: v.micMuted,
+    avatar: useVoicePrefs.getState().avatar,
     lines: phase === 'speak' ? v.spoken.slice(v.burst).map((l) => l.text) : undefined,
     page: (() => {
       const e = v.stage.find((x) => x.id === v.stageSel) ?? v.stage[v.stage.length - 1]
@@ -147,3 +149,6 @@ api.onCompanionCommand((c) => {
 
 // Rechargement en plein mode compagnon : on relance la voix et on renvoie l'état tout de suite.
 if (saved) setTimeout(() => setCompanion(true), 0)
+
+// L'apparence change dans les Paramètres : la bulle suit.
+useVoicePrefs.subscribe(push)

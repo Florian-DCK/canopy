@@ -3,7 +3,7 @@ import type { CompanionPrefs, NotifInfo, NotifSettings, ThemeMode } from '../../
 import { BG_DELAYS, useBgDelay } from '../bgtasks'
 import { api } from '../store'
 import { useTiles, ZOOM_MAX, ZOOM_MIN } from '../tiles'
-import { useVoicePrefs, type EndMode } from '../voice/prefs'
+import { useVoicePrefs, type Avatar, type EndMode } from '../voice/prefs'
 import { setMute, setVoiceName, startVoice, stopVoice, useVoice, VOICES } from '../voice/runtime'
 import './settings.css'
 
@@ -66,6 +66,9 @@ function VoiceSection() {
   return (
     <>
       <Card title="Voix de Claude">
+        <Row title="Apparence" desc="Le soleil Canopée, ou un petit personnage qui écoute, réfléchit et parle avec toi.">
+          <Seg<Avatar> label="Apparence" value={p.avatar} options={[['canopy', 'Canopée'], ['esprit', 'Esprit de la forêt'], ['gland', 'Gland']] as const} onChange={(avatar) => p.set({ avatar })} />
+        </Row>
         <Row title="Voix" desc="Les deux voix clonées. Le changement s'applique à la phrase suivante.">
           <span className="st-voices">
             {VOICES.map((x) => (
