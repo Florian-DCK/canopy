@@ -269,6 +269,21 @@ const ACTS: Partial<Record<GlandState, Act[]>> = {
   ],
   listen: [
     {
+      name: 'soulève son chapeau pour écouter',
+      dur: 2200,
+      run: (k, t, fx) => {
+        // Une main soulève le bord du chapeau, comme pour dégager l'oreille, puis le laisse retomber.
+        const e = env(k, 0.25, 0.3)
+        if (fx.side > 0) t.armR = mix(t.armR, reach(1), e)
+        else t.armL = mix(t.armL, reach(-1), e)
+        t.canY -= 30 * e
+        t.hatTilt -= 10 * e * fx.side
+        t.tilt += 6 * e * fx.side
+        t.eyeSize += 0.08 * e
+        if (k > 0.78 && fx.once(1)) fx.hat(-90, fx.side * 20)
+      }
+    },
+    {
       name: 'penche la tête',
       dur: 2400,
       run: (k, t, fx) => {
@@ -441,6 +456,20 @@ const ACTS: Partial<Record<GlandState, Act[]>> = {
     }
   ],
   speak: [
+    {
+      name: 'tire son chapeau',
+      dur: 1700,
+      run: (k, t, fx) => {
+        // Petit salut : il lève son chapeau bien haut, l'incline, puis le repose d'un coup.
+        const e = env(k, 0.25, 0.3)
+        if (fx.side > 0) t.armR = mix(t.armR, reach(1) - 20, e)
+        else t.armL = mix(t.armL, reach(-1) + 20, e)
+        t.canY -= 48 * env(k, 0.3, 0.3)
+        t.hatTilt += 14 * env(k, 0.3, 0.3) * fx.side
+        t.lean += 2 * e * fx.side
+        if (k > 0.75 && fx.once(1)) fx.hat(-120, -fx.side * 25)
+      }
+    },
     {
       name: 'touche son chapeau',
       dur: 1500,
