@@ -224,15 +224,20 @@ export class ToastCenter {
 
   private sync() {
     this.shortcutsFor(this.list.some((t) => t.kind === 'wait'))
+    const s = this.h.settings()
+    const state: ToastState = { toasts: this.list, sound: s.sound, corner: this.comp ? 'br' : s.corner, companion: this.comp }
     if (!this.list.length && !this.comp) {
-      if (this.win && !this.win.isDestroyed()) this.win.hide()
+      if (this.win && !this.win.isDestroyed()) {
+        // La page doit oublier la bulle avant d'être cachée : sinon, au retour du compagnon, elle croit l'afficher
+        // déjà, ne renvoie pas sa taille, et la fenêtre reste invisible.
+        if (this.ready) this.win.webContents.send('toasts:state', state)
+        this.win.hide()
+      }
       this.height = 0
       return
     }
     const w = this.ensureWindow()
     if (!this.ready) return
-    const s = this.h.settings()
-    const state: ToastState = { toasts: this.list, sound: s.sound, corner: this.comp ? 'br' : s.corner, companion: this.comp }
     w.webContents.send('toasts:state', state)
     this.place()
   }
