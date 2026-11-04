@@ -657,7 +657,6 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
       pencil: all('.g-pencil'),
       lines: Array.from({ length: TOOL_LINES }, (_, i) => all(`.g-line${i}`)),
       caret: all('.g-caret'),
-      thumbs: [all('.g-thumbL'), all('.g-thumbR')],
       dots: [all('.g-dotL'), all('.g-dotR')],
       glow: all('.g-glow'),
       glints: all('.g-glint')
@@ -1008,15 +1007,11 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
       const rR = aR - TAP_DEG * dTap[1]
       el.armL.forEach((g) => g.setAttribute('transform', `translate(${ARM_L.x + DL.x} ${ARM_L.y + DL.y}) rotate(${rL})`))
       el.armR.forEach((g) => g.setAttribute('transform', `translate(${ARM_R.x + DR.x} ${ARM_R.y + DR.y}) rotate(${rR})`))
-      // Pouces devant la face (cernés tant qu'ils tiennent le carnet) : ils plongent sur l'écran à chaque coup.
+      // Chaque coup allume un petit point sur l'écran, sous la main qui tape.
       const hands = [palm(ARM_L, DL, rL), palm(ARM_R, DR, rR)]
       ;[1, -1].forEach((inner, i) => {
         const d = dTap[i]
         const show = tv * (1 - (i ? offR : offL))
-        el.thumbs[i].forEach((g) => {
-          g.setAttribute('transform', `rotate(${-inner * (28 + 26 * d)} ${inner * 36} 232) translate(0 ${10 * d})`)
-          if (g.getAttribute('fill') !== 'black') g.setAttribute('stroke-width', String(6 * Math.min(1, show * 1.5)))
-        })
         const H = hands[i]
         const tip = 58
         el.dots[i].forEach((g) => {
@@ -1112,7 +1107,7 @@ export function Gland({ state, size, levels }: { state: GlandState; size: number
         </g>
       )}
       <path d={mask ? ARM_GAP : ARM} fill={mask ? 'black' : COLOR} {...(mask ? gap : {})} />
-      <ellipse className={inner > 0 ? 'g-thumbL' : 'g-thumbR'} cx={inner * 36} cy={232} rx={16} ry={26} fill={mask ? 'black' : COLOR} transform={`rotate(${-inner * 28} ${inner * 36} 232)`} {...(mask ? gap : { stroke: INK, strokeWidth: 0 })} />
+      <ellipse cx={inner * 36} cy={232} rx={16} ry={26} fill={mask ? 'black' : COLOR} transform={`rotate(${-inner * 28} ${inner * 36} 232)`} {...(mask ? gap : {})} />
     </g>
   )
   const legs = (fill: string) =>

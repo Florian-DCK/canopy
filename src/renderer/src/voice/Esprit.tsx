@@ -481,7 +481,6 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
       tool: all('.e-tool'),
       lines: Array.from({ length: TOOL_LINES }, (_, i) => all(`.e-line${i}`)),
       caret: all('.e-caret'),
-      thumbs: [all('.e-thumbL'), all('.e-thumbR')],
       dots: [all('.e-dotL'), all('.e-dotR')],
       glow: all('.e-glow'),
       glints: all('.e-glint'),
@@ -809,7 +808,7 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
       const rR = aR - TAP_DEG * dTap[1]
       el.armL.forEach((g) => g.setAttribute('transform', `translate(${ARM_L.x + DL.x} ${ARM_L.y + DL.y}) rotate(${rL})`))
       el.armR.forEach((g) => g.setAttribute('transform', `translate(${ARM_R.x + DR.x} ${ARM_R.y + DR.y}) rotate(${rR})`))
-      // Pouces devant la face, posés vers l'intérieur : ils plongent sur l'écran à chaque coup (et s'y allument).
+      // Chaque coup allume un petit point sur l'écran, sous la main qui tape.
       const hands = [palm(ARM_L, DL, rL), palm(ARM_R, DR, rR)]
       ;[1, -1].forEach((dir, i) => {
         const H = hands[i]
@@ -817,10 +816,6 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
         const show = tl * (1 - (i ? offR : offL))
         const bx = H.x + dir * tux * 14 + tuy * 14
         const by = H.y + dir * tuy * 14 - tux * 14
-        el.thumbs[i].forEach((g) => {
-          g.setAttribute('opacity', show < 0.05 ? '0' : '1')
-          g.setAttribute('transform', `translate(${bx} ${by}) rotate(${tool.a.v + dir * 24 * d}) scale(${dir * (1 - 0.18 * d) * Math.min(1, show * 1.4)} 1)`)
-        })
         const tip = 54 * (1 - 0.18 * d)
         const ta = ((tool.a.v + dir * 24 * d) * Math.PI) / 180
         el.dots[i].forEach((g) => {
@@ -1013,11 +1008,6 @@ export function Esprit({ state, size, levels }: { state: MarkState; size: number
           <circle key={i} className={i ? 'e-dotR' : 'e-dotL'} cx={0} cy={0} r={13} fill={SCREEN} opacity="0" />
         ))}
         <g mask={`url(#${id}a)`}>{arms(COLOR)}</g>
-        {[0, 1].map((i) => (
-          <g key={i} className={i ? 'e-thumbR' : 'e-thumbL'} opacity="0">
-            <ellipse cx={28} cy={0} rx={31} ry={15} fill={COLOR} stroke={INK} strokeWidth={6} />
-          </g>
-        ))}
         <g className="e-can" fill={COLOR}>{lobeShapes()}</g>
       </g>
     </svg>

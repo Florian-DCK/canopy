@@ -648,7 +648,6 @@ export function Plume({ state, size, levels }: { state: PlumeState; size: number
       tool: all('.p-tool'),
       lines: Array.from({ length: TOOL_LINES }, (_, i) => all(`.p-line${i}`)),
       caret: all('.p-caret'),
-      thumbs: [all('.p-thumbL'), all('.p-thumbR')],
       dots: [all('.p-dotL'), all('.p-dotR')],
       glow: all('.p-glow'),
       glints: all('.p-glint')
@@ -991,10 +990,6 @@ export function Plume({ state, size, levels }: { state: PlumeState; size: number
         const show = tv * (1 - (i ? offR : offL))
         const bx = H.x + dir * tux * 14 + tuy * 10
         const by = H.y + dir * tuy * 14 - tux * 10
-        el.thumbs[i].forEach((g) => {
-          g.setAttribute('opacity', show < 0.05 ? '0' : '1')
-          g.setAttribute('transform', `translate(${bx} ${by}) rotate(${tool.a.v + dir * 24 * d}) scale(${dir * (1 - 0.18 * d) * Math.min(1, show * 1.4)} 1)`)
-        })
         const tip = 70 * (1 - 0.18 * d)
         const ta = ((tool.a.v + dir * 24 * d) * Math.PI) / 180
         el.dots[i].forEach((g) => {
@@ -1210,11 +1205,6 @@ export function Plume({ state, size, levels }: { state: PlumeState; size: number
           {wing('p-armL', ARM_L.x, ARM_L.y, P0.armL, false, false)}
           {wing('p-armR', ARM_R.x, ARM_R.y, P0.armR, false, true)}
         </g>
-        {[0, 1].map((i) => (
-          <g key={i} className={i ? 'p-thumbR' : 'p-thumbL'} opacity="0">
-            <path d="M0 -17C30 -22 58 -14 70 0C58 14 30 20 0 17Z" fill={COLOR} stroke={INK} strokeWidth={6} strokeLinejoin="round" />
-          </g>
-        ))}
         {tufts((f) => (f.f ? COLOR : COLOR_BACK))}
       </g>
     </svg>
