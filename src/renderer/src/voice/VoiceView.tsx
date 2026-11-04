@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../icons'
 import { thumbUrl } from '../media'
-import { useStore } from '../store'
+import { api, useStore } from '../store'
 import { CanopyMark, type MarkState } from './CanopyMark'
 import { clearStage, hush, voiceLevels, selectStage, setVoiceSession, setMute, setVoiceName, startVoice, stopVoice, useVoice, VOICES, type StageEntry, type VoicePhase } from './runtime'
 import { StageBody, stageInfo } from './Scene'
@@ -167,16 +167,24 @@ function VoiceHeader({ sessionId }: { sessionId: string | null }) {
   const cur = sessionId ? sessions[sessionId] : undefined
   const project = cur ? projects.find((p) => p.id === cur.projectId) : undefined
   const open = Object.values(sessions).filter((x) => !x.readOnly)
+  const sandbox = projects.find((p) => p.sandbox)
+  // « Nouvelle conversation au bac à sable » : une session s'ouvre là-bas et la voix lui parle.
+  const pick = async (v: string) => {
+    if (!v.startsWith('new:')) return setVoiceSession(v)
+    const meta = await api.createSession(v.slice(4))
+    setVoiceSession(meta.id)
+  }
   const byProject = projects.map((p) => ({ p, list: open.filter((x) => x.projectId === p.id).sort((a, b) => b.updatedAt - a.updatedAt) })).filter((g) => g.list.length)
   return (
     <header className="v-top">
       <span className="v-top-project">{project?.name ?? 'Aucun projet'}</span>
       <span className="v-top-sep">·</span>
       <span className="v-top-session" title={cur?.title}>{cur?.title ?? 'Aucune session'}</span>
-      {open.length > 1 && (
+      {(open.length > 1 || sandbox) && (
         <label className="v-top-change" title="Parler à une autre session">
           Changer
-          <select value={sessionId ?? ''} onChange={(e) => setVoiceSession(e.target.value)}>
+          <select value={sessionId ?? ''} onChange={(e) => void pick(e.target.value)}>
+            {sandbox && <option value={`new:${sandbox.id}`}>＋ Nouvelle conversation au bac à sable</option>}
             {byProject.map(({ p, list }) => (
               <optgroup key={p.id} label={p.name}>
                 {list.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}

@@ -113,9 +113,14 @@ function remember(id: string) {
     /* stockage indisponible */
   }
 }
-useStore.subscribe((s) => {
-  // Hors mode voix, la session regardée devient la cible ; pendant, on n'en change qu'explicitement.
+useStore.subscribe((s, prev) => {
+  // Hors mode voix, la session regardée devient la cible.
   if (s.view.name === 'session' && useVoice.getState().phase === 'off' && saved?.id !== s.view.sessionId) remember(s.view.sessionId)
+  // Passer d'une session au mode voix (bouton de la barre) : on parle à cette session-là, même si la voix tournait déjà.
+  if (s.view.name === 'voice' && prev.view.name === 'session' && prev.view.sessionId !== useVoice.getState().sessionId) {
+    const sid = prev.view.sessionId
+    if (s.sessions[sid] && !s.sessions[sid].readOnly) setVoiceSession(sid)
+  }
 })
 function targetSession(): string | null {
   const { sessions } = useStore.getState()
