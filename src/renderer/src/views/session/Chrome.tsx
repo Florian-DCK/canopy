@@ -91,9 +91,6 @@ export function StatusPill({ session, compact }: { session: SessionMeta; compact
   )
 }
 
-/** Onglets de chaque session, du plus récent au plus ancien (Ctrl+Tab). */
-const MRU = new Map<string, string[]>()
-
 function ArtTabLabel({ a }: { a: SessionArtifact }) {
   return <>{useArtifactTitle(a)}</>
 }
@@ -136,52 +133,6 @@ export function SessionHeader({
 
   const inConvo = active === 'session'
   const browser = useBrowser((s) => s.tabs[session.id])
-
-  // Ctrl+Tab, comme Alt+Tab : les onglets du plus récent au plus ancien. Un appui bref revient au précédent ;
-  // Ctrl tenu, chaque Tab avance (Maj+Tab recule) dans le sélecteur, et relâcher Ctrl valide.
-  const keys = ['session', ...(browser ? ['browser'] : []), ...tabs.map((a) => a.url)]
-  useEffect(() => {
-    const list = (MRU.get(session.id) ?? []).filter((k) => k !== active)
-    MRU.set(session.id, [active, ...list])
-  }, [active, session.id])
-  const [switcher, setSwitcher] = useState<{ order: string[]; i: number } | null>(null)
-  const sw = useRef(switcher)
-  sw.current = switcher
-  useEffect(() => {
-    if (keys.length < 2) return
-    const order = () => {
-      const seen = (MRU.get(session.id) ?? []).filter((k) => keys.includes(k))
-      return [...seen, ...keys.filter((k) => !seen.includes(k))]
-    }
-    const onDown = (e: KeyboardEvent) => {
-      if (!e.ctrlKey || e.altKey || e.key !== 'Tab') return
-      e.preventDefault()
-      const cur = sw.current ?? { order: order(), i: 0 }
-      const n = cur.order.length
-      setSwitcher({ ...cur, i: (cur.i + (e.shiftKey ? n - 1 : 1)) % n })
-    }
-    const onUp = (e: KeyboardEvent) => {
-      if (e.key !== 'Control' || !sw.current) return
-      const pick = sw.current.order[sw.current.i]
-      setSwitcher(null)
-      if (pick) setActive(session.id, pick)
-    }
-    const onBlur = () => setSwitcher(null)
-    window.addEventListener('keydown', onDown, true)
-    window.addEventListener('keyup', onUp, true)
-    window.addEventListener('blur', onBlur)
-    return () => {
-      window.removeEventListener('keydown', onDown, true)
-      window.removeEventListener('keyup', onUp, true)
-      window.removeEventListener('blur', onBlur)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keys.join('|'), session.id, setActive])
-  const labelOf = (k: string) =>
-    k === 'session' ? <><Icon name="conversation" size={15} />Conversation</> : k === 'browser' ? <><Icon name="web" size={15} />{browser ? hostOf(browser.url) : 'Navigateur'}</> : (() => {
-      const a = tabs.find((t) => t.url === k)
-      return <><Icon name="artifact" size={15} />{a ? <ArtTabLabel a={a} /> : k}</>
-    })()
   const nRemarks = useBrowser((s) => s.remarks[session.id]?.length ?? 0)
   const openBrowser = () => {
     if (!useBrowser.getState().tabs[session.id]) useBrowser.getState().open(session.id, guessLocalUrl(session.id))
@@ -295,16 +246,6 @@ export function SessionHeader({
         <Icon name="panel" size={18} />
       </button>
     </InTitleBar>
-    {switcher && (
-      <div className="tab-switch" role="listbox" aria-label="Onglets récents">
-        {switcher.order.map((k, i) => (
-          <div key={k} role="option" aria-selected={i === switcher.i} className={`tab-switch-row${i === switcher.i ? ' on' : ''}`}>
-            {labelOf(k)}
-          </div>
-        ))}
-        <div className="tab-switch-hint">Tab pour avancer · relâche Ctrl pour ouvrir</div>
-      </div>
-    )}
     </>
   )
 }

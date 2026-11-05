@@ -390,3 +390,4 @@ kbd { font-family: var(--mono); font-size: 10.5px; padding: 1px 5px; border-radi
 .tab-switch-row { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; border-radius: 9px; font-size: 13.5px; color: var(--g600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tab-switch-row.on { background: var(--g150); color: var(--slate); box-shadow: inset 0 0 0 1px var(--clay-line, rgba(217,119,87,.45)); }
 .tab-switch-hint { padding: 6px 12px 2px; font-size: 11.5px; color: var(--g550); }
+.tab-switch-sub { margin-left: 4px; color: var(--g550); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; }

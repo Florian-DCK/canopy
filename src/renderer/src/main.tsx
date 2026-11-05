@@ -23,6 +23,7 @@ import { SessionView } from './views/SessionView'
 import { TilesView } from './views/TilesView'
 import { ToolsView } from './views/ToolsView'
 import { VoiceDock, VoiceView } from './voice/VoiceView'
+import { ViewSwitcher } from './ViewSwitcher'
 import { SettingsView } from './views/SettingsView'
 import { resolve, useTiles } from './tiles'
 
@@ -60,6 +61,7 @@ function App() {
       <ViewerOverlay />
       <VoiceDock />
       <Palette />
+      <ViewSwitcher />
     </div>
     </TitleBar>
   )
