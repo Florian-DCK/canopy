@@ -359,7 +359,13 @@ function createWindow() {
   })
   // Fermée par toi : la prochaine fois, Canopy repart sans compagnon.
   win.on('close', () => setResume(false))
-  win.on('closed', () => app.quit())
+  win.on('closed', () => {
+    app.quit()
+    // Filet de sécurité : si quelque chose retient la fermeture, on sort quand même. Sinon le processus reste caché,
+    // garde le journal du lanceur ouvert, et Canopy ne peut plus être relancé. Le moteur et le service voix, eux,
+    // continuent exprès (sessions en cours, voix prête).
+    setTimeout(() => app.exit(0), 3000)
+  })
   // Mode compagnon : Canopy au premier plan, la bulle s'efface (tu as le mode voix sous les yeux) ;
   // dès que tu passes à autre chose (Alt+Tab, réduite), elle revient. Le mode compagnon, lui, continue.
   const front = () => toasts.setCompanionHidden(!!win && !win.isDestroyed() && win.isVisible() && !win.isMinimized() && win.isFocused())
