@@ -61,6 +61,13 @@ export class ToastCenter {
     ipcMain.on('companion:command', (e, c: CompanionCommand) => {
       if (e.sender === this.win?.webContents) this.h.companion(c)
     })
+    // Écrire dans la bulle : la fenêtre accepte le focus le temps de la saisie, puis redevient transparente au clavier.
+    ipcMain.on('companion:typing', (e, on: boolean) => {
+      const w = this.win
+      if (e.sender !== w?.webContents || w.isDestroyed()) return
+      w.setFocusable(on)
+      if (on) w.focus()
+    })
     ipcMain.on('companion:drag', (e, phase: 'start' | 'move' | 'end', x: number, y: number) => {
       if (e.sender !== this.win?.webContents || !this.shown) return
       const a = this.anchor()
@@ -228,6 +235,10 @@ export class ToastCenter {
       }
     })
     w.setAlwaysOnTop(true, this.h.settings().overFullscreen ? 'screen-saver' : 'floating')
+    if (process.platform === 'darwin') {
+      w.setAlwaysOnTop(true, 'screen-saver')
+      w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    }
     w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     w.webContents.on('will-navigate', (e) => e.preventDefault())
     const page = this.h.page()

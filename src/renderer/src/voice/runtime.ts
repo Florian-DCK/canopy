@@ -694,6 +694,17 @@ export function setVoiceName(name: string) {
   send({ type: 'voice', name })
 }
 
+/** Écrire au lieu de parler (au bureau) : la phrase suit le même chemin qu'une phrase dite, Claude se tait d'abord. */
+export function typeToVoice(text: string) {
+  const t = text.trim()
+  if (!t) return
+  held = null
+  if (turn) turn.dropped = true
+  stopPlayback()
+  send({ type: 'stop' })
+  void onFinal(t)
+}
+
 /** Coupe ou rend la voix de Claude ; l'écoute et le travail continuent. */
 export function setMute(mute: boolean) {
   try {

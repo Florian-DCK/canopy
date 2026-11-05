@@ -47,6 +47,54 @@ function Karaoke({ lines, current }: { lines: string[]; current: number }) {
   )
 }
 
+/** Écrire au lieu de parler. La fenêtre de la bulle ne prend jamais le focus : on le lui donne au clic dans le champ,
+ * on le rend quand on en sort (ton application reprend le clavier). */
+function TypeField() {
+  const [text, setText] = useState('')
+  const ref = useRef<HTMLInputElement>(null)
+  const want = useRef(false)
+  useEffect(() => {
+    // La fenêtre vient de recevoir le focus : le curseur va dans le champ.
+    const onFocus = () => want.current && ref.current?.focus()
+    window.addEventListener('focus', onFocus)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      if (want.current) bridge.typing(false)
+    }
+  }, [])
+  return (
+    <form
+      className="c-type"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!text.trim()) return
+        bridge.companion({ say: text })
+        setText('')
+      }}
+    >
+      <input
+        ref={ref}
+        aria-label="Écrire à Claude"
+        placeholder="Écris-lui plutôt…"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onPointerDown={() => {
+          if (want.current) return
+          want.current = true
+          bridge.typing(true)
+        }}
+        onBlur={() => {
+          want.current = false
+          bridge.typing(false)
+        }}
+      />
+      <button type="submit" aria-label="Envoyer" disabled={!text.trim()} onPointerDown={(e) => e.preventDefault()}>
+        <Icon name="send" size={13} />
+      </button>
+    </form>
+  )
+}
+
 export function Companion({ c }: { c: CompanionState }) {
   const [open, setOpen] = useState(false)
   const [, tick] = useState(0)
@@ -171,8 +219,9 @@ export function Companion({ c }: { c: CompanionState }) {
           <div className="c-card-body">
             {c.heard && <div className="c-card-you">{c.heard}</div>}
             {c.said && <div className="c-card-said">{c.said}</div>}
-            {!c.heard && !c.said && <div className="c-muted">Parle-moi : je t’écoute.</div>}
+            {!c.heard && !c.said && <div className="c-muted">{c.micMuted ? 'Micro coupé : écris-moi ci-dessous.' : 'Parle-moi ou écris-moi : je t’écoute.'}</div>}
           </div>
+          <TypeField />
           <div className="c-card-foot">
             {c.phase === 'speak' && <button type="button" onClick={() => bridge.companion('hush')}><Icon name="stop" size={13} />Couper</button>}
             <span style={{ flex: 1 }} />

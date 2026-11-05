@@ -101,6 +101,12 @@ kbd { font-family: 'JetBrains Mono Variable', Consolas, monospace; font-size: 10
 .c-card-body { display: flex; flex-direction: column; gap: 10px; padding: 14px; max-height: 260px; overflow: auto; }
 .c-card-you { align-self: flex-end; max-width: 85%; padding: 8px 12px; border-radius: 12px; background: rgba(91, 155, 230, 0.14); color: #b5d4f8; font-size: 13px; }
 .c-card-said { font-family: 'Source Serif 4 Variable', Georgia, serif; font-size: 14px; line-height: 1.5; color: #f0eee6; }
+.c-type { display: flex; align-items: center; gap: 4px; margin: 0 12px 12px; height: 38px; padding: 0 3px 0 12px; border-radius: 999px; background: rgba(240, 238, 230, 0.07); border: 0.5px solid rgba(240, 238, 230, 0.14); }
+.c-type:focus-within { border-color: rgba(240, 238, 230, 0.34); }
+.c-type input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: #f0eee6; font: inherit; font-size: 13px; }
+.c-type input::placeholder { color: #8f8d86; }
+.c-type button { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border: none; border-radius: 50%; background: #f0eee6; color: #141413; cursor: pointer; }
+.c-type button:disabled { background: transparent; color: #6b6a65; cursor: default; }
 .c-card-foot { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 0.5px solid rgba(240, 238, 230, 0.08); }
 .c-look { border-color: rgba(213, 113, 81, 0.5); }
 .c-look .c-muted { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -75,6 +75,13 @@
 .v-bar button { height: 28px; padding: 0 11px; border-radius: 8px; border: 0.5px solid rgba(240, 238, 230, 0.16); background: transparent; color: #D1CFC5; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .v-bar button:hover { background: rgba(240, 238, 230, 0.07); }
 .v-bar button[aria-pressed='true'] { background: #F0EEE6; color: #141413; border-color: transparent; }
+/* Écrire au lieu de parler : un champ discret, même pastille que les commandes. */
+.v-type { flex: 1; max-width: 460px; min-width: 0; display: flex; align-items: center; gap: 4px; height: 44px; padding: 0 4px 0 16px; border-radius: 999px; background: rgba(240, 238, 230, 0.08); border: 0.5px solid rgba(240, 238, 230, 0.16); transition: border-color 0.15s, background 0.15s; }
+.v-type:focus-within { border-color: rgba(240, 238, 230, 0.36); background: rgba(240, 238, 230, 0.11); }
+.v-type input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: #F5F4EE; font: inherit; font-size: 14px; }
+.v-type input::placeholder { color: #8F8D86; }
+.v-bar .v-type button { width: 36px; height: 36px; padding: 0; border: none; border-radius: 50%; justify-content: center; background: #F0EEE6; color: #141413; }
+.v-bar .v-type button:disabled { background: transparent; color: #6B6A65; cursor: default; }
 .v-seg { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(240, 238, 230, 0.07); }
 .v-seg button { border: none; height: 24px; }
 

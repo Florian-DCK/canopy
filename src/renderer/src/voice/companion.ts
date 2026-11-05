@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { CompanionPhase, CompanionState } from '../../../shared/companion'
 import { api, useStore } from '../store'
-import { hush, setMicMuted, startVoice, useVoice } from './runtime'
+import { hush, setMicMuted, startVoice, typeToVoice, useVoice } from './runtime'
 import { withTransition } from './transition'
 import { useVoicePrefs } from './prefs'
 
@@ -143,6 +143,7 @@ window.addEventListener('atelier:companion', (e) => {
 })
 
 api.onCompanionCommand((c) => {
+  if (typeof c === 'object') return typeToVoice(c.say)
   if (c === 'hush') return hush()
   if (c === 'mic') return setMicMuted(!useVoice.getState().micMuted)
   setCompanion(false)

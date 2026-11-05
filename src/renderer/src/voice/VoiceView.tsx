@@ -3,7 +3,7 @@ import { Icon } from '../icons'
 import { thumbUrl } from '../media'
 import { api, useStore } from '../store'
 import { CanopyMark, type MarkState } from './CanopyMark'
-import { clearStage, setMicMuted, hush, voiceLevels, selectStage, setVoiceSession, setMute, startVoice, stopVoice, useVoice, type StageEntry, type VoicePhase } from './runtime'
+import { clearStage, setMicMuted, hush, voiceLevels, selectStage, setVoiceSession, setMute, startVoice, stopVoice, typeToVoice, useVoice, type StageEntry, type VoicePhase } from './runtime'
 import { Changes, StageBody, stageInfo } from './Scene'
 import { Avatar } from './Avatar'
 import { useVoicePrefs } from './prefs'
@@ -90,6 +90,7 @@ export function VoiceView() {
       {split && cur && <Stage entries={v.stage} cur={cur} sessionId={v.sessionId} />}
       <div className="v-bar">
         {!session && <span className="v-with">Aucune session : ouvre-en une pour lui parler</span>}
+        <TypeField />
         <span style={{ flex: 1 }} />
         {/* Commandes en icônes ; leur nom apparaît au survol. Le choix de la voix est dans les Paramètres. */}
         <div className="v-tools" role="toolbar" aria-label="Mode voix">
@@ -268,6 +269,24 @@ function VBtn({ label, onClick, pressed, className, children }: { label: string;
     <button type="button" className={`v-ibtn ${className ?? ''}`} aria-label={label} aria-pressed={pressed} data-tip={label} onClick={onClick}>
       {children}
     </button>
+  )
+}
+
+/** Champ pour écrire à Claude sans parler (au bureau, micro coupé) ; Entrée envoie. */
+function TypeField() {
+  const [text, setText] = useState('')
+  return (
+    <form
+      className="v-type"
+      onSubmit={(e) => {
+        e.preventDefault()
+        typeToVoice(text)
+        setText('')
+      }}
+    >
+      <input aria-label="Écrire à Claude" placeholder="Écris-lui plutôt…" value={text} onChange={(e) => setText(e.target.value)} />
+      <button type="submit" aria-label="Envoyer" disabled={!text.trim()}><Icon name="send" size={14} /></button>
+    </form>
   )
 }
 

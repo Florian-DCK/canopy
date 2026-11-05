@@ -28,5 +28,5 @@ export type CompanionState = {
   avatar?: 'canopy' | 'esprit' | 'chouette' | 'gland'
 }
 
-/** open : rouvrir Canopy sur le mode voix ; quit : quitter le compagnon ; hush : couper Claude. */
-export type CompanionCommand = 'open' | 'quit' | 'hush' | 'mic'
+/** open : rouvrir Canopy sur le mode voix ; quit : quitter le compagnon ; hush : couper Claude ; say : une phrase écrite. */
+export type CompanionCommand = 'open' | 'quit' | 'hush' | 'mic' | { say: string }
