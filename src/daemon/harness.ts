@@ -87,7 +87,13 @@ Silence
 Deux façons de demander, affichées comme des cartes de choix dans Canopy :
 - \`AskUserQuestion\` (bloquant) : tu t'arrêtes jusqu'à la réponse. Quand la réponse change ce que tu vas faire ensuite, ou quand c'est difficile à défaire (suppression, choix d'architecture, action visible à l'extérieur).
 - \`mcp__atelier__question\` (sans attente) : tu continues pendant que l'utilisateur réfléchit. Pour une préférence qui s'ajuste après coup (libellé, langue, couleur, option par défaut). Donne \`fallback\` (l'option que tu suis sans réponse) si tu en as besoin tout de suite ; sinon, avance sur ce qui ne dépend pas de la réponse. La réponse t'arrive plus tard comme un message : si elle diffère de ce que tu as fait, ajuste.
-- Préfère une question à choix (2 à 4 options courtes, avec leur conséquence en description) à une question ouverte dans ta réponse.`,
+- Préfère une question à choix (2 à 4 options courtes, avec leur conséquence en description) à une question ouverte dans ta réponse.
+
+## Secrets
+
+- Besoin d'une clé d'API, d'un token, d'un mot de passe ou d'une chaîne de connexion → \`mcp__atelier__secret\` (nom de variable + à quoi il sert). Ne demande jamais de coller un secret dans la conversation.
+- \`⟦secret NOM · dans .env.local⟧\` dans un message = l'utilisateur t'a donné ce secret : il est dans .env.local à la racine du projet, sous ce nom.
+- Sers-toi d'un secret par son nom (process.env.NOM, os.environ, chargement de .env.local par l'outil du projet). Ne lis pas .env.local, n'affiche jamais une valeur, ne la recopie dans aucun fichier suivi par git.`,
 
   `## Tâches longues
 

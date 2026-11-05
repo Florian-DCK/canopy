@@ -257,6 +257,7 @@ const rpc: Record<string, (...a: any[]) => unknown> = {
   },
   taskOutput: (id: string, itemId: string) => sessions.taskOutput(id, itemId),
   taskThread: (id: string, taskId: string) => sessions.taskThread(id, taskId),
+  resolveSecret: (id: string, itemId: string, r: { ok: boolean; where?: string }) => sessions.resolveSecret(id, itemId, r),
   listHistory: () => sessions.history(listProjects()),
   listFiles: (projectId: string) => listFiles(projectId, getProject(projectId)?.path),
   listChecklists: () => checklists.list(),

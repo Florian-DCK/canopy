@@ -105,6 +105,8 @@ type OpenAsk = { questions: AskQuestion[]; fallback?: string; waiting: boolean }
 type Live = {
   /** Questions sans attente en cours (id de l'élément du fil → question). */
   asks?: Map<string, OpenAsk>
+  /** Cartes de secret en attente : résolues par le processus principal (la valeur ne passe pas ici). */
+  secretWaits?: Map<string, (r: { ok: boolean; where?: string }) => void>
   meta: SessionMeta
   input: InputQueue
   query?: any
@@ -305,6 +307,23 @@ export class SessionManager {
         return { content: [{ type: 'text', text: `Question posée sans attendre. ${next}` }] }
       }
     )
+    const secretTool = tool(
+      'secret',
+      "Demande un secret à l'utilisateur (clé d'API, chaîne de connexion, mot de passe, token) SANS jamais le voir : une carte s'affiche dans le fil avec un champ masqué. Canopy chiffre la valeur, l'écrit dans .env.local à la racine du projet (ignoré par git) et te rend seulement son nom. Ne demande JAMAIS de coller un secret dans la conversation : utilise cet outil. Ensuite, sers-t'en par son nom (process.env.NOM, os.environ, chargement de .env.local par l'outil du projet) ; ne lis jamais .env.local et n'affiche jamais la valeur. name : nom de variable en MAJUSCULES (DATABASE_URL) ; purpose : à quoi il sert, en une phrase.",
+      { name: z.string().regex(/^[A-Z][A-Z0-9_]{1,63}$/), purpose: z.string().min(3).max(200) },
+      async ({ name, purpose }: { name: string; purpose: string }) => {
+        const itemId = randomUUID()
+        this.add(s, { id: itemId, kind: 'secret', name, purpose, state: 'pending', at: Date.now() })
+        const r = await new Promise<{ ok: boolean; where?: string }>((resolve) => {
+          ;(s.secretWaits ??= new Map()).set(itemId, resolve)
+          setTimeout(() => s.secretWaits?.has(itemId) && this.resolveSecret(s.meta.id, itemId, { ok: false }), 15 * 60_000)
+        })
+        return {
+          content: [{ type: 'text', text: r.ok ? `${name} est disponible dans ${r.where ?? '.env.local'} (racine du projet). Utilise-le par son nom ; ne lis pas ce fichier et n'affiche jamais la valeur.` : `L'utilisateur n'a pas fourni ${name}. Continue sans, ou explique ce qu'il permettrait.` }],
+          isError: !r.ok
+        }
+      }
+    )
     const ui = tool(
       'interface',
       "Agit sur ce que l'utilisateur voit dans Canopy : c'est le geste qui répond, pas une phrase. show : affiche une vue (target : session, cockpit, tiles = Mosaïque, tools = Outils de Claude, history, projects, checklist (+ checklist = id ou titre ; sans = toutes), artifact (+ url), browser = navigateur intégré de la session, voice = revenir au grand soleil du mode voix). panel : ouvre ou ferme le panneau de travail de la session (state open|closed, tab lists|files|media|ctx). highlight : fait défiler jusqu'à un élément (selector CSS) et le surligne quelques secondes. scroll : haut ou bas de la conversation (to top|bottom) ou jusqu'à un selector. back : revient à la vue précédente. Quand l'utilisateur demande de montrer, ouvrir ou afficher quelque chose, fais-le avec cet outil et ne le décris pas ensuite : un petit son lui confirme le geste. Rien d'irréversible ici.",
@@ -409,7 +428,7 @@ export class SessionManager {
         return { content: [...(r.image ? [{ type: 'image' as const, data: r.image, mimeType: 'image/jpeg' }] : []), { type: 'text' as const, text: r.info }], isError: !r.ok }
       }
     )
-    return createSdkMcpServer({ name: 'atelier', version: '1.0.0', tools: [capture, browser, checklist, question, ui, scene, screenTool, actTool, markTool] })
+    return createSdkMcpServer({ name: 'atelier', version: '1.0.0', tools: [capture, browser, checklist, question, secretTool, ui, scene, screenTool, actTool, markTool] })
   }
 
   private emitMedia(m: MediaItem | null) {
@@ -728,13 +747,15 @@ export class SessionManager {
         // Prompt de Claude Code + consignes de Canopy (mise en forme, artefacts, médias…).
         systemPrompt: { type: 'preset', preset: 'claude_code', append: HARNESS },
         settingSources: ['user', 'project', 'local'],
+        // Coffre : les fichiers où Canopy écrit les secrets ne se lisent pas (Claude n'en connaît que les noms).
+        disallowedTools: ['Read(**/.env)', 'Read(**/.env.local)', 'Read(**/.env.*.local)'],
         permissionMode: s.meta.permissionMode,
         includePartialMessages: true,
         // Outils de Canopy fournis à la session (voir harness.ts) ; autorisés sans demande.
         ...(this.capture || this.browser
           ? {
               mcpServers: { atelier: this.atelierMcp(s, createSdkMcpServer, tool) },
-              allowedTools: [...(this.capture ? ['mcp__atelier__capture'] : []), ...(this.checklists ? ['mcp__atelier__checklist'] : []), 'mcp__atelier__question', ...(this.ui ? ['mcp__atelier__interface', 'mcp__atelier__scene'] : []), ...(this.capture ? ['mcp__atelier__screen', 'mcp__atelier__act', 'mcp__atelier__mark'] : [])]
+              allowedTools: [...(this.capture ? ['mcp__atelier__capture'] : []), ...(this.checklists ? ['mcp__atelier__checklist'] : []), 'mcp__atelier__question', 'mcp__atelier__secret', ...(this.ui ? ['mcp__atelier__interface', 'mcp__atelier__scene'] : []), ...(this.capture ? ['mcp__atelier__screen', 'mcp__atelier__act', 'mcp__atelier__mark'] : [])]
             }
           : {}),
         canUseTool: (toolName, input, opts) => this.ask(s, toolName, input, opts)
@@ -1205,6 +1226,16 @@ export class SessionManager {
   }
 
   /** Réponse à une question (bloquante ou sans attente) : choisie, passée, ou « je réponds dans le fil ». */
+  /** Le processus principal a servi (ou non) le secret de cette carte : Claude reprend, sans la valeur. */
+  resolveSecret(id: string, itemId: string, r: { ok: boolean; where?: string }) {
+    const s = this.sessions.get(id)
+    const done = s?.secretWaits?.get(itemId)
+    if (!s || !done) return
+    s.secretWaits!.delete(itemId)
+    this.patchItem(s, itemId, { state: r.ok ? 'given' : 'declined', where: r.where })
+    done({ ok: r.ok, where: r.where })
+  }
+
   answerQuestion(id: string, itemId: string, a: QuestionAnswer) {
     const s = this.sessions.get(id)
     if (!s) return

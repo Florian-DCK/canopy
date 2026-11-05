@@ -11,6 +11,7 @@ import { capture } from './capture'
 import { captureScreen } from './screen'
 import { runAct, stopActing } from './act'
 import { runMark } from './mark'
+import { serveToEnv, validName, vaultDelete, vaultGet, vaultList, vaultStore } from './vault'
 import { restoreDuck, setDuck } from './duck'
 import { DaemonClient, type DaemonStatus } from './daemon'
 import { MediaServer, registerMediaScheme } from './media'
@@ -170,6 +171,38 @@ const setResume = (on: boolean) => {
   }
 }
 ipcMain.handle('companion:resume', () => existsSync(resumeFile()))
+
+// Coffre (planche 39) : la valeur d'un secret arrive ici depuis la carte ou la zone de saisie, est chiffrée et
+// écrite dans le projet ; le moteur (donc Claude) n'apprend que « c'est fait, sous ce nom ».
+const projectPathOf = (projectId: string) => projects.find((p) => p.id === projectId)?.path
+const secretError = (e: unknown) => String((e as Error)?.message ?? e)
+ipcMain.handle('vault:provide', async (_e, a: { sessionId: string; itemId?: string; projectId: string; name: string; value: string; remember: 'project' | 'global' | null }) => {
+  const path = projectPathOf(a.projectId)
+  if (!path || !validName(a.name) || !a.value) return { ok: false, error: 'Nom ou projet invalide.' }
+  try {
+    if (a.remember) vaultStore(a.name, a.value, a.remember, path)
+    const where = serveToEnv(a.name, a.value, path)
+    if (a.itemId) await daemon.rpc('resolveSecret', a.sessionId, a.itemId, { ok: true, where })
+    return { ok: true, where }
+  } catch (e) {
+    return { ok: false, error: secretError(e) }
+  }
+})
+ipcMain.handle('vault:use', async (_e, a: { sessionId: string; itemId: string; projectId: string; name: string }) => {
+  const path = projectPathOf(a.projectId)
+  const value = path ? vaultGet(a.name, path) : null
+  if (!path || value === null) return { ok: false, error: 'Ce secret n’est plus dans le coffre.' }
+  try {
+    const where = serveToEnv(a.name, value, path)
+    await daemon.rpc('resolveSecret', a.sessionId, a.itemId, { ok: true, where })
+    return { ok: true, where }
+  } catch (e) {
+    return { ok: false, error: secretError(e) }
+  }
+})
+ipcMain.handle('vault:decline', (_e, sessionId: string, itemId: string) => daemon.rpc('resolveSecret', sessionId, itemId, { ok: false }))
+ipcMain.handle('vault:list', (_e, projectId?: string) => vaultList(projectId ? projectPathOf(projectId) : undefined))
+ipcMain.handle('vault:delete', (_e, name: string, scope: 'project' | 'global', projectId?: string) => vaultDelete(name, scope, projectId ? projectPathOf(projectId) : undefined))
 ipcMain.on('companion:set', (_e, state: CompanionState | null) => {
   setResume(!!state)
   const entering = !!state && !toasts.companionOn

@@ -1,3 +1,4 @@
+import { SecretCard } from './SecretCard'
 import { createContext, memo, useContext, useMemo, useState, type ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
@@ -486,6 +487,8 @@ export const Thread = memo(function Thread({
             return i.name === CHECKLIST_TOOL && !i.subagent ? <ChecklistToolCard key={i.id} t={i} /> : <SubAgent key={i.id} t={i} kids={subOf[i.id] ?? []} />
           case 'permission':
             return <PermCard key={i.id} p={i} sessionId={sessionId} agent={agentName(i.parent)} />
+          case 'secret':
+            return <SecretCard key={i.id} item={i} sessionId={sessionId} />
           case 'question':
             return <QuestionCard key={i.id} item={i} sessionId={sessionId} />
           case 'task':

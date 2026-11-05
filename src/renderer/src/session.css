@@ -391,3 +391,39 @@ kbd { font-family: var(--mono); font-size: 10.5px; padding: 1px 5px; border-radi
 .tab-switch-row.on { background: var(--g150); color: var(--slate); box-shadow: inset 0 0 0 1px var(--clay-line, rgba(217,119,87,.45)); }
 .tab-switch-hint { padding: 6px 12px 2px; font-size: 11.5px; color: var(--g550); }
 .tab-switch-sub { margin-left: 4px; color: var(--g550); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Secrets (planche 39) : carte de Claude dans le fil, puces dans la zone de saisie. */
+.sec-card { align-self: stretch; border-radius: 14px; background: var(--white); border: 1px solid color-mix(in srgb, var(--clay) 45%, transparent); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06); overflow: hidden; margin: 4px 0; }
+.sec-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--clay-tint); color: var(--clay-text); font-size: 13px; }
+.sec-head b { font-weight: 600; }
+.sec-muted { color: var(--g550); font-size: 12px; }
+.sec-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.sec-what { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: 13.5px; color: var(--g600); }
+.sec-what code { font-family: var(--mono, Consolas, monospace); font-size: 14px; font-weight: 600; color: var(--slate); }
+.sec-row { display: flex; gap: 8px; }
+.sec-field { flex: 1; display: flex; align-items: center; height: 38px; border-radius: 9px; border: 0.5px solid var(--line-strong); background: var(--white); padding: 0 6px 0 12px; }
+.sec-field input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-family: var(--mono, Consolas, monospace); font-size: 13.5px; color: var(--slate); }
+.sec-show { border: none; background: transparent; color: var(--g550); font: inherit; font-size: 12px; cursor: pointer; padding: 4px 6px; }
+.sec-opts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--g600); }
+.sec-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.sec-check input { accent-color: var(--clay); }
+.sec-stored { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 8px; border: 0.5px solid var(--line-strong); background: transparent; color: var(--slate); font: inherit; font-size: 12.5px; cursor: pointer; }
+.sec-later { display: inline-flex; align-items: center; gap: 5px; border: none; background: transparent; color: var(--g550); font: inherit; font-size: 12.5px; cursor: pointer; }
+.sec-err { margin: 0; font-size: 12.5px; color: var(--st-err, #b4462e); }
+.sec-done { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 11px; font-size: 13px; margin: 2px 0; }
+.sec-done.given { background: color-mix(in srgb, var(--st-ok) 10%, transparent); color: var(--st-ok); border: 0.5px solid color-mix(in srgb, var(--st-ok) 35%, transparent); }
+.sec-done.declined { background: var(--g100); color: var(--g550); border: 0.5px solid var(--line); }
+.sec-done b { font-family: var(--mono, Consolas, monospace); font-weight: 600; }
+.sec-done code { font-family: var(--mono, Consolas, monospace); font-size: 12px; }
+
+.sec-bar { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 0; }
+.sec-det { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 10px; border-radius: 10px; background: var(--g100); border: 0.5px solid var(--line); font-size: 12.5px; color: var(--g600); }
+.sec-det.on { background: var(--clay-tint); border-color: color-mix(in srgb, var(--clay) 40%, transparent); color: var(--clay-text); }
+.sec-det code { font-family: var(--mono, Consolas, monospace); font-size: 12px; }
+.sec-det button { border: none; background: transparent; color: inherit; font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+.sec-det button.strong { font-weight: 600; }
+.sec-name { width: 150px; height: 26px; padding: 0 8px; border-radius: 7px; border: 0.5px solid var(--line-strong); background: var(--white); font-family: var(--mono, Consolas, monospace); font-size: 12px; color: var(--slate); }
+.sec-lock { display: flex; align-items: center; gap: 8px; margin: 8px 10px 0; padding: 8px 10px; border-radius: 11px; background: var(--clay-tint); border: 0.5px solid color-mix(in srgb, var(--clay) 40%, transparent); color: var(--clay-text); }
+.sec-value { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border-radius: 7px; border: 0.5px solid var(--line-strong); background: var(--white); font-family: var(--mono, Consolas, monospace); font-size: 12.5px; }
+.sec-x { border: none; background: transparent; color: inherit; cursor: pointer; display: grid; place-items: center; }
+.cmp-icon.on { color: var(--clay); background: var(--clay-tint); }

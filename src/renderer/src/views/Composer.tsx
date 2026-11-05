@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Attachment, Item, PermissionModeUI, SessionMeta } from '../../../shared/types'
 import { contextWindowOf } from '../derive'
 import { Icon, MODE_ICON, Ring, toolDoing, type IconName } from '../icons'
@@ -8,6 +8,8 @@ import { BG_DELAYS, isForeground, sendToBackground, useBgDelay } from '../bgtask
 import { LimitCard } from '../Palette'
 import { UsageChip } from '../usage'
 import { useAutocomplete } from './session/Autocomplete'
+import { Lock } from './session/SecretCard'
+import { detectSecrets, placeholder as secretMark, sanitizeName } from '../secrets'
 import { Thread } from './session/Thread'
 
 // Saisie (planche 3) : la bande d'activité au-dessus du texte, puis la barre — joindre, modèle, mode
@@ -283,14 +285,49 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
   }, [draft, sessionId, inputId, setDraft])
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const ac = useAutocomplete({ text, setText, sessionId, projectId: session?.projectId ?? '', inputRef })
+  // Secrets (planche 39) : repérés dans le message avant l'envoi, ou glissés à la main (cadenas, Ctrl+Maj+S).
+  // Leur valeur part au coffre (chiffrée, écrite dans .env.local) ; Claude ne reçoit que ⟦secret NOM⟧.
+  const [stash, setStash] = useState<Record<string, string>>({})
+  const [skip, setSkip] = useState<string[]>([])
+  const [promote, setPromote] = useState<string[]>([])
+  const [renames, setRenames] = useState<Record<string, string>>({})
+  const [secErr, setSecErr] = useState('')
+  const [lock, setLock] = useState<{ name: string; value: string } | null>(null)
+  const dets = useMemo(
+    () => detectSecrets(text).filter((d) => !skip.includes(d.value)).map((d) => ({ ...d, name: renames[d.value] ?? d.name, on: d.level === 'sure' || promote.includes(d.value) })),
+    [text, skip, promote, renames]
+  )
   if (!session) return null
   const running = session.status === 'run'
   const waiting = session.status === 'wait'
   const empty = !text.trim() && !pending.length
 
-  const send = () => {
-    const t = text.trim() || (pending.length ? 'Regarde cette image.' : '')
+  const send = async () => {
+    let t = text.trim() || (pending.length ? 'Regarde cette image.' : '')
     if (!t) return
+    const projectId = session.projectId
+    try {
+      for (const d of dets.filter((x) => x.on)) {
+        const r = await api.vaultProvide({ sessionId, projectId, name: d.name, value: d.value, remember: 'project' })
+        if (!r.ok) throw new Error(r.error ?? `${d.name} n’a pas pu être gardé.`)
+        t = t.split(d.value).join(secretMark(d.name, r.where))
+      }
+      for (const [name, value] of Object.entries(stash)) {
+        if (!t.includes(secretMark(name))) continue
+        const r = await api.vaultProvide({ sessionId, projectId, name, value, remember: 'project' })
+        if (!r.ok) throw new Error(r.error ?? `${name} n’a pas pu être gardé.`)
+        t = t.split(secretMark(name)).join(secretMark(name, r.where))
+      }
+    } catch (e) {
+      // Rien n'est envoyé tant que les secrets ne sont pas à l'abri.
+      setSecErr(String((e as Error)?.message ?? e))
+      return
+    }
+    setStash({})
+    setSkip([])
+    setPromote([])
+    setRenames({})
+    setSecErr('')
     setText('')
     onSent()
     // Une question bloquante en cours : écrire dans la saisie, c'est y répondre librement.
@@ -359,6 +396,46 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
           </div>
         )}
         {ac.menu}
+        {(dets.length > 0 || secErr) && (
+          <div className="sec-bar" role="status">
+            {dets.map((d) => (
+              <div key={d.value} className={`sec-det ${d.on ? 'on' : ''}`}>
+                <Lock size={14} />
+                <span>{d.on ? 'Secret repéré' : 'Peut-être un secret'} : <code>{d.value.length > 10 ? `${d.value.slice(0, 6)}…` : d.value}</code> — {d.why}. {d.on ? 'Il partira comme' : 'Garder comme'}</span>
+                <input className="sec-name" aria-label="Nom du secret" value={d.name} onChange={(e) => setRenames({ ...renames, [d.value]: sanitizeName(e.target.value) })} />
+                <span style={{ flex: 1 }} />
+                {d.on ? (
+                  <button type="button" onClick={() => setSkip([...skip, d.value])}>Ce n’est pas un secret</button>
+                ) : (
+                  <button type="button" className="strong" onClick={() => setPromote([...promote, d.value])}>C’est un secret</button>
+                )}
+              </div>
+            ))}
+            {secErr && <div className="sec-err">{secErr}</div>}
+          </div>
+        )}
+        {lock && (
+          <form
+            className="sec-lock"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const name = sanitizeName(lock.name)
+              if (!lock.value) return
+              setStash({ ...stash, [name]: lock.value })
+              const el = inputRef.current
+              const at = el ? el.selectionStart : text.length
+              setText(text.slice(0, at) + secretMark(name) + text.slice(at))
+              setLock(null)
+              el?.focus()
+            }}
+          >
+            <Lock size={15} />
+            <input className="sec-name" aria-label="Nom du secret" value={lock.name} onChange={(e) => setLock({ ...lock, name: e.target.value })} />
+            <input className="sec-value" aria-label="Valeur du secret" type="password" autoComplete="off" autoFocus placeholder="Colle la valeur" value={lock.value} onChange={(e) => setLock({ ...lock, value: e.target.value })} />
+            <button type="submit" className="btn clay sm" disabled={!lock.value}>Insérer</button>
+            <button type="button" className="sec-x" aria-label="Annuler" onClick={() => setLock(null)}><Icon name="close" size={13} /></button>
+          </form>
+        )}
         <label htmlFor={inputId} className="sr-only">Message</label>
         <textarea
           id={inputId}
@@ -386,7 +463,18 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
               if (empty && waiting) allowPending()
-              else send()
+              else void send()
+            } else if (e.ctrlKey && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+              // Ctrl+Maj+S : le texte sélectionné devient un secret (puce dans le message, valeur au coffre).
+              const el = e.currentTarget
+              const [a, b] = [el.selectionStart, el.selectionEnd]
+              if (b <= a) return
+              e.preventDefault()
+              const value = text.slice(a, b)
+              let name = sanitizeName(detectSecrets(value)[0]?.name ?? 'SECRET')
+              for (let k = 2; stash[name] !== undefined && stash[name] !== value; k++) name = `${name.replace(/_\d+$/, '')}_${k}`
+              setStash({ ...stash, [name]: value })
+              setText(text.slice(0, a) + secretMark(name) + text.slice(b))
             } else if (e.key === 'Escape' && running && empty) {
               e.preventDefault()
               void api.interrupt(sessionId)
@@ -407,6 +495,9 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
           />
           <button type="button" className="cmp-icon" aria-label="Joindre une image" title="Joindre une image" onClick={() => fileRef.current?.click()}>
             <Icon name="attach" size={17} />
+          </button>
+          <button type="button" className={`cmp-icon${lock ? ' on' : ''}`} aria-label="Glisser un secret" title="Glisser un secret : il part au coffre, Claude ne voit que son nom (ou sélectionne un mot et Ctrl+Maj+S)" onClick={() => setLock(lock ? null : { name: 'SECRET', value: '' })}>
+            <Lock size={16} />
           </button>
           <Dropdown label={`Modèle : ${modelLabel}`} button={<><Icon name="model" size={15} /><span className="cmp-chip-txt">{modelLabel}</span><Icon name="chevron" size={13} className="cmp-caret" /></>}>
             {(close) =>
@@ -433,7 +524,7 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
               <Icon name="stop" size={15} />
             </button>
           ) : (
-            <button type="button" className="cmp-send" aria-label="Envoyer (Entrée)" title="Envoyer (Entrée)" onClick={send} disabled={empty}>
+            <button type="button" className="cmp-send" aria-label="Envoyer (Entrée)" title="Envoyer (Entrée)" onClick={() => void send()} disabled={empty}>
               <Icon name="send" size={17} />
             </button>
           )}

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { CompanionPrefs, NotifInfo, NotifSettings, ThemeMode } from '../../../shared/types'
+import type { CompanionPrefs, NotifInfo, NotifSettings, ThemeMode, VaultEntry } from '../../../shared/types'
 import { BG_DELAYS, useBgDelay } from '../bgtasks'
-import { api } from '../store'
+import { api, useStore } from '../store'
 import { useTiles, ZOOM_MAX, ZOOM_MIN } from '../tiles'
 import { useVoicePrefs, type Avatar, type EndMode } from '../voice/prefs'
 import { setMute, setVoiceName, startVoice, stopVoice, useVoice, VOICES } from '../voice/runtime'
@@ -15,6 +15,7 @@ const SECTIONS = [
   ['companion', 'Compagnon'],
   ['sessions', 'Sessions'],
   ['notif', 'Notifications'],
+  ['vault', 'Coffre'],
   ['look', 'Apparence']
 ] as const
 type Section = (typeof SECTIONS)[number][0]
@@ -184,6 +185,36 @@ function NotifSection() {
   )
 }
 
+/** Coffre (planche 39) : les noms des secrets, jamais leurs valeurs, où ils servent, et de quoi les retirer. */
+function VaultSection() {
+  const projects = useStore((s) => s.projects)
+  const [list, setList] = useState<VaultEntry[] | null>(null)
+  const load = () => void api.vaultList().then(setList).catch(() => setList([]))
+  useEffect(load, [])
+  const projectName = (key?: string) => projects.find((p) => p.path.replace(/\\/g, '/').toLowerCase() === key)?.name ?? key?.split('/').pop() ?? '—'
+  const when = (t?: number) => (t ? new Date(t).toLocaleDateString('fr-BE', { day: 'numeric', month: 'short' }) : '—')
+  return (
+    <Card title="Secrets gardés" note="Chiffrés par Windows avec ton compte. Claude n'en connaît que les noms : Canopy écrit les valeurs dans le .env.local du projet, que Claude n'a pas le droit de lire.">
+      {list === null && <div className="st-desc">Lecture du coffre…</div>}
+      {list?.length === 0 && <div className="st-desc">Aucun secret pour l'instant. Quand Claude en demande un, ou que tu en colles un dans un message, il arrive ici.</div>}
+      {list?.map((e) => (
+        <Row key={`${e.scope}:${e.project ?? ''}:${e.name}`} title={e.name} desc={`${e.scope === 'global' ? 'Global' : projectName(e.project)} · ${e.where ? `servi dans ${e.where}` : 'pas encore servi'} · ${e.usedAt ? `utilisé le ${when(e.usedAt)}` : `ajouté le ${when(e.at)}`}`}>
+          <button
+            type="button"
+            className="btn sm"
+            onClick={() => {
+              const p = projects.find((x) => x.path.replace(/\\/g, '/').toLowerCase() === e.project)
+              void api.vaultDelete(e.name, e.scope, p?.id).then(load)
+            }}
+          >
+            Retirer
+          </button>
+        </Row>
+      ))}
+    </Card>
+  )
+}
+
 function LookSection() {
   const [theme, setTheme] = useState<ThemeMode | null>(null)
   useEffect(() => void api.getTheme().then(setTheme), [])
@@ -223,6 +254,7 @@ export function SettingsView() {
           {sec === 'companion' && <CompanionSection />}
           {sec === 'sessions' && <SessionsSection />}
           {sec === 'notif' && <NotifSection />}
+          {sec === 'vault' && <VaultSection />}
           {sec === 'look' && <LookSection />}
         </div>
       </main>

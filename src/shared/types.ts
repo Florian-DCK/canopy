@@ -96,6 +96,19 @@ export type Item =
       notes?: Record<string, string>
       at: number
     }
+  /** Claude a besoin d'un secret (planche 39) : carte dans le fil ; la valeur ne passe jamais par la conversation. */
+  | {
+      id: string
+      kind: 'secret'
+      /** Nom de variable (DATABASE_URL). */
+      name: string
+      /** À quoi il sert, en une phrase. */
+      purpose: string
+      state: 'pending' | 'given' | 'declined'
+      /** Où Canopy l'a servi (.env.local). */
+      where?: string
+      at: number
+    }
   | { id: string; kind: 'result'; text: string; ok: boolean; durationMs?: number; actions?: number; at: number }
   /** Événement de la session affiché en ligne fine : compactage, reprise, changement de modèle ou de mode. */
   | { id: string; kind: 'event'; event: 'compact' | 'resume' | 'readonly' | 'model' | 'mode' | 'background'; text: string; at: number }
@@ -221,6 +234,9 @@ export type MarkParams = {
 /** Agent custom (fichier .md de Claude Code) : à moi (tous projets) ou au projet. */
 export type AgentDraft = { name: string; description: string; model?: string; tools?: string[]; prompt: string }
 export type AgentFile = AgentDraft & { scope: 'user' | 'project'; path: string; enabled: boolean }
+
+/** Un secret du coffre : jamais la valeur, seulement le nom et où il sert. */
+export type VaultEntry = { name: string; scope: 'project' | 'global'; project?: string; at: number; usedAt?: number; where?: string }
 
 export type CaptureResult = { ok: boolean; image?: string; info: string }
 
@@ -354,6 +370,12 @@ export type AtelierApi = {
   draftAgent(text: string): Promise<AgentDraft & { why: string }>
   /** Mode voix : une phrase par fichier modifié (Haiku). */
   summarizeChanges(files: { path: string; lines: string }[]): Promise<Record<string, string>>
+  /** Coffre : la valeur va au processus principal (chiffrée, écrite dans .env.local), jamais au moteur. */
+  vaultProvide(a: { sessionId: string; itemId?: string; projectId: string; name: string; value: string; remember: 'project' | 'global' | null }): Promise<{ ok: boolean; where?: string; error?: string }>
+  vaultUseStored(a: { sessionId: string; itemId: string; projectId: string; name: string }): Promise<{ ok: boolean; where?: string; error?: string }>
+  vaultDecline(sessionId: string, itemId: string): Promise<void>
+  vaultList(projectId?: string): Promise<VaultEntry[]>
+  vaultDelete(name: string, scope: 'project' | 'global', projectId?: string): Promise<void>
   reconnectMcp(projectId: string, name: string): Promise<void>
   listMemory(projectId: string): Promise<MemoryList>
   writeMemory(projectId: string, file: string, raw: string): Promise<void>
