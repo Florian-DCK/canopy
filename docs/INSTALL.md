@@ -8,7 +8,7 @@ Mac (Apple Silicon surtout) et Windows.
 
 ## Installation
 ```
-git clone <dépôt> && cd Atelier
+git clone https://github.com/Florian-DCK/canopy.git && cd canopy
 npm install
 node node_modules/electron/install.js   # piège : le binaire Electron n'est parfois pas téléchargé par npm install
 npm run dev
