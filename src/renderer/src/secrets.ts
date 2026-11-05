@@ -17,7 +17,7 @@ const KNOWN: [RegExp, string, string][] = [
   [/\bAIza[0-9A-Za-z_-]{35}\b/g, 'GOOGLE_API_KEY', 'clé Google'],
   [/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g, 'JWT_TOKEN', 'jeton JWT']
 ]
-const CONTEXT = /(token|cl[ée]|key|secret|password|mot de passe|mdp|pwd|passphrase|api|bearer|credential|identifiant)\b[^.\n]{0,40}$/i
+const CONTEXT = /(token|cl[ée]|key|secret|password|mot de passe|mdp|pwd|passphrase|api|bearer|credential|identifiant)(?![\p{L}\d_])[^.\n]{0,40}$/iu
 
 function entropy(s: string) {
   const f = new Map<string, number>()
