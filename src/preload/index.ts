@@ -139,6 +139,13 @@ const api: AtelierApi = {
     const h = (_: unknown, e: Parameters<typeof cb>[0]) => cb(e)
     ipcRenderer.on('setup:log', h)
     return () => ipcRenderer.removeListener('setup:log', h)
+  },
+  updateCheck: () => ipcRenderer.invoke('update:check'),
+  updateApply: () => ipcRenderer.invoke('update:apply'),
+  onUpdate: (cb) => {
+    const h = (_: unknown, u: Parameters<typeof cb>[0]) => cb(u)
+    ipcRenderer.on('update:info', h)
+    return () => ipcRenderer.removeListener('update:info', h)
   }
 }
 

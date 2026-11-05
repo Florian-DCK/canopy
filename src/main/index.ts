@@ -19,6 +19,7 @@ import { applySavedTheme, getCompanionAnchor, getCompanionPrefs, setCompanionPre
 import { inQuietHours, ToastCenter } from './toasts'
 import { startVoice, stopVoice } from './voice'
 import { createShortcut } from './shortcut'
+import { applyUpdate, checkUpdate, watchUpdates } from './update'
 import { configureSetup, markProjectsLoaded, setupAddProjects, setupAskPermission, setupFinish, setupFindProjects, setupInstallClaude, setupInstallVoice, setupLogin, setupLoginInput, setupReopen, setupStatus } from './setup'
 
 // Electron n'est qu'un client du démon (src/daemon) : fenêtre, notifications, boîtes de dialogue,
@@ -536,6 +537,9 @@ ipcMain.handle('setup:askPermission', (_e, kind: 'screen' | 'microphone' | 'acce
 ipcMain.handle('setup:finish', (_e, features) => setupFinish(features))
 ipcMain.handle('setup:reopen', () => setupReopen())
 ipcMain.handle('setup:shortcut', () => createShortcut())
+ipcMain.handle('update:check', () => checkUpdate())
+ipcMain.handle('update:apply', () => applyUpdate())
+watchUpdates((u) => toRenderer('update:info', u))
 ipcMain.handle('media:open', async (_e, id: string) => {
   const f = media.fileOf(id)
   if (f) await shell.openPath(f)

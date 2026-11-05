@@ -238,6 +238,25 @@ function LookSection() {
   )
 }
 
+function UpdateButton() {
+  const [msg, setMsg] = useState('')
+  const check = async () => {
+    setMsg('Vérification…')
+    try {
+      const u = await api.updateCheck()
+      setMsg(u.error ? u.error : u.behind ? `${u.behind} nouveauté${u.behind > 1 ? 's' : ''} : voir le bandeau` : 'À jour')
+    } catch (e) {
+      setMsg(String((e as Error)?.message ?? e))
+    }
+  }
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {msg && <span className="st-desc" style={{ margin: 0 }}>{msg}</span>}
+      <button type="button" className="st-btn" onClick={() => void check()}>Vérifier maintenant</button>
+    </span>
+  )
+}
+
 function ShortcutButton() {
   const [msg, setMsg] = useState('')
   const make = async () => {
@@ -263,6 +282,9 @@ function InstallSection() {
     <Card title="Installation">
       <Row title="Raccourci" desc="Lancer Canopy sans terminal : Applications sur Mac, Bureau sur Windows. Un raccourci existant n'est jamais remplacé.">
         <ShortcutButton />
+      </Row>
+      <Row title="Mises à jour" desc="Canopy vérifie le dépôt GitHub au démarrage puis toutes les 30 minutes ; un bandeau apparaît s'il y a du nouveau.">
+        <UpdateButton />
       </Row>
       <Row title="Aperçu du setup" desc="Parcourir l'écran de premier lancement, en macOS ou Windows, sans rien enregistrer ni lancer.">
         <button type="button" className="st-btn" onClick={openPreview}>Voir l'aperçu</button>

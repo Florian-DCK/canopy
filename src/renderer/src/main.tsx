@@ -1,4 +1,5 @@
 import { StrictMode, useEffect, useState } from 'react'
+import type { UpdateInfo } from '../../shared/types'
 import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/inter'
 import '@fontsource-variable/source-serif-4'
@@ -47,6 +48,7 @@ function App() {
       <div className="stage">
         {/* Le bandeau du moteur reste à droite de la barre latérale : celle-ci ne s'interrompt jamais. */}
         <DaemonBanner />
+        <UpdateBanner />
         <SetupBanner />
         {view.name === 'cockpit' && <Cockpit />}
         {view.name === 'project' && <ProjectView projectId={view.projectId} />}
@@ -97,6 +99,48 @@ function DaemonBanner() {
       <button type="button" className="btn clay sm" disabled={d.busy} onClick={() => api.restartDaemon().catch((e) => setErr(String(e?.message ?? e)))}>
         Redémarrer le moteur
       </button>
+      <button type="button" className="icon-btn sm" aria-label="Masquer" title="Masquer" onClick={() => setHidden(true)}>
+        <Icon name="close" size={14} />
+      </button>
+    </div>
+  )
+}
+
+/** Nouveautés sur le dépôt git : récupérées d'un clic ; les rechargements habituels font le reste. */
+function UpdateBanner() {
+  const [u, setU] = useState<UpdateInfo | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [hidden, setHidden] = useState(false)
+  useEffect(() => {
+    api.updateCheck().then(setU, () => {})
+    return api.onUpdate(setU)
+  }, [])
+  if (hidden || !u || u.behind === 0) return null
+  const n = u.behind
+  const apply = async () => {
+    setBusy(true)
+    try {
+      setU(await api.updateApply())
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="banner" role="status">
+      <span className="banner-dot" aria-hidden="true" />
+      <b>Mise à jour disponible</b>
+      <span className="banner-txt" title={u.subjects.join('\n')}>
+        {n} nouveauté{n > 1 ? 's' : ''} : {u.subjects.slice(0, 2).join(' · ')}
+        {u.subjects.length > 2 ? '…' : ''}
+        {u.dirty && ' — modifications locales en cours : mets à jour à la main (git pull).'}
+        {u.error && ` — ${u.error}`}
+      </span>
+      <span style={{ flex: 1 }} />
+      {!u.dirty && (
+        <button type="button" className="btn clay sm" disabled={busy} onClick={() => void apply()}>
+          {busy ? 'Mise à jour…' : 'Mettre à jour'}
+        </button>
+      )}
       <button type="button" className="icon-btn sm" aria-label="Masquer" title="Masquer" onClick={() => setHidden(true)}>
         <Icon name="close" size={14} />
       </button>

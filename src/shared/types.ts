@@ -362,6 +362,9 @@ export type SetupTask = 'login' | 'claude' | 'voice'
 /** Ligne de journal d'une tâche du setup ; step = ligne « STEP n/total texte » du script de la voix. */
 export type SetupLog = { task: SetupTask; line?: string; url?: string; step?: { n: number; total: number; text: string }; done?: boolean; error?: string }
 
+/** Mise à jour depuis le dépôt git (bandeau « Mise à jour disponible »). */
+export type UpdateInfo = { behind: number; ahead: number; subjects: string[]; dirty: boolean; error?: string; checkedAt?: number }
+
 export type AtelierApi = {
   platform: string
   setupStatus(): Promise<SetupStatus>
@@ -380,6 +383,10 @@ export type AtelierApi = {
   /** Crée le raccourci s'il n'existe pas (jamais de remplacement). */
   setupShortcut(): Promise<{ ok: boolean; path?: string; existed?: boolean; error?: string }>
   onSetupLog(cb: (e: SetupLog) => void): () => void
+  updateCheck(): Promise<UpdateInfo>
+  /** git pull --ff-only, puis npm install si les dépendances ont changé. */
+  updateApply(): Promise<UpdateInfo>
+  onUpdate(cb: (u: UpdateInfo) => void): () => void
   listFiles(projectId: string): Promise<string[]>
   listCommands(sessionId: string): Promise<CommandSuggestion[]>
   listProjects(): Promise<Project[]>
