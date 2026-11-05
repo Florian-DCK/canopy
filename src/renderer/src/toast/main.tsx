@@ -7,6 +7,7 @@ import type { Toast, ToastApi, ToastState } from '../../../shared/types'
 import { Icon, type IconName } from '../icons'
 import './toast.css'
 import { Companion } from './Companion'
+import { isMac } from '../platform'
 
 // Fenêtre des notifications (planche 9) : toujours sombre, posée au-dessus de tout, sans prendre le focus.
 
@@ -111,7 +112,7 @@ function Card({ t }: { t: Toast; now: number }) {
             <button type="button" className="b clay" onClick={() => act('allow')}>Autoriser</button>
             <button type="button" className="b" onClick={() => act('deny')}>Refuser</button>
             <button type="button" className="b text" onClick={() => act('open')}><Icon name="external" size={14} />Ouvrir</button>
-            <span className="keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>↵</kbd></span>
+            <span className="keys"><kbd>{isMac ? '⌘' : 'Ctrl'}</kbd><kbd>{isMac ? '⌥' : 'Alt'}</kbd><kbd>↵</kbd></span>
           </>
         )}
         {t.kind === 'question' && (

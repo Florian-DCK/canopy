@@ -11,6 +11,7 @@ import { Composer } from './Composer'
 import { FindBar, JumpDown, jumpUserMessage, ScrollMarks } from './session/Nav'
 import { SessionHeader, SessionList, useWidth, WorkPanel } from './session/Chrome'
 import { Thread, TodoCard, useTodos } from './session/Thread'
+import { mod } from '../platform'
 
 const NO_ITEMS: Item[] = []
 /** En dessous, les panneaux se ferment d'office et l'en-tête se compacte. */
@@ -76,7 +77,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   }, [sessionId])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f' && scroller.current) {
+      if (mod(e) && !e.altKey && e.key.toLowerCase() === 'f' && scroller.current) {
         e.preventDefault()
         setFinding(true)
       } else if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && scroller.current) {

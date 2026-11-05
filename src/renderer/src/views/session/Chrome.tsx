@@ -15,6 +15,7 @@ import { newSession } from '../Cockpit'
 import { MediaPanel } from '../Media'
 import { ChecklistDock, useSessionChecklists } from './ChecklistDock'
 import { DiffCount, isOutside, type Tool } from './Thread'
+import { MOD, mod } from '../../platform'
 
 // En-tête unique, liste des sessions et panneau de travail (planche 1).
 
@@ -120,7 +121,7 @@ export function SessionHeader({
   useEffect(() => {
     if (!tabs.length) return
     const onKey = (e: KeyboardEvent) => {
-      if (!e.ctrlKey || e.altKey || e.shiftKey || !/^[1-9]$/.test(e.key)) return
+      if (!mod(e) || e.altKey || e.shiftKey || !/^[1-9]$/.test(e.key)) return
       const n = Number(e.key)
       const key = n === 1 ? 'session' : tabs[n - 2]?.url
       if (!key) return
@@ -151,8 +152,8 @@ export function SessionHeader({
         className="icon-btn"
         aria-pressed={active === 'browser' ? browser?.chat !== false : leftOpen && inConvo}
         disabled={!inConvo && active !== 'browser'}
-        aria-label={active === 'browser' ? 'Afficher ou masquer la conversation (page en plein écran)' : 'Liste des sessions (Ctrl+B)'}
-        title={active === 'browser' ? 'Afficher ou masquer la conversation (page en plein écran)' : 'Liste des sessions (Ctrl+B)'}
+        aria-label={active === 'browser' ? 'Afficher ou masquer la conversation (page en plein écran)' : `Liste des sessions (${MOD}+B)`}
+        title={active === 'browser' ? 'Afficher ou masquer la conversation (page en plein écran)' : `Liste des sessions (${MOD}+B)`}
         onClick={() => (active === 'browser' ? useBrowser.getState().patch(session.id, { chat: browser?.chat === false }) : onToggle('left'))}
       >
         <Icon name="sessions" size={18} />
@@ -186,7 +187,7 @@ export function SessionHeader({
           </Menu>
         ) : (
           <div className="s-tabs" role="tablist" aria-label="Vues de la session">
-            <button type="button" role="tab" aria-selected={inConvo} className="s-tab" title="Conversation (Ctrl+1)" onClick={() => setActive(session.id, 'session')}>
+            <button type="button" role="tab" aria-selected={inConvo} className="s-tab" title={`Conversation (${MOD}+1)`} onClick={() => setActive(session.id, 'session')}>
               <Icon name="conversation" size={15} />Conversation
             </button>
             {browser && (
@@ -203,7 +204,7 @@ export function SessionHeader({
               </div>
             )}
             {tabs.map((a, k) => (
-              <div key={a.url} role="tab" aria-selected={active === a.url} className="s-tab art" title={`${a.url} (Ctrl+${k + 2})`}>
+              <div key={a.url} role="tab" aria-selected={active === a.url} className="s-tab art" title={`${a.url} (${MOD}+${k + 2})`}>
                 <button type="button" className="s-tab-main" onClick={() => setActive(session.id, a.url)}>
                   <Icon name="artifact" size={15} />
                   <span className="s-tab-label"><ArtTabLabel a={a} /></span>
@@ -239,8 +240,8 @@ export function SessionHeader({
         className="icon-btn"
         aria-pressed={rightOpen && inConvo}
         disabled={!inConvo}
-        aria-label="Panneau de travail (Ctrl+Alt+B)"
-        title="Panneau de travail (Ctrl+Alt+B)"
+        aria-label={`Panneau de travail (${MOD}+Alt+B)`}
+        title={`Panneau de travail (${MOD}+Alt+B)`}
         onClick={() => onToggle('right')}
       >
         <Icon name="panel" size={18} />
@@ -269,7 +270,7 @@ export function SessionList({ project, current, width }: { project: Project; cur
       <div className="scroll side-scroll">
         <div className="side-h">Ouvertes</div>
         {open.map((s) => (
-          <button key={s.id} type="button" className={`side-item ${fxClass(s, fresh)}`} aria-current={s.id === current} draggable onDragStart={(e) => dragSession(e, { sessionId: s.id })} onClick={(e) => openOrTile(e, s.id)} title={`${s.title} — ${STATUS_WORD[s.status]} · Ctrl+clic : Mosaïque`}>
+          <button key={s.id} type="button" className={`side-item ${fxClass(s, fresh)}`} aria-current={s.id === current} draggable onDragStart={(e) => dragSession(e, { sessionId: s.id })} onClick={(e) => openOrTile(e, s.id)} title={`${s.title} — ${STATUS_WORD[s.status]} · ${MOD}+clic : Mosaïque`}>
             <Icon name={s.readOnly ? 'readonly' : STATUS_ICON[s.status]} size={15} className={`st-${s.status}`} />
             <span className="side-t">{s.title}</span>
             <span className="side-ago">{ago(s.updatedAt)}</span>

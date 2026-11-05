@@ -14,6 +14,7 @@ import { ArtifactFrame, useArtifactTabs, useArtifactTitle, type SessionArtifact 
 import { Composer } from './Composer'
 import { Menu, MenuItem, StatusPill, WorkPanel } from './session/Chrome'
 import { FocusChat } from './SessionView'
+import { MOD, mod } from '../platform'
 
 // Mosaïque (planche 15) : 1 à 4 sessions à la fois, chacune avec sa saisie ; la disposition suit leur nombre.
 // Un seul panneau de travail, pour la case active.
@@ -60,7 +61,7 @@ export function TilesView() {
     const el = grid.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey) return
+      if (!e.ctrlKey && !mod(e)) return
       e.preventDefault()
       const st = useTiles.getState()
       st.setZoom(st.zoom + (e.deltaY < 0 ? 0.1 : -0.1))
@@ -72,12 +73,12 @@ export function TilesView() {
   // Ctrl+1…4 : aller à une case (et à sa saisie). Ctrl+0 : zoom à 100 %.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key === '0') {
+      if (mod(e) && !e.altKey && !e.shiftKey && e.key === '0') {
         e.preventDefault()
         useTiles.getState().setZoom(1)
         return
       }
-      if (!e.ctrlKey || e.altKey || e.shiftKey || !/^[1-4]$/.test(e.key)) return
+      if (!mod(e) || e.altKey || e.shiftKey || !/^[1-4]$/.test(e.key)) return
       const st = useTiles.getState()
       const all = useStore.getState().sessions
       const vis = st.cells.map((c, i) => ({ c, i })).filter((x) => resolve(x.c, all))
@@ -98,9 +99,9 @@ export function TilesView() {
           <b className="tl-title">Mosaïque</b>
           <span className="small muted">{items.length} session{items.length > 1 ? 's' : ''}</span>
           <span className="seg tl-zoom" role="group" aria-label="Zoom du contenu des cases">
-            <button type="button" aria-label="Dézoomer (Ctrl + molette)" title="Dézoomer (Ctrl + molette)" disabled={t.zoom <= ZOOM_MIN} onClick={() => t.setZoom(t.zoom - 0.1)}>−</button>
-            <button type="button" title="Revenir à 100 % (Ctrl+0)" onClick={() => t.setZoom(1)}>{Math.round(t.zoom * 100)} %</button>
-            <button type="button" aria-label="Zoomer (Ctrl + molette)" title="Zoomer (Ctrl + molette)" disabled={t.zoom >= ZOOM_MAX} onClick={() => t.setZoom(t.zoom + 0.1)}>+</button>
+            <button type="button" aria-label={`Dézoomer (${MOD} + molette)`} title={`Dézoomer (${MOD} + molette)`} disabled={t.zoom <= ZOOM_MIN} onClick={() => t.setZoom(t.zoom - 0.1)}>−</button>
+            <button type="button" title={`Revenir à 100 % (${MOD}+0)`} onClick={() => t.setZoom(1)}>{Math.round(t.zoom * 100)} %</button>
+            <button type="button" aria-label={`Zoomer (${MOD} + molette)`} title={`Zoomer (${MOD} + molette)`} disabled={t.zoom >= ZOOM_MAX} onClick={() => t.setZoom(t.zoom + 0.1)}>+</button>
           </span>
           <Menu label="Ajouter une session" className="btn sm" align="left" button={<><Icon name="plus" size={14} />Ajouter une session</>}>
             {(done) => (
@@ -122,7 +123,7 @@ export function TilesView() {
                 ))}
                 <MenuItem icon="files" onClick={() => { done(); void addProjectDialog().then((pr) => pr && newSessionInTile(pr.id)) }}>Ajouter un projet (dossier)…</MenuItem>
                 <MenuItem icon="history" onClick={() => { useStore.getState().go({ name: 'history' }); done() }}>Reprendre depuis l’historique…</MenuItem>
-                <div className="menu-hint">{addHint(items.length)} Ailleurs dans Canopy, Ctrl+clic sur une session l’ajoute ici.</div>
+                <div className="menu-hint">{addHint(items.length)} Ailleurs dans Canopy, {MOD}+clic sur une session l’ajoute ici.</div>
               </>
             )}
           </Menu>

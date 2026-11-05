@@ -5,6 +5,7 @@ import { Icon } from './icons'
 import { api } from './store'
 import { UsageChip } from './usage'
 import './titlebar.css'
+import { isMac, MOD } from './platform'
 
 // Barre de fenêtre de Canopy (option B, « barre fusionnée + recherche ») : la barre native de Windows est
 // masquée ; logo, contenu de la vue, recherche, usage et boutons de fenêtre sont dessinés ici.
@@ -44,7 +45,7 @@ function WinButton({ kind, label, onClick }: { kind: keyof typeof GLYPH; label: 
 }
 
 /** Ouvre la palette de commandes (même effet que Ctrl+K). */
-const openPalette = () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))
+const openPalette = () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: !isMac, metaKey: isMac, bubbles: true }))
 
 export function TitleBar({ children }: { children: ReactNode }) {
   const [left, setLeft] = useState<HTMLElement | null>(null)
@@ -54,27 +55,37 @@ export function TitleBar({ children }: { children: ReactNode }) {
     void api.windowState().then(setWin)
     return api.onWindowState(setWin)
   }, [])
+  const mac = api.platform === 'darwin'
   return (
     <SlotCtx.Provider value={{ left, right }}>
       {/* Les zones vides sont des zones de glisser natives : Windows gère déplacer, double-clic et ancrage. */}
       <header className={`titlebar ${win.focused ? '' : 'blur'} ${win.maximized ? 'maxed' : ''}`}>
-        <span className="tb-logo">
-          <img src={logoUrl} alt="Canopy" title="Canopy" />
-        </span>
+        {/* Sur Mac, les pastilles de la fenêtre prennent la place du logo, au-dessus du rail. */}
+        {mac ? (
+          <span className="tb-mac" />
+        ) : (
+          <span className="tb-logo">
+            <img src={logoUrl} alt="Canopy" title="Canopy" />
+          </span>
+        )}
         <div className="tb-left" ref={setLeft} />
         <span className="tb-drag" />
-        <button type="button" className="tb-search" onClick={openPalette} title="Rechercher une session, une action (Ctrl+K)">
+        <button type="button" className="tb-search" onClick={openPalette} title={`Rechercher une session, une action (${MOD}+K)`}>
           <Icon name="search" size={14} />
           <span className="tb-search-txt">Rechercher…</span>
-          <span className="tb-keys"><kbd>Ctrl</kbd><kbd>K</kbd></span>
+          <span className="tb-keys"><kbd>{MOD}</kbd><kbd>K</kbd></span>
         </button>
         <span className="tb-drag small" />
         <UsageChip down />
         <div className="tb-right" ref={setRight} />
-        <span className="tb-sep" />
-        <WinButton kind="min" label="Réduire" onClick={() => api.windowControl('minimize')} />
-        <WinButton kind={win.maximized ? 'restore' : 'max'} label={win.maximized ? 'Restaurer' : 'Agrandir'} onClick={() => api.windowControl('toggle-maximize')} />
-        <WinButton kind="close" label="Fermer" onClick={() => api.windowControl('close')} />
+        {!mac && (
+          <>
+            <span className="tb-sep" />
+            <WinButton kind="min" label="Réduire" onClick={() => api.windowControl('minimize')} />
+            <WinButton kind={win.maximized ? 'restore' : 'max'} label={win.maximized ? 'Restaurer' : 'Agrandir'} onClick={() => api.windowControl('toggle-maximize')} />
+            <WinButton kind="close" label="Fermer" onClick={() => api.windowControl('close')} />
+          </>
+        )}
       </header>
       {children}
     </SlotCtx.Provider>

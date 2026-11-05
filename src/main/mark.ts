@@ -74,6 +74,7 @@ function ensureWindow(): BrowserWindow {
       webPreferences: { sandbox: true, contextIsolation: true }
     })
     win.setAlwaysOnTop(true, 'screen-saver')
+    if (process.platform === 'darwin') win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
     win.setIgnoreMouseEvents(true)
   } else win.setBounds(d.bounds)
   return win

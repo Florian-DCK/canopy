@@ -9,6 +9,7 @@ import { useLastImage } from './Media'
 import { Icons, Tile, TopBar } from '../ui'
 import { fxClass, useFx } from '../fx'
 import { dragHistory, dragSession, openOrTile, resumeIntoTiles } from '../tiles'
+import { MOD, mod } from '../platform'
 
 export async function newSession(projectId: string) {
   openSession(await api.createSession(projectId))
@@ -21,7 +22,7 @@ export function TreeView({ tree }: { tree: Tree }) {
   const fresh = useFx((f) => f.fresh)
   return (
     <div className="tree">
-      <button type="button" className={`root ${tree.status === 'wait' ? 'wait' : ''} ${fxClass(tree.session, fresh)}`} onClick={open} draggable onDragStart={(e) => dragSession(e, { sessionId: tree.session.id })} title="Ctrl+clic : ajouter à la Mosaïque" style={last ? { paddingTop: 0, overflow: 'hidden' } : undefined}>
+      <button type="button" className={`root ${tree.status === 'wait' ? 'wait' : ''} ${fxClass(tree.session, fresh)}`} onClick={open} draggable onDragStart={(e) => dragSession(e, { sessionId: tree.session.id })} title={`${MOD}+clic : ajouter à la Mosaïque`} style={last ? { paddingTop: 0, overflow: 'hidden' } : undefined}>
         {last && (
           <span style={{ position: 'relative', display: 'block', height: 120, margin: '0 -14px 4px', background: 'var(--g150)' }}>
             <img src={thumbUrl(last.id)} alt={`Dernière vue : ${last.name}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -131,7 +132,7 @@ export function Cockpit() {
     setBusy(e.key)
     try {
       if (e.kind === 'external') await openExternal(e.x)
-      else if (ev.ctrlKey || ev.metaKey) await resumeIntoTiles(e.h)
+      else if (mod(ev)) await resumeIntoTiles(e.h)
       else await resumeFromHistory(e.h)
     } finally {
       setBusy(null)
@@ -156,7 +157,7 @@ export function Cockpit() {
             </label>
             <button type="button" className="btn primary" onClick={() => void addProjectDialog()}>{Icons.plus}Projet</button>
           </div>
-          <p className="small muted ck-hint">Glisse une session sur l’icône Mosaïque de la barre de gauche (ou Ctrl+clic) pour l’ajouter à la mosaïque sans quitter cette page.</p>
+          <p className="small muted ck-hint">Glisse une session sur l’icône Mosaïque de la barre de gauche (ou {MOD}+clic) pour l’ajouter à la mosaïque sans quitter cette page.</p>
 
           {projects.length === 0 && (
             <div className="band" style={{ padding: 28, flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
@@ -183,7 +184,7 @@ export function Cockpit() {
                     {top ? (
                       <>
                         <span className={`ck-state ${st!.cls}`}><i aria-hidden="true" />{st!.word}</span>
-                        <button type="button" className="ck-title" draggable={top.kind !== 'external'} onDragStart={drag(top)} disabled={busy === top.key} title={`${top.title} — Ctrl+clic : Mosaïque`} onClick={(ev) => void openEntry(top, ev)}>
+                        <button type="button" className="ck-title" draggable={top.kind !== 'external'} onDragStart={drag(top)} disabled={busy === top.key} title={`${top.title} — ${MOD}+clic : Mosaïque`} onClick={(ev) => void openEntry(top, ev)}>
                           {busy === top.key ? 'Ouverture…' : top.title}
                         </button>
                         <span className="ck-ago">{ago(top.at)}</span>
@@ -208,7 +209,7 @@ export function Cockpit() {
                       {rest.map((e) => {
                         const s = stateOf(e)
                         return (
-                          <button key={e.key} type="button" className="ck-sub" draggable={e.kind !== 'external'} onDragStart={drag(e)} disabled={busy === e.key} title={`${e.title} — Ctrl+clic : Mosaïque`} onClick={(ev) => void openEntry(e, ev)}>
+                          <button key={e.key} type="button" className="ck-sub" draggable={e.kind !== 'external'} onDragStart={drag(e)} disabled={busy === e.key} title={`${e.title} — ${MOD}+clic : Mosaïque`} onClick={(ev) => void openEntry(e, ev)}>
                             <span className={`ck-state ${s.cls}`}><i aria-hidden="true" />{s.word}</span>
                             <span className="ck-sub-t">{busy === e.key ? 'Ouverture…' : e.title}</span>
                             <span className="ck-ago">{ago(e.at)}</span>

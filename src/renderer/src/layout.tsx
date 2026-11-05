@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { UI_PANEL_EVENT, type UiPanelDetail } from '../../shared/ui'
+import { mod } from './platform'
 
 // Panneaux de la session, façon VS Code : ouverture/fermeture, largeur réglable, mémorisés.
 
@@ -63,7 +64,7 @@ export function useSessionLayout() {
   // Raccourcis VS Code : Ctrl+B (panneau gauche), Ctrl+Alt+B (panneau droit).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!e.ctrlKey || e.shiftKey || e.key.toLowerCase() !== 'b') return
+      if (!mod(e) || e.shiftKey || e.key.toLowerCase() !== 'b') return
       e.preventDefault()
       toggle(e.altKey ? 'right' : 'left')
     }

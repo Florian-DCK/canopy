@@ -27,10 +27,18 @@ export function stopActing() {
 }
 
 function ps(payload: object): Promise<{ ok: boolean; text: string; rect?: { x: number; y: number; w: number; h: number } }> {
-  const script = join(app.getAppPath(), 'scripts', 'act.ps1')
   const b64 = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64')
+  let cmd: string
+  let args: string[]
+  if (process.platform === 'win32') {
+    cmd = 'powershell.exe'
+    args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', join(app.getAppPath(), 'scripts', 'act.ps1'), '-Payload', b64]
+  } else if (process.platform === 'darwin') {
+    cmd = 'osascript'
+    args = ['-l', 'JavaScript', join(app.getAppPath(), 'scripts', 'act-mac.js'), b64]
+  } else return Promise.resolve({ ok: false, text: 'Le mode compagnon (agir sur l’écran) n’est pas disponible sur ce système.' })
   return new Promise((resolve) => {
-    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-Payload', b64], { windowsHide: true, timeout: 20_000, maxBuffer: 4 << 20 }, (err, out) => {
+    execFile(cmd, args, { windowsHide: true, timeout: 20_000, maxBuffer: 4 << 20 }, (err, out) => {
       try {
         resolve(JSON.parse(String(out).trim().split('\n').pop() ?? ''))
       } catch {

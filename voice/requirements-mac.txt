@@ -1,0 +1,5 @@
+-r requirements-common.txt
+# Apple Silicon : Whisper sur le GPU via MLX
+mlx-whisper
+# Repli (Mac Intel, ou CANOPY_STT=faster) : Whisper sur CPU
+faster-whisper

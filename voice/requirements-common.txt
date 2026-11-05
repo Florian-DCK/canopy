@@ -1,0 +1,8 @@
+numpy
+torch
+websockets
+pocket-tts
+silero-vad
+onnxruntime
+transformers
+huggingface_hub

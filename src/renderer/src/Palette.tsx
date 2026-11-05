@@ -3,6 +3,7 @@ import { Icon, type IconName } from './icons'
 import { addProjectDialog, resumeFromHistory, useStore } from './store'
 import { hhmm } from './usage'
 import { newSession } from './views/Cockpit'
+import { MOD, mod } from './platform'
 
 const norm = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 
@@ -37,7 +38,7 @@ export function Palette() {
   // Ctrl+K ouvre/ferme ; Ctrl+Tab / Ctrl+Maj+Tab : session suivante/précédente.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+      if (mod(e) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setQ('')
         setIdx(0)
@@ -179,10 +180,10 @@ export function Palette() {
         </div>
         <div className="pal-foot">
           <span>
-            <kbd>Ctrl 1…9</kbd> vue
+            <kbd>{MOD} 1…9</kbd> vue
           </span>
           <span>
-            <kbd>Ctrl B</kbd> sessions
+            <kbd>{MOD} B</kbd> sessions
           </span>
           <span>
             <kbd>Échap</kbd> arrêter

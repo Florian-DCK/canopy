@@ -20,6 +20,7 @@ Service → client
 import asyncio
 import json
 import os
+import platform
 import queue
 import re
 import sys
@@ -59,10 +60,38 @@ def log(msg: str):
 log("LOADING")
 vad_model = load_silero_vad()
 
-import openvino_genai as ov  # noqa: E402
 from huggingface_hub import hf_hub_download, snapshot_download  # noqa: E402
 
-_pipe = ov.WhisperPipeline(snapshot_download("OpenVINO/whisper-large-v3-int8-ov"), "GPU")
+
+def pick_stt() -> str:
+    """Moteur STT : CANOPY_STT (openvino | mlx | faster), sinon selon la plateforme et ce qui est installé."""
+    forced = os.environ.get("CANOPY_STT", "").strip().lower()
+    if forced in ("openvino", "mlx", "faster"):
+        return forced
+    import importlib.util as iu
+
+    if sys.platform != "darwin" and iu.find_spec("openvino_genai"):
+        return "openvino"
+    if sys.platform == "darwin" and platform.machine() == "arm64" and iu.find_spec("mlx_whisper"):
+        return "mlx"
+    return "faster"
+
+
+STT = pick_stt()
+STT_MODEL = os.environ.get("CANOPY_STT_MODEL", "")
+log(f"STT : {STT}")
+if STT == "openvino":
+    import openvino_genai as ov  # noqa: E402
+
+    _pipe = ov.WhisperPipeline(snapshot_download("OpenVINO/whisper-large-v3-int8-ov"), "GPU")
+elif STT == "mlx":
+    import mlx_whisper  # noqa: E402
+
+    _mlx_repo = STT_MODEL or "mlx-community/whisper-large-v3-turbo"
+else:
+    from faster_whisper import WhisperModel  # noqa: E402
+
+    _fw = WhisperModel(STT_MODEL or "small", device="cpu", compute_type="int8")
 
 
 # Phrases que Whisper invente sur un silence ou un bruit (génériques de sous-titres vus à l'entraînement).
@@ -76,7 +105,12 @@ GHOSTS = re.compile(
 
 
 def transcribe(seg: np.ndarray) -> str:
-    txt = str(_pipe.generate(seg.tolist(), language="<|fr|>", task="transcribe")).strip()
+    if STT == "openvino":
+        txt = str(_pipe.generate(seg.tolist(), language="<|fr|>", task="transcribe")).strip()
+    elif STT == "mlx":
+        txt = mlx_whisper.transcribe(seg, path_or_hf_repo=_mlx_repo, language="fr")["text"].strip()
+    else:
+        txt = " ".join(x.text.strip() for x in _fw.transcribe(seg, language="fr")[0]).strip()
     return GHOSTS.sub("", txt).strip(" .")
 
 
@@ -107,9 +141,20 @@ _voices: dict = {}
 
 
 def voice_state(name: str):
+    """(nom réellement utilisé, état). Échantillon absent de VOICE_DIR → voix intégrée de pocket_tts, sans planter."""
     if name not in _voices:
         path = os.path.join(VOICE_DIR, f"xtts-{name}.wav")
-        _voices[name] = tts.get_state_for_audio_prompt(path if os.path.exists(path) else name)
+        if os.path.exists(path):
+            _voices[name] = (name, tts.get_state_for_audio_prompt(path))
+        else:
+            try:  # nom d'une voix intégrée (ex. « alba »)
+                _voices[name] = (name, tts.get_state_for_audio_prompt(name))
+            except Exception:  # noqa: BLE001
+                from pocket_tts.default_parameters import get_default_voice_for_language
+
+                d = get_default_voice_for_language("french")
+                log(f"voix « {name} » introuvable, voix intégrée « {d} »")
+                _voices[name] = (d, tts.get_state_for_audio_prompt(d))
     return _voices[name]
 
 
@@ -260,7 +305,7 @@ class Session:
             if self.cut.is_set():
                 continue
             self.send({"type": "say_start", "id": sid})
-            for chunk in tts.generate_audio_stream(voice_state(self.voice), text):
+            for chunk in tts.generate_audio_stream(voice_state(self.voice)[1], text):
                 if self.cut.is_set() or not self.alive:
                     break
                 self.send(chunk.numpy().astype("float32").tobytes())
@@ -283,7 +328,7 @@ async def handler(ws):
     global clients, last_seen
     clients += 1
     s = Session(ws, asyncio.get_running_loop(), os.environ.get("CANOPY_VOICE", "ana"))
-    voice_state(s.voice)
+    s.voice = voice_state(s.voice)[0]
     threading.Thread(target=s.listener, daemon=True).start()
     threading.Thread(target=s.speaker, daemon=True).start()
     await ws.send(json.dumps({"type": "ready", "rate": tts.sample_rate, "voice": s.voice}))
@@ -311,8 +356,7 @@ async def handler(ws):
                 while not s.mic.empty():  # ce que le micro a capté pendant la réponse ne compte pas
                     s.mic.get_nowait()
             elif t == "voice":
-                s.voice = str(m.get("name", s.voice))
-                await asyncio.to_thread(voice_state, s.voice)
+                s.voice = (await asyncio.to_thread(voice_state, str(m.get("name", s.voice))))[0]
     finally:
         clients -= 1
         last_seen = time.time()

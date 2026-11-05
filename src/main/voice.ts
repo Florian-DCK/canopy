@@ -10,8 +10,28 @@ import { app } from 'electron'
 // Il tourne détaché et survit aux redémarrages de Canopy (les modèles mettent ~25 s à charger) ;
 // il s'arrête seul après 15 min sans fenêtre connectée. Chemins modifiables par variables d'environnement.
 
-const BENCH = process.env.CANOPY_VOICE_BENCH ?? join(homedir(), 'Documents', 'voice-bench')
-const PYTHON = process.env.CANOPY_VOICE_PYTHON ?? join(BENCH, '.venv-pocket', 'Scripts', 'python.exe')
+const winBench = join(homedir(), 'Documents', 'voice-bench')
+// Mac : sans banc d'essai dans Documents, dossier géré par l'installation (userData/voice).
+export const BENCH = process.env.CANOPY_VOICE_BENCH ?? (process.platform === 'darwin' && !existsSync(winBench) ? join(app.getPath('userData'), 'voice') : winBench)
+export const PYTHON =
+  process.env.CANOPY_VOICE_PYTHON ?? (process.platform === 'win32' ? join(BENCH, '.venv-pocket', 'Scripts', 'python.exe') : join(BENCH, '.venv-pocket', 'bin', 'python'))
+
+/** Arrête le service et ses enfants : taskkill sous Windows ; ailleurs le groupe de processus (service lancé detached). */
+function killTree(pid: number) {
+  if (process.platform === 'win32') {
+    spawn('taskkill', ['/T', '/F', '/PID', String(pid)], { windowsHide: true })
+    return
+  }
+  try {
+    process.kill(-pid, 'SIGTERM')
+  } catch {
+    try {
+      process.kill(pid, 'SIGTERM')
+    } catch {
+      /* déjà arrêté */
+    }
+  }
+}
 
 export type VoiceInfo = { ok: true; port: number; token: string } | { ok: false; error: string }
 type Saved = { pid: number; port: number; token: string; /** Date du code du service au lancement : s'il change, on relance. */ mtime?: number }
@@ -54,7 +74,7 @@ async function running(): Promise<Saved | null> {
     if (s.port && alive(s.pid) && (await listening(s.port))) {
       if (s.mtime === scriptMtime()) return s
       // Code du service modifié : on arrête l'ancien pour relancer le nouveau.
-      spawn('taskkill', ['/T', '/F', '/PID', String(s.pid)], { windowsHide: true })
+      killTree(s.pid)
       await new Promise((r) => setTimeout(r, 800))
     }
   } catch {
@@ -120,5 +140,5 @@ async function launch(voice: string): Promise<VoiceInfo> {
 export async function stopVoice() {
   const cur = await running()
   // Le python du venv est un lanceur : on arrête tout l'arbre.
-  if (cur) spawn('taskkill', ['/T', '/F', '/PID', String(cur.pid)], { windowsHide: true })
+  if (cur) killTree(cur.pid)
 }

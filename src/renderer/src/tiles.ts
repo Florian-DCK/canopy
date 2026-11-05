@@ -2,6 +2,7 @@ import type { DragEvent } from 'react'
 import { create } from 'zustand'
 import type { HistoryEntry, SessionMeta } from '../../shared/types'
 import { api, CAPTURE, useStore } from './store'
+import { mod } from './platform'
 
 // Mosaïque (planche 15) : 1 à 4 cases, chacune une session et une de ses vues (conversation, navigateur,
 // artefact). La disposition suit le nombre de sessions : 1 pleine largeur, 2 et 3 en colonnes, 4 en 2 × 2.
@@ -110,7 +111,7 @@ export async function resumeIntoTiles(h: HistoryEntry) {
 
 /** Clic sur une session ailleurs dans l'app : Ctrl+clic l'ajoute à la grille sans quitter l'écran. */
 export function openOrTile(e: { ctrlKey: boolean; metaKey: boolean }, sessionId: string) {
-  if (e.ctrlKey || e.metaKey) useTiles.getState().add(sessionId)
+  if (mod(e)) useTiles.getState().add(sessionId)
   else useStore.getState().go({ name: 'session', sessionId })
 }
 

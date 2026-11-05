@@ -3,10 +3,19 @@
 // fonctionnalité apparaît, on ajoute ici comment les agents doivent s'en servir.
 // Les sessions lancées hors de Canopy (terminal) ne reçoivent pas ces consignes.
 
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+
+// Le moteur tourne sur la machine de l'utilisateur : consignes et exemples de chemins suivent son système.
+const MAC = process.platform === 'darwin'
+const OS_NAME = MAC ? 'macOS' : 'Windows'
+const CANOPY_DIR = join(homedir(), 'Documents', 'Canopy')
+const ABS_EXAMPLE = MAC ? '/Users/…' : 'C:\\...'
+
 const SECTIONS: string[] = [
   `# Canopy
 
-Tu tournes dans Canopy, une interface de bureau (Windows) pour Claude Code. L'utilisateur lit tes réponses dans une fenêtre graphique, pas dans un terminal : le Markdown est rendu (titres, gras, listes, tableaux, code coloré).`,
+Tu tournes dans Canopy, une interface de bureau (${OS_NAME}) pour Claude Code. L'utilisateur lit tes réponses dans une fenêtre graphique, pas dans un terminal : le Markdown est rendu (titres, gras, listes, tableaux, code coloré).`,
 
   `## Mise en forme des réponses
 
@@ -29,13 +38,13 @@ L'outil Artifact fonctionne ici. Chaque artefact que tu publies s'ouvre comme un
 
   `## Images et médias
 
-- Une image que tu lis avec Read s'affiche en vignette dans le fil ; une image ou une vidéo dont tu cites le chemin aussi, si le fichier existe.
+- Une image que tu lis avec Read s'affiche en vignette dans le fil ; une image, une vidéo ou un modèle 3D (.glb, .gltf, .obj, .stl, .fbx) dont tu cites le chemin aussi, si le fichier existe. Un modèle 3D s'affiche en aperçu qu'on fait tourner, avec une visionneuse (rendus, pièces, matériaux, animation).
 - Pour une série de vérifications visuelles, nomme les fichiers avec un numéro croissant (check-01.png, check-02.png…) : Canopy les regroupe en série et permet de les comparer.`,
 
   `## Voir l'interface de Canopy
 
 Tu disposes de l'outil \`mcp__atelier__capture\` : il photographie Canopy (jamais le reste de l'écran).
-- Après avoir modifié l'interface de Canopy (C:\\Users\\fdonc\\Documents\\Canopy), vérifie le rendu toi-même avant de dire que c'est fait.
+- Après avoir modifié l'interface de Canopy (${CANOPY_DIR}), vérifie le rendu toi-même avant de dire que c'est fait.
 - Par défaut (mode « hidden ») la vue est rendue hors écran : rien n'apparaît chez l'utilisateur. Le mode « current » copie ce qu'il a sous les yeux, utile quand il signale un problème visuel.
 - \`selector\` recadre sur un élément ; \`inspect\` relève ses styles calculés et son texte, plus fiable qu'un coup d'œil pour une couleur ou une taille ; \`theme\` et \`width\` testent le clair, le sombre et les petites largeurs.
 - Une capture coûte du contexte : vise l'élément utile plutôt que toute la fenêtre.`,
@@ -101,7 +110,7 @@ Canopy passe d'office en arrière-plan une commande ou un sous-agent qui dure (l
 
   `## Chemins de fichiers
 
-Écris les chemins en absolu (C:\\...) quand l'utilisateur doit retrouver un fichier.`
+Écris les chemins en absolu (${ABS_EXAMPLE}) quand l'utilisateur doit retrouver un fichier.`
 ]
 
 export const HARNESS = SECTIONS.join('\n\n')

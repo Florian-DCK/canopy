@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { AgentDraft, AgentFile, ToolsInventory } from '../../../shared/types'
 import { Icon } from '../icons'
 import { api } from '../store'
+import { mod } from '../platform'
 
 // Onglet « Agents » de la page Outils de Claude (planche 38) : les agents custom, lisibles comme des fiches
 // (quand Claude s'en sert, modèle, outils, consignes), modifiables, créés en les décrivant, coupés par projet.
@@ -144,7 +145,7 @@ function Describe({ global, projectName, onDraft, onBlank }: { global?: boolean;
         <h2 className="tools-name">Décris ce qu’il doit faire</h2>
         <p className="small muted">Claude rédige la fiche : consignes, outils au plus juste, le modèle le moins cher qui suffit. Tu la relis avant de l’enregistrer.</p>
         <label className="sr-only" htmlFor="ag-describe">Description de l’agent</label>
-        <textarea id="ag-describe" rows={5} value={text} placeholder="Ex. : un agent qui prépare mes comptes rendus de réunion à partir de la transcription Teams : décisions, actions avec qui et quand, et rien d’autre." onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.ctrlKey || e.metaKey) && void go()} />
+        <textarea id="ag-describe" rows={5} value={text} placeholder="Ex. : un agent qui prépare mes comptes rendus de réunion à partir de la transcription Teams : décisions, actions avec qui et quand, et rien d’autre." onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && mod(e) && void go()} />
         {!global && <div className="ag-field"><span>Portée</span><Seg<AgentFile['scope']> label="Portée" value={scope} options={[['user', 'Moi · tous projets'], ['project', `Ce projet · ${projectName}`]]} onChange={setScope} /></div>}
         {err && <p className="tools-err">{err}</p>}
         <div className="tools-acts">

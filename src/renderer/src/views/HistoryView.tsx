@@ -3,6 +3,7 @@ import type { HistoryEntry } from '../../../shared/types'
 import { resumeFromHistory, useStore } from '../store'
 import { openOrTile, resumeIntoTiles } from '../tiles'
 import { Tile, TopBar } from '../ui'
+import { MOD, mod } from '../platform'
 
 const dayLabel = (t: number) => {
   const d = new Date(t)
@@ -32,15 +33,15 @@ export function HistoryRow({ h, showProject = true }: { h: HistoryEntry; showPro
         </span>
       </span>
       {open ? (
-        <button type="button" className="btn sm" title="Ctrl+clic : ajouter à la Mosaïque" onClick={(e) => openOrTile(e, open.id)}>Ouverte</button>
+        <button type="button" className="btn sm" title={`${MOD}+clic : ajouter à la Mosaïque`} onClick={(e) => openOrTile(e, open.id)}>Ouverte</button>
       ) : (
         <button
           type="button"
           className="btn sm"
           disabled={busy}
-          title="Ctrl+clic : reprendre dans la Mosaïque"
+          title={`${MOD}+clic : reprendre dans la Mosaïque`}
           onClick={async (e) => {
-            const tile = e.ctrlKey || e.metaKey
+            const tile = mod(e)
             setBusy(true)
             try {
               if (tile) await resumeIntoTiles(h)

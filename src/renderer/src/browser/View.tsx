@@ -5,6 +5,7 @@ import { Splitter } from '../layout'
 import { FocusChat } from '../views/SessionView'
 import * as reg from './registry'
 import { hostOf, useBrowser } from './store'
+import { MOD } from '../platform'
 
 // Onglet « navigateur » d'une session (planche 10) : conversation réduite à gauche, barre + page à droite.
 // La page elle-même est un webview tenu par BrowserHost ; ici on ne mesure que son emplacement.
@@ -85,7 +86,7 @@ export function BrowserTabView({ sessionId, embedded = false }: { sessionId: str
           )}
           <button type="button" className="icon-btn" title="Précédent" onClick={() => wv()?.goBack()}><Icon name="back" size={16} /></button>
           <button type="button" className="icon-btn" title="Suivant" onClick={() => wv()?.goForward()}><Icon name="forward" size={16} /></button>
-          <button type="button" className="icon-btn" title="Recharger (Ctrl+R dans la page)" onClick={() => wv()?.reload()}>
+          <button type="button" className="icon-btn" title={`Recharger (${MOD}+R dans la page)`} onClick={() => wv()?.reload()}>
             <Icon name={tab.loading ? 'run' : 'restart'} size={16} />
           </button>
           <form

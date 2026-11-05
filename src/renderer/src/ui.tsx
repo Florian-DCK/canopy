@@ -10,6 +10,7 @@ import { fxOfGroup, useFx } from './fx'
 import { CanopyMark } from './voice/CanopyMark'
 import { useVoice } from './voice/runtime'
 import { markOf } from './voice/VoiceView'
+import { MOD } from './platform'
 
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
 
@@ -137,7 +138,7 @@ export function Rail() {
     <nav className="rail" aria-label="Navigation principale">
       {btn('Cockpit', Icons.grid, { name: 'cockpit' }, view.name === 'cockpit' || view.name === 'project', waiting)}
       {btn('Dernière session', Icons.chat, last ? { name: 'session', sessionId: last.id } : null, view.name === 'session')}
-      {btn('Mosaïque (Ctrl+clic sur une session pour l’ajouter)', <Icon name="tiles" size={20} />, { name: 'tiles' }, view.name === 'tiles', tilesWaiting, false, `${tilesFx} ${dropping ? `drop-${dropping}` : ''}`.trim(), {
+      {btn(`Mosaïque (${MOD}+clic sur une session pour l’ajouter)`, <Icon name="tiles" size={20} />, { name: 'tiles' }, view.name === 'tiles', tilesWaiting, false, `${tilesFx} ${dropping ? `drop-${dropping}` : ''}`.trim(), {
         onDragOver: (e: React.DragEvent) => {
           if (!isTileDrag(e)) return
           e.preventDefault()
