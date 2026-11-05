@@ -6,6 +6,8 @@ import { useTiles, ZOOM_MAX, ZOOM_MIN } from '../tiles'
 import { useVoicePrefs, type Avatar, type EndMode } from '../voice/prefs'
 import { setMute, setVoiceName, startVoice, stopVoice, useVoice, VOICES } from '../voice/runtime'
 import './settings.css'
+import { MOD } from '../platform'
+import { useSetupGate } from './Setup'
 
 // Page Paramètres (planche 34) : les réglages de Canopy réunis au même endroit. Ceux de Claude Code (skills, MCP,
 // mémoire) restent dans « Outils de Claude ».
@@ -16,7 +18,8 @@ const SECTIONS = [
   ['sessions', 'Sessions'],
   ['notif', 'Notifications'],
   ['vault', 'Coffre'],
-  ['look', 'Apparence']
+  ['look', 'Apparence'],
+  ['install', 'Installation']
 ] as const
 type Section = (typeof SECTIONS)[number][0]
 
@@ -225,11 +228,47 @@ function LookSection() {
       <Row title="Thème">
         {theme && <Seg<ThemeMode> label="Thème" value={theme} options={[['light', 'Clair'], ['dark', 'Sombre'], ['system', 'Système']] as const} onChange={(m) => void api.setTheme(m).then(() => setTheme(m))} />}
       </Row>
-      <Row title="Zoom de la mosaïque" desc="Le même pour toutes les cases ; Ctrl+molette dans la mosaïque.">
+      <Row title="Zoom de la mosaïque" desc={`Le même pour toutes les cases ; ${MOD}+molette dans la mosaïque.`}>
         <span className="st-inline">
           <input type="range" min={ZOOM_MIN * 100} max={ZOOM_MAX * 100} step={10} value={Math.round(zoom * 100)} onChange={(e) => setZoom(Number(e.target.value) / 100)} aria-label="Zoom de la mosaïque" />
           <span className="st-val">{Math.round(zoom * 100)} %</span>
         </span>
+      </Row>
+    </Card>
+  )
+}
+
+function ShortcutButton() {
+  const [msg, setMsg] = useState('')
+  const make = async () => {
+    try {
+      const r = await api.setupShortcut()
+      setMsg(r.ok ? (r.existed ? 'Déjà là' : 'Créé') : r.error ?? 'Échec')
+    } catch (e) {
+      setMsg(String((e as Error)?.message ?? e))
+    }
+  }
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {msg && <span className="st-desc" style={{ margin: 0 }}>{msg}</span>}
+      <button type="button" className="st-btn" onClick={() => void make()}>Créer le raccourci</button>
+    </span>
+  )
+}
+
+function InstallSection() {
+  const reopen = useSetupGate((g) => g.reopen)
+  const openPreview = useSetupGate((g) => g.openPreview)
+  return (
+    <Card title="Installation">
+      <Row title="Raccourci" desc="Lancer Canopy sans terminal : Applications sur Mac, Bureau sur Windows. Un raccourci existant n'est jamais remplacé.">
+        <ShortcutButton />
+      </Row>
+      <Row title="Aperçu du setup" desc="Parcourir l'écran de premier lancement, en macOS ou Windows, sans rien enregistrer ni lancer.">
+        <button type="button" className="st-btn" onClick={openPreview}>Voir l'aperçu</button>
+      </Row>
+      <Row title="Refaire le setup" desc="Rouvre l'écran de premier lancement (Claude, projets, fonctions, voix). Rien n'est remis à zéro.">
+        <button type="button" className="st-btn" onClick={() => void reopen()}>Refaire le setup</button>
       </Row>
     </Card>
   )
@@ -256,6 +295,7 @@ export function SettingsView() {
           {sec === 'notif' && <NotifSection />}
           {sec === 'vault' && <VaultSection />}
           {sec === 'look' && <LookSection />}
+          {sec === 'install' && <InstallSection />}
         </div>
       </main>
     </div>

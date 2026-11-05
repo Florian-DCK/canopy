@@ -1,9 +1,11 @@
 import { app, nativeTheme } from 'electron'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { CompanionPrefs, NotifSettings, ThemeMode } from '../shared/types'
+import type { CompanionPrefs, NotifSettings, SetupFeatures, ThemeMode } from '../shared/types'
 
-type Settings = { theme: ThemeMode; notif?: Partial<NotifSettings>; /** Mode compagnon : coin bas-droit de la bulle. */ companionAnchor?: { x: number; y: number } | null; /** Ce que Claude peut faire sur l'ordinateur. */ companion?: Partial<CompanionPrefs> }
+export type SetupState = { done: boolean; legacy?: boolean; at?: number; features?: SetupFeatures }
+
+type Settings = { theme: ThemeMode; /** Premier lancement. */ setup?: SetupState; notif?: Partial<NotifSettings>; /** Mode compagnon : coin bas-droit de la bulle. */ companionAnchor?: { x: number; y: number } | null; /** Ce que Claude peut faire sur l'ordinateur. */ companion?: Partial<CompanionPrefs> }
 
 export const NOTIF_DEFAULT: NotifSettings = { corner: 'br', overFullscreen: true, sound: true, quiet: false, quietFrom: '22:00', quietTo: '08:00' }
 
@@ -51,6 +53,14 @@ export function getCompanionAnchor(): { x: number; y: number } | null {
 
 export function setCompanionAnchor(p: { x: number; y: number } | null) {
   writeFileSync(file(), JSON.stringify({ ...read(), companionAnchor: p }, null, 2), 'utf8')
+}
+
+export function getSetup(): SetupState | undefined {
+  return read().setup
+}
+
+export function setSetup(setup: SetupState) {
+  writeFileSync(file(), JSON.stringify({ ...read(), setup }, null, 2), 'utf8')
 }
 
 const COMPANION_DEFAULT: CompanionPrefs = { screen: true, act: true }

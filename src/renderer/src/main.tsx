@@ -25,6 +25,7 @@ import { ToolsView } from './views/ToolsView'
 import { VoiceDock, VoiceView } from './voice/VoiceView'
 import { ViewSwitcher } from './ViewSwitcher'
 import { SettingsView } from './views/SettingsView'
+import { Setup, useSetupGate } from './views/Setup'
 import { resolve, useTiles } from './tiles'
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
       <div className="stage">
         {/* Le bandeau du moteur reste à droite de la barre latérale : celle-ci ne s'interrompt jamais. */}
         <DaemonBanner />
+        <SetupBanner />
         {view.name === 'cockpit' && <Cockpit />}
         {view.name === 'project' && <ProjectView projectId={view.projectId} />}
         {view.name === 'session' && <SessionView key={view.sessionId} sessionId={view.sessionId} />}
@@ -102,11 +104,46 @@ function DaemonBanner() {
   )
 }
 
+/** Lancements suivants (planche 43) : une fonction cochée ne peut pas marcher tant que l'installation n'est pas finie. */
+function SetupBanner() {
+  const { status, ignored, ignore, reopen } = useSetupGate()
+  if (ignored || !status || !status.done || status.legacy || !status.features) return null
+  const f = status.features
+  const p = status.permissions
+  const mac = status.platform === 'darwin'
+  const why: string[] = []
+  if (f.voice && !status.voice.installed) why.push('la voix n’est pas installée')
+  if (mac && (f.companion || f.capture) && p.screen !== 'granted') why.push('l’Enregistrement de l’écran n’est pas autorisé')
+  if (mac && f.companion && p.accessibility !== 'granted') why.push('l’Accessibilité n’est pas autorisée')
+  if (!why.length) return null
+  return (
+    <div className="banner" role="status">
+      <span className="banner-dot" aria-hidden="true" />
+      <b>Installation à finir</b>
+      <span className="banner-txt">{why.join(' ; ')}.</span>
+      <span style={{ flex: 1 }} />
+      <button type="button" className="btn clay sm" onClick={() => void reopen()}>Régler</button>
+      <button type="button" className="btn ghost sm" onClick={ignore}>Ignorer</button>
+    </div>
+  )
+}
+
+/** Le setup ne s'affiche que si le statut est connu et done=false ; sinon (inconnu, erreur) l'app normale. */
+function Root() {
+  const show = useSetupGate((g) => g.show)
+  const refresh = useSetupGate((g) => g.refresh)
+  const preview = useSetupGate((g) => g.preview)
+  const closePreview = useSetupGate((g) => g.closePreview)
+  useEffect(() => void refresh(), [refresh])
+  if (show) return <TitleBar><Setup key={preview ? 'preview' : 'setup'} preview={preview} onDone={preview ? closePreview : () => void refresh()} /></TitleBar>
+  return <App />
+}
+
 startBrowserAgent()
 startUiAgent()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <Root />
   </StrictMode>
 )

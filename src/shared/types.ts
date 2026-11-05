@@ -240,7 +240,7 @@ export type VaultEntry = { name: string; scope: 'project' | 'global'; project?: 
 
 export type CaptureResult = { ok: boolean; image?: string; info: string }
 
-export type MediaKind = 'image' | 'video' | 'audio'
+export type MediaKind = 'image' | 'video' | 'audio' | 'model'
 export type MediaSource = 'read' | 'screenshot' | 'tool' | 'mention' | 'attach'
 
 export type MediaItem = {
@@ -262,7 +262,8 @@ export type MediaItem = {
 }
 
 /** Pièce jointe à un message : un média connu, ou une image capturée (data URL). */
-export type Attachment = { mediaId: string; name: string } | { dataUrl: string; name: string }
+/** Image (média connu ou data URL) envoyée en bloc image, ou tout autre fichier passé à Claude par son chemin. */
+export type Attachment = { mediaId: string; name: string } | { dataUrl: string; name: string } | { path: string; name: string }
 
 export type Quota = {
   five?: QuotaWindow
@@ -335,7 +336,50 @@ export type ThemeMode = 'system' | 'light' | 'dark'
 
 export type CommandSuggestion = { name: string; description: string; kind: 'skill' | 'command' }
 
+/** Premier lancement (planches 42-43). */
+export type SetupCheck = { ok: boolean; version?: string; path?: string; error?: string }
+export type PermState = 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown'
+export type SetupFeatures = { voice: boolean; companion: boolean; capture: boolean; notif: boolean; blender: boolean; fal: boolean }
+export type SetupStatus = {
+  /** Setup terminé, ou installation existante (projets déjà là) marquée faite sans rien toucher. */
+  done: boolean
+  /** Installation existante reprise sans passer par le setup : pas de bandeau « à finir ». */
+  legacy?: boolean
+  features?: SetupFeatures
+  platform: string
+  node: SetupCheck
+  claude: SetupCheck
+  git: SetupCheck
+  auth: { loggedIn: boolean; method?: string; email?: string; plan?: string }
+  blender: string | null
+  voice: { installed: boolean; dir: string; stt: 'mlx' | 'openvino' | 'faster' }
+  permissions: { screen: PermState; microphone: PermState; accessibility: PermState }
+  /** Raccourci pour lancer Canopy sans terminal (Mac : ~/Applications/Canopy.app ; Windows : Canopy.lnk sur le Bureau). */
+  shortcut: { exists: boolean; path: string | null }
+}
+export type FoundProject = { name: string; path: string; mtime: number; known: boolean }
+export type SetupTask = 'login' | 'claude' | 'voice'
+/** Ligne de journal d'une tâche du setup ; step = ligne « STEP n/total texte » du script de la voix. */
+export type SetupLog = { task: SetupTask; line?: string; url?: string; step?: { n: number; total: number; text: string }; done?: boolean; error?: string }
+
 export type AtelierApi = {
+  platform: string
+  setupStatus(): Promise<SetupStatus>
+  setupFindProjects(): Promise<FoundProject[]>
+  setupAddProjects(paths: string[]): Promise<void>
+  /** Lance `claude auth login` (abonnement : claudeai ; clé d'API : console). Journal via onSetupLog. */
+  setupLogin(mode: 'claudeai' | 'console'): Promise<void>
+  /** Texte envoyé à l'entrée de `claude auth login` (code collé). */
+  setupLoginInput(text: string): Promise<void>
+  setupInstallClaude(): Promise<void>
+  setupInstallVoice(): Promise<void>
+  setupAskPermission(kind: 'screen' | 'microphone' | 'accessibility'): Promise<PermState>
+  setupFinish(features: SetupFeatures): Promise<void>
+  /** Rouvrir le setup (Paramètres › Installation) : ne remet rien à zéro, seulement done = false. */
+  setupReopen(): Promise<void>
+  /** Crée le raccourci s'il n'existe pas (jamais de remplacement). */
+  setupShortcut(): Promise<{ ok: boolean; path?: string; existed?: boolean; error?: string }>
+  onSetupLog(cb: (e: SetupLog) => void): () => void
   listFiles(projectId: string): Promise<string[]>
   listCommands(sessionId: string): Promise<CommandSuggestion[]>
   listProjects(): Promise<Project[]>
@@ -349,6 +393,8 @@ export type AtelierApi = {
   takeOver(sessionId: string): Promise<void>
   setModel(sessionId: string, model: string): Promise<void>
   send(sessionId: string, text: string, attachments?: Attachment[]): Promise<void>
+  /** Chemin sur le disque d'un fichier glissé ou choisi ('' s'il n'en a pas, ex. image collée). */
+  pathForFile(file: File): string
   openMedia(mediaId: string): Promise<void>
   openInEditor(projectId: string, relPath: string, line?: number): Promise<void>
   showMediaInFolder(mediaId: string): Promise<void>
@@ -451,6 +497,8 @@ export type ToastApi = {
   /** Mode compagnon : déplacer la bulle, la commander, laisser passer les clics hors de la bulle. */
   drag(phase: 'start' | 'move' | 'end', x: number, y: number): void
   companion(c: import('./companion').CompanionCommand): void
+  /** Champ de la bulle : la fenêtre (qui ne prend jamais le focus) l'accepte le temps d'écrire. */
+  typing(on: boolean): void
   mouse(inside: boolean): void
   onLook(cb: (title: string) => void): () => void
   ready(): void

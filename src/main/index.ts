@@ -18,6 +18,8 @@ import { MediaServer, registerMediaScheme } from './media'
 import { applySavedTheme, getCompanionAnchor, getCompanionPrefs, setCompanionPrefs, getNotifSettings, getTheme, setCompanionAnchor, setNotifSettings, setTheme, windowBackground } from './settings'
 import { inQuietHours, ToastCenter } from './toasts'
 import { startVoice, stopVoice } from './voice'
+import { createShortcut } from './shortcut'
+import { configureSetup, markProjectsLoaded, setupAddProjects, setupAskPermission, setupFinish, setupFindProjects, setupInstallClaude, setupInstallVoice, setupLogin, setupLoginInput, setupReopen, setupStatus } from './setup'
 
 // Electron n'est qu'un client du démon (src/daemon) : fenêtre, notifications, boîtes de dialogue,
 // serveur de médias. Il peut redémarrer (mode dev, modification du main…) sans couper les agents.
@@ -360,6 +362,7 @@ const daemon = new DaemonClient(app.getPath('userData'), join(__dirname, 'daemon
 async function refreshProjects() {
   try {
     projects = await daemon.rpc<Project[]>('listProjects')
+    markProjectsLoaded()
   } catch {
     /* démon indisponible */
   }
@@ -376,6 +379,8 @@ function createWindow() {
     // Barre de fenêtre dessinée par Canopy (titlebar.tsx) : sur Windows, « hidden » retire la barre et les boutons
     // natifs mais garde les bords de redimensionnement, l'ombre et l'ancrage.
     titleBarStyle: 'hidden',
+    // macOS : pastilles natives, centrées dans la barre de 44 px (pastille ≈ 12 px).
+    ...(process.platform === 'darwin' ? { trafficLightPosition: { x: 6, y: 16 } } : {}), // pastilles (52 px) centrées sur le rail de 64 px, barre de 44 px
     // Icône de la fenêtre et de la barre des tâches (resources/ à la racine du projet).
     icon: join(__dirname, '../../resources/canopy.ico'),
     autoHideMenuBar: true,
@@ -514,6 +519,23 @@ ipcMain.handle('projects:add', async () => {
   void refreshProjects()
   return p
 })
+configureSetup({
+  getProjects: () => projects,
+  addPath: (p) => daemon.rpc('addProjectPath', p),
+  refresh: refreshProjects,
+  send: (e) => toRenderer('setup:log', e)
+})
+ipcMain.handle('setup:status', () => setupStatus())
+ipcMain.handle('setup:findProjects', () => setupFindProjects())
+ipcMain.handle('setup:addProjects', (_e, paths: string[]) => setupAddProjects(paths))
+ipcMain.handle('setup:login', (_e, mode: 'claudeai' | 'console') => setupLogin(mode))
+ipcMain.handle('setup:loginInput', (_e, text: string) => setupLoginInput(String(text)))
+ipcMain.handle('setup:installClaude', () => setupInstallClaude())
+ipcMain.handle('setup:installVoice', () => setupInstallVoice())
+ipcMain.handle('setup:askPermission', (_e, kind: 'screen' | 'microphone' | 'accessibility') => setupAskPermission(kind))
+ipcMain.handle('setup:finish', (_e, features) => setupFinish(features))
+ipcMain.handle('setup:reopen', () => setupReopen())
+ipcMain.handle('setup:shortcut', () => createShortcut())
 ipcMain.handle('media:open', async (_e, id: string) => {
   const f = media.fileOf(id)
   if (f) await shell.openPath(f)
@@ -620,6 +642,8 @@ const APP_ID = 'be.hilarious.canopy'
 app.setAppUserModelId(APP_ID)
 
 app.whenReady().then(() => {
+  // Mode dev sur Mac : le Dock montrerait l'icône d'Electron.
+  if (process.platform === 'darwin') app.dock?.setIcon(join(app.getAppPath(), 'resources', 'canopy.png'))
   // Agent utilisateur de Chrome (sans « Electron/… ») : sinon certaines connexions refusent le navigateur intégré.
   const claudeSession = session.fromPartition('persist:claude')
   claudeSession.setUserAgent(claudeSession.getUserAgent().replace(/\s(Electron|atelier)\/\S+/gi, ''))

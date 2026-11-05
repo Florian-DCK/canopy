@@ -1,8 +1,9 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { AppState } from '../shared/state'
 import type { AppEvent, AtelierApi, ToastApi, ToastState } from '../shared/types'
 
 const api: AtelierApi = {
+  platform: process.platform,
   listFiles: (projectId) => ipcRenderer.invoke('files:list', projectId),
   listCommands: (sessionId) => ipcRenderer.invoke('commands:list', sessionId),
   listChecklists: () => ipcRenderer.invoke('checklists:list'),
@@ -21,6 +22,7 @@ const api: AtelierApi = {
   takeOver: (id) => ipcRenderer.invoke('session:takeover', id),
   setModel: (id, model) => ipcRenderer.invoke('session:model', id, model),
   send: (id, text, attachments) => ipcRenderer.invoke('session:send', id, text, attachments),
+  pathForFile: (file) => webUtils.getPathForFile(file),
   openMedia: (id) => ipcRenderer.invoke('media:open', id),
   openInEditor: (projectId, relPath, line) => ipcRenderer.invoke('editor:open', projectId, relPath, line),
   showMediaInFolder: (id) => ipcRenderer.invoke('media:folder', id),
@@ -121,7 +123,23 @@ const api: AtelierApi = {
     ipcRenderer.on('companion:command', h)
     return () => ipcRenderer.removeListener('companion:command', h)
   },
-  voiceStop: () => ipcRenderer.invoke('voice:stop')
+  voiceStop: () => ipcRenderer.invoke('voice:stop'),
+  setupStatus: () => ipcRenderer.invoke('setup:status'),
+  setupFindProjects: () => ipcRenderer.invoke('setup:findProjects'),
+  setupAddProjects: (paths) => ipcRenderer.invoke('setup:addProjects', paths),
+  setupLogin: (mode) => ipcRenderer.invoke('setup:login', mode),
+  setupLoginInput: (text) => ipcRenderer.invoke('setup:loginInput', text),
+  setupInstallClaude: () => ipcRenderer.invoke('setup:installClaude'),
+  setupInstallVoice: () => ipcRenderer.invoke('setup:installVoice'),
+  setupAskPermission: (kind) => ipcRenderer.invoke('setup:askPermission', kind),
+  setupFinish: (features) => ipcRenderer.invoke('setup:finish', features),
+  setupReopen: () => ipcRenderer.invoke('setup:reopen'),
+  setupShortcut: () => ipcRenderer.invoke('setup:shortcut'),
+  onSetupLog: (cb) => {
+    const h = (_: unknown, e: Parameters<typeof cb>[0]) => cb(e)
+    ipcRenderer.on('setup:log', h)
+    return () => ipcRenderer.removeListener('setup:log', h)
+  }
 }
 
 const toast: ToastApi = {
@@ -134,6 +152,7 @@ const toast: ToastApi = {
   size: (height) => ipcRenderer.send('toasts:size', height),
   drag: (phase, x, y) => ipcRenderer.send('companion:drag', phase, x, y),
   companion: (c) => ipcRenderer.send('companion:command', c),
+  typing: (on) => ipcRenderer.send('companion:typing', on),
   mouse: (inside) => ipcRenderer.send('toasts:mouse', inside),
   onLook: (cb) => {
     const h = (_: unknown, title: string) => cb(title)
