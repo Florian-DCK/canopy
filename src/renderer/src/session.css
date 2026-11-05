@@ -384,3 +384,9 @@ kbd { font-family: var(--mono); font-size: 10.5px; padding: 1px 5px; border-radi
 
 /* Fil d'un sous-agent : même rendu que le fil de la session, un peu plus serré. */
 .tt-body.thread { padding: 16px 18px 28px; gap: 12px; }
+
+/* Ctrl+Tab : sélecteur d'onglets récents, au centre, tant que Ctrl est tenu. */
+.tab-switch { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 400; min-width: 320px; max-width: 520px; padding: 8px; border-radius: 14px; background: var(--head); border: 0.5px solid var(--line-strong); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28); display: flex; flex-direction: column; gap: 2px; }
+.tab-switch-row { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; border-radius: 9px; font-size: 13.5px; color: var(--g600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tab-switch-row.on { background: var(--g150); color: var(--slate); box-shadow: inset 0 0 0 1px var(--clay-line, rgba(217,119,87,.45)); }
+.tab-switch-hint { padding: 6px 12px 2px; font-size: 11.5px; color: var(--g550); }
