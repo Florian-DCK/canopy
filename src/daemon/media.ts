@@ -10,6 +10,7 @@ import { DATA } from './paths'
 const IMAGE_EXT = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg']
 const VIDEO_EXT = ['.mp4', '.webm', '.mov', '.m4v']
 const AUDIO_EXT = ['.wav', '.mp3', '.ogg', '.m4a', '.flac', '.opus', '.aac']
+const MODEL_EXT = ['.glb', '.gltf', '.obj', '.stl', '.fbx']
 const MIME: Record<string, string> = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp' }
 
 export function kindOf(path: string): MediaKind | null {
@@ -17,6 +18,7 @@ export function kindOf(path: string): MediaKind | null {
   if (IMAGE_EXT.includes(e)) return 'image'
   if (VIDEO_EXT.includes(e)) return 'video'
   if (AUDIO_EXT.includes(e)) return 'audio'
+  if (MODEL_EXT.includes(e)) return 'model'
   return null
 }
 
@@ -65,7 +67,7 @@ export class MediaStore {
   fromPath(raw: string, cwd: string, meta: { sessionId: string; itemId: string }): MediaItem | null {
     const kind = kindOf(raw)
     if (!kind) return null
-    const p = raw.startsWith('file:///') ? decodeURIComponent(raw.slice(8)) : raw
+    const p = raw.startsWith('file:///') ? decodeURIComponent(raw.slice(IS_POSIX && !/^file:\/\/\/[A-Za-z]:/.test(raw) ? 7 : 8)) : raw
     const file = isAbsolute(p) ? p : resolve(cwd, p)
     try {
       if (!statSync(file).isFile()) return null
@@ -86,14 +88,22 @@ export class MediaStore {
   }
 }
 
-/** Chemins / URL file:// de médias cités dans un texte (Windows ou relatifs). */
-export function findMediaPaths(text: string): string[] {
-  const ext = 'png|jpe?g|gif|webp|bmp|svg|mp4|webm|mov|m4v|wav|mp3|ogg|m4a|flac|opus|aac'
+const IS_POSIX = process.platform !== 'win32'
+
+/** Chemins / URL file:// de médias cités dans un texte (Windows, absolus POSIX hors Windows, ou relatifs). */
+export function findMediaPaths(text: string, posix = IS_POSIX): string[] {
+  const ext = 'png|jpe?g|gif|webp|bmp|svg|mp4|webm|mov|m4v|wav|mp3|ogg|m4a|flac|opus|aac|glb|gltf|obj|stl|fbx'
+  // Absolu POSIX (/Users/x/a.png) : pas au milieu d'un autre chemin ni d'une URL (https://…).
+  const posixAlt = posix ? String.raw`|(?<![\w:.\/~-])\/[^\s"'<>|*?\`]+?` : ''
   const re = new RegExp(
-    String.raw`(?:file:\/\/\/[^\s"'<>|]+?|[A-Za-z]:[\\/][^\s"'<>|*?\`]+?|(?:\.{1,2}[\\/])?[\w\-.]+(?:[\\/][\w\-. ]+?)*)\.(?:${ext})(?![\w])`,
+    String.raw`(?:file:\/\/\/[^\s"'<>|]+?|[A-Za-z]:[\\/][^\s"'<>|*?\`]+?${posixAlt}|(?:\.{1,2}[\\/])?[\w\-.]+(?:[\\/][\w\-. ]+?)*)\.(?:${ext})(?![\w])`,
     'gi'
   )
   const out = new Set<string>()
-  for (const m of text.matchAll(re)) out.add(m[0].replace(/^[(\[`'"]+/, ''))
+  // Chemin absolu entre backticks : les espaces y sont permis (« Hilarious Knockout\… »).
+  const quotedHead = posix ? String.raw`(?:[A-Za-z]:[\\/]|\/)` : String.raw`[A-Za-z]:[\\/]`
+  const quoted = new RegExp(String.raw`\`(${quotedHead}[^\`\n]+?\.(?:${ext}))\``, 'gi')
+  for (const m of text.matchAll(quoted)) out.add(m[1])
+  for (const m of text.matchAll(re)) if (![...out].some((q) => q.endsWith(m[0]) && q !== m[0])) out.add(m[0].replace(/^[(\[`'"]+/, ''))
   return [...out]
 }

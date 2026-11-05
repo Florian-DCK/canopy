@@ -3,6 +3,9 @@ import type { Item, MediaItem } from '../../../shared/types'
 import { commentFor, fmtSize, groupSeries, mediaUrl, seriesOf, thumbUrl } from '../media'
 import { Icon } from '../icons'
 import { api, useStore, type ViewerMode } from '../store'
+import { LookSeg, ModelCard, ModelSnap, ModelStage, statsLine } from '../three/ModelMedia'
+import type { Look, ModelStats } from '../three/model'
+import type { ModelApi } from '../three/ModelView'
 
 // Références stables pour les sélecteurs zustand (un nouveau [] à chaque rendu boucle).
 const NO_MEDIA: MediaItem[] = []
@@ -31,6 +34,8 @@ export function Thumb({ m, w, h, label = true }: { m: MediaItem; w: number; h: n
     >
       {m.kind === 'image' ? (
         <img src={thumbUrl(m.id)} alt="" loading="lazy" draggable={false} />
+      ) : m.kind === 'model' ? (
+        <ModelSnap m={m} w={w} h={h} />
       ) : m.kind === 'audio' ? (
         <span className="thumb-audio" aria-hidden="true"><Icon name="audio" size={Math.min(34, h * 0.4)} /></span>
       ) : (
@@ -105,6 +110,29 @@ export function InlineMedia({ sessionId, itemId }: { sessionId: string; itemId: 
       </div>
     )
 
+  const seriesBtns = inSeries && (
+    <span style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+      <button type="button" className="btn sm" onClick={() => open({ sessionId, mediaId: m.id, mode: 'single' })}>
+        Série {series[0] ? seriesLabelOf(series[0]) : ''} · {series.length} {m.kind === 'model' ? 'versions' : 'vues'}
+      </button>
+      <button
+        type="button"
+        className="btn ghost sm"
+        onClick={() => open({ sessionId, mediaId: m.id, compareId: series[idx - 1].id, mode: 'side' })}
+      >
+        Comparer avec {m.kind === 'model' ? 'la version précédente' : 'la vue précédente'}
+      </button>
+    </span>
+  )
+
+  if (m.kind === 'model')
+    return (
+      <div className="media-row">
+        <ModelCard m={m} w={inSeries ? 400 : 540} h={inSeries ? 220 : 300} />
+        {seriesBtns}
+      </div>
+    )
+
   if (m.kind === 'video')
     return (
       <div className="media-card" style={{ width: 360 }}>
@@ -125,20 +153,7 @@ export function InlineMedia({ sessionId, itemId }: { sessionId: string; itemId: 
           <span className="muted">{[m.width && `${m.width}×${m.height}`, fmtSize(m.size)].filter(Boolean).join(' · ')}</span>
         </span>
       </div>
-      {inSeries && (
-        <span style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-          <button type="button" className="btn sm" onClick={() => open({ sessionId, mediaId: m.id, mode: 'single' })}>
-            Série {series[0] ? seriesLabelOf(series[0]) : ''} · {series.length} vues
-          </button>
-          <button
-            type="button"
-            className="btn ghost sm"
-            onClick={() => open({ sessionId, mediaId: m.id, compareId: series[idx - 1].id, mode: 'side' })}
-          >
-            Comparer avec la vue précédente
-          </button>
-        </span>
-      )}
+      {seriesBtns}
     </div>
   )
 }
@@ -151,7 +166,7 @@ export function MediaPanel({ sessionId }: { sessionId: string }) {
   const open = useStore((s) => s.openViewer)
   const groups = useMemo(() => groupSeries(all).reverse(), [all])
   if (!all.length)
-    return <div className="empty">Les images et vidéos que la session lit, produit ou cite apparaîtront ici.</div>
+    return <div className="empty">Les images, vidéos et modèles 3D que la session lit, produit ou cite apparaîtront ici.</div>
   return (
     <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 18 }}>
       {groups.map((g) => (
@@ -204,13 +219,17 @@ export function ViewerOverlay() {
   const [zoom, setZoom] = useState(0)
   const [pos, setPos] = useState(50)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const modelApi = useRef<ModelApi | null>(null)
+  const [look, setLook] = useState<Look>('rendu')
+  const [mstats, setMstats] = useState<ModelStats | null>(null)
 
   const cur = all.find((m) => m.id === v?.mediaId)
   const series = cur ? seriesOf(cur, all) : []
   const strip = series.length > 1 ? series : all
   const idx = strip.findIndex((m) => m.id === cur?.id)
   const other = v?.compareId ? all.find((m) => m.id === v.compareId) : undefined
-  const comparing = !!other && v?.mode !== 'single' && cur?.kind === 'image'
+  const isModel = cur?.kind === 'model'
+  const comparing = !!other && v?.mode !== 'single' && (cur?.kind === 'image' || (isModel && other.kind === 'model'))
 
   useEffect(() => {
     if (!v) return
@@ -222,7 +241,10 @@ export function ViewerOverlay() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   })
-  useEffect(() => setZoom(0), [v?.mediaId])
+  useEffect(() => {
+    setZoom(0)
+    setMstats(null)
+  }, [v?.mediaId])
 
   if (!v || !cur) return null
 
@@ -236,7 +258,11 @@ export function ViewerOverlay() {
     openV({ ...v, mode, compareId: mode === 'single' ? v.compareId : v.compareId ?? prev?.id })
   }
   const capture = () => {
-    if (cur.kind === 'video' && videoRef.current) {
+    if (cur.kind === 'model') {
+      const url = modelApi.current?.capture()
+      if (!url) return
+      attach(v.sessionId, { dataUrl: url, name: `${cur.name.replace(/\.[^.]+$/, '')} · vue ${look}.png` })
+    } else if (cur.kind === 'video' && videoRef.current) {
       const vid = videoRef.current
       const c = document.createElement('canvas')
       c.width = vid.videoWidth
@@ -260,15 +286,16 @@ export function ViewerOverlay() {
           </span>
           <span className="mono v-muted" style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cur.path}</span>
         </span>
-        {cur.kind === 'image' && strip.length > 1 && (
+        {(cur.kind === 'image' || isModel) && strip.length > 1 && (
           <div className="v-seg" role="group" aria-label="Mode d’affichage">
-            {(['single', 'side', 'slider'] as ViewerMode[]).map((m) => (
+            {((isModel ? ['single', 'side'] : ['single', 'side', 'slider']) as ViewerMode[]).map((m) => (
               <button key={m} type="button" aria-pressed={v.mode === m} onClick={() => setMode(m)}>
-                {m === 'single' ? 'Une vue' : m === 'side' ? 'Côte à côte' : 'Curseur'}
+                {m === 'single' ? 'Une vue' : m === 'side' ? (isModel ? 'Comparer' : 'Côte à côte') : 'Curseur'}
               </button>
             ))}
           </div>
         )}
+        {isModel && <LookSeg look={look} setLook={setLook} />}
         {cur.kind === 'image' && !comparing && (
           <div className="v-seg" role="group" aria-label="Zoom">
             {['Ajusté', '100 %', '150 %'].map((l, k) => (
@@ -279,13 +306,16 @@ export function ViewerOverlay() {
         <button type="button" className="v-btn" onClick={() => navigator.clipboard.writeText(cur.path)}>Copier le chemin</button>
         <button type="button" className="v-btn" onClick={() => api.showMediaInFolder(cur.id)}>Ouvrir le dossier</button>
         <button type="button" className="v-btn" onClick={() => api.openMedia(cur.id)}>Ouvrir avec…</button>
-        {!readOnly && cur.kind !== 'audio' && <button type="button" className="v-btn primary" onClick={capture}>{cur.kind === 'video' ? 'Capture → session' : 'Joindre → session'}</button>}
+        {!readOnly && cur.kind !== 'audio' && <button type="button" className="v-btn primary" onClick={capture}>{cur.kind === 'video' || isModel ? 'Capture → session' : 'Joindre → session'}</button>}
         <button type="button" className="v-btn" aria-label="Fermer (Échap)" onClick={close}>✕</button>
       </header>
 
-      <div className="viewer-stage">
-        {idx > 0 && <button type="button" className="v-nav left" aria-label="Précédent" onClick={() => go(strip[idx - 1])}>‹</button>}
-        {cur.kind === 'audio' ? (
+      <div className={isModel ? 'viewer-stage flush' : 'viewer-stage'}>
+        {isModel ? (
+          <ModelStage key={cur.id + (comparing ? other!.id : '')} m={cur} other={comparing ? other : undefined} look={look} apiRef={modelApi} onStats={setMstats} />
+        ) : null}
+        {!isModel && idx > 0 && <button type="button" className="v-nav left" aria-label="Précédent" onClick={() => go(strip[idx - 1])}>‹</button>}
+        {isModel ? null : cur.kind === 'audio' ? (
           <div className="v-audio">
             <Icon name="audio" size={56} />
             <span className="mono">{cur.name}</span>
@@ -323,13 +353,13 @@ export function ViewerOverlay() {
             <Frame m={cur} zoom={zoom} />
           </div>
         )}
-        {idx < strip.length - 1 && <button type="button" className="v-nav right" aria-label="Suivant" onClick={() => go(strip[idx + 1])}>›</button>}
+        {!isModel && idx < strip.length - 1 && <button type="button" className="v-nav right" aria-label="Suivant" onClick={() => go(strip[idx + 1])}>›</button>}
       </div>
 
       <footer className="viewer-foot">
         <span className="small v-muted" style={{ width: 260, lineHeight: 1.5 }}>
-          {[cur.width && `${cur.width} × ${cur.height}`, fmtSize(cur.size), cur.source === 'read' ? 'lu par Read' : cur.source === 'screenshot' ? 'capture' : cur.source === 'mention' ? 'cité' : 'outil'].filter(Boolean).join(' · ')}
-          <br />← → naviguer{strip.length > 1 && cur.kind === 'image' ? ' · Maj+clic = vue A' : ''} · Échap fermer
+          {[isModel && mstats ? statsLine(mstats) : '', cur.width && `${cur.width} × ${cur.height}`, fmtSize(cur.size), cur.source === 'read' ? 'lu par Read' : cur.source === 'screenshot' ? 'capture' : cur.source === 'mention' ? 'cité' : 'outil'].filter(Boolean).join(' · ')}
+          <br />← → naviguer{strip.length > 1 && (cur.kind === 'image' || isModel) ? ' · Maj+clic = vue A' : ''} · Échap fermer
         </span>
         <div className="v-strip" role="tablist" aria-label="Médias">
           {strip.slice(Math.max(0, idx - 10), idx + 11).map((m) => (
@@ -342,7 +372,7 @@ export function ViewerOverlay() {
               className={m.id === cur.id ? 'on' : m.id === other?.id && comparing ? 'a' : ''}
               onClick={(e) => go(m, e.shiftKey)}
             >
-              {m.kind === 'image' ? <img src={thumbUrl(m.id)} alt="" loading="lazy" /> : m.kind === 'audio' ? <Icon name="audio" size={20} /> : <PlayBadge size={22} />}
+              {m.kind === 'image' ? <img src={thumbUrl(m.id)} alt="" loading="lazy" /> : m.kind === 'model' ? <ModelSnap m={m} w={76} h={50} /> : m.kind === 'audio' ? <Icon name="audio" size={20} /> : <PlayBadge size={22} />}
             </button>
           ))}
         </div>

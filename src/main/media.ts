@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { app, nativeImage, net, protocol } from 'electron'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, dirname, join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { MediaItem } from '../shared/types'
 
@@ -13,7 +13,7 @@ export const SCHEME = 'atelier-media'
 /** À appeler avant app.whenReady(). */
 export function registerMediaScheme() {
   protocol.registerSchemesAsPrivileged([
-    { scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
+    { scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } }
   ])
 }
 
@@ -69,10 +69,20 @@ export class MediaServer {
           }
         })
       }
-      const m = this.known.get(id)
+      // media/<id>/<nom> : un modèle 3D et ses fichiers voisins (textures d'un .gltf, .mtl d'un .obj), pris dans son dossier.
+      const [mid, ...rest] = id.split('/')
+      const m = this.known.get(mid)
       if (!m) return new Response('introuvable', { status: 404 })
+      if (rest.length > 1 || (rest.length === 1 && decodeURIComponent(rest[0]) !== basename(m.file))) {
+        if (m.kind !== 'model') return new Response('introuvable', { status: 404 })
+        const dir = dirname(existsSync(m.path) ? m.path : m.file)
+        const f = resolve(dir, decodeURIComponent(rest.join('/')))
+        if (!f.toLowerCase().startsWith(dir.toLowerCase() + sep) || !existsSync(f)) return new Response('introuvable', { status: 404 })
+        return withCors(await net.fetch(pathToFileURL(f).toString(), { headers: req.headers }))
+      }
       const file = u.host === 'thumb' ? this.thumb(m) : m.file
-      return net.fetch(pathToFileURL(file).toString(), { headers: req.headers })
+      const res = await net.fetch(pathToFileURL(file).toString(), { headers: req.headers })
+      return m.kind === 'model' ? withCors(res) : res
     })
   }
 
@@ -97,4 +107,11 @@ html,body{margin:0;background:#1F1E1D;color:#E3E1D8;font:14px/1.5 'Segoe UI',sys
 body{padding:22px 24px}h1,h2,h3{font-family:Georgia,'Source Serif 4',serif;font-weight:400;color:#F5F4EE;margin:0 0 .5em}
 a{color:#8BBCF5}:root{--clay:#D57151;--ivory:#FAF9F5;--slate:#141413;--muted:#8F8D86}
 </style></head><body>${html}</body></html>`
+}
+
+/** Les modèles 3D sont lus par fetch() depuis la page (origine http://localhost en dev) : il faut l'en-tête CORS. */
+function withCors(res: Response): Response {
+  const h = new Headers(res.headers)
+  h.set('access-control-allow-origin', '*')
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h })
 }

@@ -62,7 +62,9 @@ const PATHS = {
   "audio": "<path d=\"M4 10v4M8 7v10M12 4.5v15M16 7.5v9M20 10.5v3\"/>",
   "tiles": "<rect x=\"3.5\" y=\"4.5\" width=\"7.5\" height=\"15\" rx=\"2\"/><rect x=\"13\" y=\"4.5\" width=\"7.5\" height=\"15\" rx=\"2\"/>",
   "settings": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4L18 18M6 18l1.6-1.6M16.4 7.6L18 6\"/><circle cx=\"12\" cy=\"12\" r=\"6.3\"/>",
-  "expand": "<path d=\"M14 4.5h5.5V10M10 19.5H4.5V14M19.5 4.5l-6 6M4.5 19.5l6-6\"/>",
+  "cube": "<path d=\"M12 3.5l7.5 4.2v8.6L12 20.5l-7.5-4.2V7.7z\"/><path d=\"M12 12l7.5-4.3M12 12v8.5M12 12L4.5 7.7\"/>",
+  "eye-off": "<path d=\"M2.8 12S6.2 5.8 12 5.8 21.2 12 21.2 12 17.8 18.2 12 18.2 2.8 12 2.8 12z\"/><circle cx=\"12\" cy=\"12\" r=\"2.8\"/><path d=\"M4.5 4.5l15 15\"/>",
+  "expand":"<path d=\"M14 4.5h5.5V10M10 19.5H4.5V14M19.5 4.5l-6 6M4.5 19.5l6-6\"/>",
 } as const
 
 export type IconName = keyof typeof PATHS | 'context'
