@@ -11,6 +11,7 @@ import { useAutocomplete } from './session/Autocomplete'
 import { Lock } from './session/SecretCard'
 import { detectSecrets, placeholder as secretMark, sanitizeName } from '../secrets'
 import { Thread } from './session/Thread'
+import { MOD, mod, SHIFT } from '../platform'
 
 // Saisie (planche 3) : la bande d'activité au-dessus du texte, puis la barre — joindre, modèle, mode
 // à gauche ; contexte, fenêtre 5 h et un seul bouton (Envoyer ou Arrêter) à droite.
@@ -341,7 +342,14 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
     if (p && p.tool !== 'ExitPlanMode') void api.respondPermission(sessionId, p.id, 'allow')
   }
   const addFiles = async (files: Iterable<File>) => {
-    for (const f of files) if (f.type.startsWith('image/')) attach(sessionId, { dataUrl: await readAsDataUrl(f), name: f.name || 'image collée' })
+    for (const f of files) {
+      if (f.type.startsWith('image/')) attach(sessionId, { dataUrl: await readAsDataUrl(f), name: f.name || 'image collée' })
+      else {
+        // Tout autre fichier part par son chemin ; un fichier sans chemin (collé depuis la mémoire) est ignoré.
+        const path = api.pathForFile(f)
+        if (path) attach(sessionId, { path, name: f.name })
+      }
+    }
   }
 
   const model = MODELS.find((m) => m.v === (session.modelChoice ?? '')) ?? MODELS[0]
@@ -355,7 +363,7 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
     ? 'Réponds à la demande ci-dessus, ou ajoute une précision…'
     : running
       ? 'Ajoute une précision, elle sera prise en compte à la suite…'
-      : 'Écris ta demande… (@ fichier, / skill, coller ou glisser une image)'
+      : 'Écris ta demande… (@ fichier, / skill, coller une image, glisser un fichier)'
 
   return (
     <div className="composer-wrap">
@@ -386,7 +394,7 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
           <div className="cmp-att">
             {pending.map((a, k) => (
               <span key={k} className="attach">
-                <img src={'mediaId' in a ? thumbUrl(a.mediaId) : a.dataUrl} alt="" />
+                {'path' in a ? <Icon name="attach" size={15} /> : <img src={'mediaId' in a ? thumbUrl(a.mediaId) : a.dataUrl} alt="" />}
                 <span>{a.name}</span>
                 <button type="button" aria-label={`Retirer ${a.name}`} onClick={() => detach(sessionId, k)}>
                   <Icon name="close" size={12} />
@@ -464,7 +472,7 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
               e.preventDefault()
               if (empty && waiting) allowPending()
               else void send()
-            } else if (e.ctrlKey && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+            } else if (mod(e) && e.shiftKey && (e.key === 'S' || e.key === 's')) {
               // Ctrl+Maj+S : le texte sélectionné devient un secret (puce dans le message, valeur au coffre).
               const el = e.currentTarget
               const [a, b] = [el.selectionStart, el.selectionEnd]
@@ -485,7 +493,6 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
             multiple
             hidden
             onChange={(e) => {
@@ -493,10 +500,10 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
               e.target.value = ''
             }}
           />
-          <button type="button" className="cmp-icon" aria-label="Joindre une image" title="Joindre une image" onClick={() => fileRef.current?.click()}>
+          <button type="button" className="cmp-icon" aria-label="Joindre un fichier" title="Joindre un fichier" onClick={() => fileRef.current?.click()}>
             <Icon name="attach" size={17} />
           </button>
-          <button type="button" className={`cmp-icon${lock ? ' on' : ''}`} aria-label="Glisser un secret" title="Glisser un secret : il part au coffre, Claude ne voit que son nom (ou sélectionne un mot et Ctrl+Maj+S)" onClick={() => setLock(lock ? null : { name: 'SECRET', value: '' })}>
+          <button type="button" className={`cmp-icon${lock ? ' on' : ''}`} aria-label="Glisser un secret" title={`Glisser un secret : il part au coffre, Claude ne voit que son nom (ou sélectionne un mot et ${MOD}+${SHIFT}+S)`} onClick={() => setLock(lock ? null : { name: 'SECRET', value: '' })}>
             <Lock size={16} />
           </button>
           <Dropdown label={`Modèle : ${modelLabel}`} button={<><Icon name="model" size={15} /><span className="cmp-chip-txt">{modelLabel}</span><Icon name="chevron" size={13} className="cmp-caret" /></>}>

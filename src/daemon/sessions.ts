@@ -688,8 +688,14 @@ export class SessionManager {
     }
     // Pièces jointes → blocs image du message (médias connus ou captures en data URL).
     const images: unknown[] = []
+    const files: string[] = []
     const userId = randomUUID()
     for (const a of attachments) {
+      // Fichier quelconque (zip, pdf, code…) : Claude le lit lui-même à son emplacement.
+      if ('path' in a) {
+        files.push(a.path)
+        continue
+      }
       const img =
         'mediaId' in a
           ? this.media.read(a.mediaId)
@@ -715,7 +721,8 @@ export class SessionManager {
       this.patchItem(s, qid, { mode: 'async' } as Partial<Item>)
     }
     this.patch(s, { status: s.pending.size ? 'wait' : 'run' })
-    s.input.push(images.length ? [...images, { type: 'text', text }] : text)
+    const prompt = files.length ? `${text}\n\nFichiers joints :\n${files.map((f) => `- ${f}`).join('\n')}` : text
+    s.input.push(images.length ? [...images, { type: 'text', text: prompt }] : prompt)
     if (!s.started) {
       s.started = true
       void this.run(s)
