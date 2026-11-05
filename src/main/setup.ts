@@ -9,6 +9,7 @@ import { askMacPermission, macPermissions, type MacPermission } from './permissi
 import { getSetup, setSetup } from './settings'
 import { shortcutExists, shortcutPath } from './shortcut'
 import { BENCH, PYTHON } from './voice'
+import { appRoot } from './root'
 
 // Premier lancement : détection des prérequis, installations, connexion. Aucun effet de bord sur une installation existante.
 
@@ -290,7 +291,7 @@ export function setupInstallClaude(): void {
 }
 
 export function setupInstallVoice(): void {
-  const scripts = join(app.getAppPath(), 'scripts')
+  const scripts = join(appRoot(), 'scripts')
   let sawDone = false
   let err: string | undefined
   const onLine = (l: string) => {

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ActParams, CaptureResult } from '../shared/types'
 import { captureScreen } from './screen'
+import { appRoot } from './root'
 
 // Mode compagnon (planche 33) : Claude agit sur l'écran. scripts/act.ps1 fait le travail (accessibilité Windows, souris,
 // clavier) ; ici on montre la main de Claude (fenêtre transparente, les clics la traversent) qui glisse jusqu'à la cible
@@ -32,10 +33,10 @@ function ps(payload: object): Promise<{ ok: boolean; text: string; rect?: { x: n
   let args: string[]
   if (process.platform === 'win32') {
     cmd = 'powershell.exe'
-    args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', join(app.getAppPath(), 'scripts', 'act.ps1'), '-Payload', b64]
+    args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', join(appRoot(), 'scripts', 'act.ps1'), '-Payload', b64]
   } else if (process.platform === 'darwin') {
     cmd = 'osascript'
-    args = ['-l', 'JavaScript', join(app.getAppPath(), 'scripts', 'act-mac.js'), b64]
+    args = ['-l', 'JavaScript', join(appRoot(), 'scripts', 'act-mac.js'), b64]
   } else return Promise.resolve({ ok: false, text: 'Le mode compagnon (agir sur l’écran) n’est pas disponible sur ce système.' })
   return new Promise((resolve) => {
     execFile(cmd, args, { windowsHide: true, timeout: 20_000, maxBuffer: 4 << 20 }, (err, out) => {
@@ -50,7 +51,7 @@ function ps(payload: object): Promise<{ ok: boolean; text: string; rect?: { x: n
 
 const HAND = (() => {
   try {
-    return readFileSync(join(app.getAppPath(), 'design', 'cursor', 'hand.svg'), 'utf8').replace(/<!--[\s\S]*?-->/g, '')
+    return readFileSync(join(appRoot(), 'design', 'cursor', 'hand.svg'), 'utf8').replace(/<!--[\s\S]*?-->/g, '')
   } catch {
     return ''
   }

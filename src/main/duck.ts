@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { execFile } from 'node:child_process'
 import { join } from 'node:path'
+import { appRoot } from './root'
 
 // Mode voix : pendant que Claude parle, le son des autres applications baisse (scripts/duck.ps1), puis revient.
 // Les appels sont mis en file pour ne jamais se croiser.
@@ -33,7 +34,7 @@ async function runMac(action: 'duck' | 'restore', factor: number) {
 function run(action: 'duck' | 'restore', factor = 0.3) {
   if (process.platform === 'darwin') return runMac(action, factor)
   if (process.platform !== 'win32') return Promise.resolve()
-  const script = join(app.getAppPath(), 'scripts', 'duck.ps1')
+  const script = join(appRoot(), 'scripts', 'duck.ps1')
   return new Promise<void>((resolve) => {
     execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-Action', action, '-Factor', String(factor)], { windowsHide: true, timeout: 20_000 }, () => resolve())
   })

@@ -21,12 +21,14 @@ import { startVoice, stopVoice } from './voice'
 import { createShortcut } from './shortcut'
 import { applyUpdate, checkUpdate, watchUpdates } from './update'
 import { configureSetup, markProjectsLoaded, setupAddProjects, setupAskPermission, setupFinish, setupFindProjects, setupInstallClaude, setupInstallVoice, setupLogin, setupLoginInput, setupReopen, setupStatus } from './setup'
+import { appRoot, fixMacPath } from './root'
 
 // Electron n'est qu'un client du démon (src/daemon) : fenêtre, notifications, boîtes de dialogue,
 // serveur de médias. Il peut redémarrer (mode dev, modification du main…) sans couper les agents.
 
 // Dossier de données isolé (tests e2e).
 if (process.env.ATELIER_USER_DATA) app.setPath('userData', process.env.ATELIER_USER_DATA)
+fixMacPath() // avant tout lancement de processus (npm, claude, git) depuis une app ouverte par le Dock
 registerMediaScheme()
 
 let win: BrowserWindow | null = null
@@ -647,7 +649,7 @@ app.setAppUserModelId(APP_ID)
 
 app.whenReady().then(() => {
   // Mode dev sur Mac : le Dock montrerait l'icône d'Electron.
-  if (process.platform === 'darwin') app.dock?.setIcon(join(app.getAppPath(), 'resources', 'canopy.png'))
+  if (process.platform === 'darwin') app.dock?.setIcon(join(appRoot(), 'resources', 'canopy.png'))
   // Agent utilisateur de Chrome (sans « Electron/… ») : sinon certaines connexions refusent le navigateur intégré.
   const claudeSession = session.fromPartition('persist:claude')
   claudeSession.setUserAgent(claudeSession.getUserAgent().replace(/\s(Electron|atelier)\/\S+/gi, ''))

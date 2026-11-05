@@ -5,6 +5,7 @@ import { connect } from 'node:net'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { app } from 'electron'
+import { appRoot } from './root'
 
 // Service voix local (voice/server.py) : Whisper + Pocket TTS, lancé à la demande avec le Python du banc d'essai.
 // Il tourne détaché et survit aux redémarrages de Canopy (les modèles mettent ~25 s à charger) ;
@@ -36,7 +37,7 @@ function killTree(pid: number) {
 export type VoiceInfo = { ok: true; port: number; token: string } | { ok: false; error: string }
 type Saved = { pid: number; port: number; token: string; /** Date du code du service au lancement : s'il change, on relance. */ mtime?: number }
 
-const scriptPath = () => join(app.getAppPath(), 'voice', 'server.py')
+const scriptPath = () => join(appRoot(), 'voice', 'server.py')
 const scriptMtime = () => {
   try {
     return statSync(scriptPath()).mtimeMs

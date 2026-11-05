@@ -3,12 +3,13 @@ import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { UpdateInfo } from '../shared/types'
+import { appRoot, isDevServer } from './root'
 
 // Mises à jour depuis le dépôt git (Canopy tourne depuis le code source) : fetch au démarrage puis toutes les 30 min.
 // « Mettre à jour » = git pull --ff-only (+ npm install si les dépendances changent) ; ensuite les rechargements
 // habituels prennent le relais (interface à chaud, Electron relancé par electron-vite, bandeau « Moteur modifié »).
 
-const root = () => app.getAppPath()
+const root = () => appRoot()
 const WIN = process.platform === 'win32'
 
 function git(args: string[], timeout = 30_000): Promise<string> {
@@ -54,6 +55,17 @@ export async function applyUpdate(): Promise<UpdateInfo> {
           err ? reject(new Error(`npm install : ${String(se || err.message).trim().split('\n').slice(-2).join(' ')}`)) : resolve()
         )
       )
+    }
+    // Version construite (app « Canopy » sur Mac, ou `npm start`) : reconstruire puis relancer.
+    // En `npm run dev`, les rechargements habituels suffisent.
+    if (!isDevServer()) {
+      await new Promise<void>((resolve, reject) =>
+        execFile(WIN ? 'npx.cmd' : 'npx', ['electron-vite', 'build'], { cwd: root(), timeout: 300_000, windowsHide: true, shell: WIN }, (err, _o, se) =>
+          err ? reject(new Error(`construction : ${String(se || err.message).trim().split('\n').slice(-2).join(' ')}`)) : resolve()
+        )
+      )
+      app.relaunch()
+      app.exit(0)
     }
     busy = false
     return await checkUpdate()
