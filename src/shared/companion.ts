@@ -20,6 +20,8 @@ export type CompanionState = {
   /** Parle : les phrases du tour et l'index de celle qu'on entend (le texte défile à ce rythme). */
   lines?: string[]
   current?: number
+  /** Mot prononcé à l'instant dans la ligne `current` (estimé). */
+  word?: number
   /** Page libre posée par Claude : affichée au-dessus de la bulle. */
   page?: { src: string; title: string; height: number }
   /** Micro coupé : la bulle le montre et propose de le réactiver. */

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { create } from 'zustand'
 import { Icon } from '../icons'
 import { thumbUrl } from '../media'
 import { api, useStore } from '../store'
@@ -80,7 +81,7 @@ export function VoiceView() {
           <div className="v-words" aria-live="polite">
             <span className="v-word">{word}</span>
             {v.phase === 'speak' && v.spoken.length > 0 ? (
-              <SpokenLines lines={v.spoken.slice(v.burst)} speaking={v.speaking} />
+              <SpokenLines lines={v.spoken.slice(v.burst)} speaking={v.speaking} word={v.word} />
             ) : (
             <SwapLine k={!line ? 'empty' : fromClaude ? `c-${line}` : v.phase === 'waking' ? 'waking' : 'you'} className={`v-line${fromClaude ? (whole ? ' v-whole' : '') : v.phase === 'waking' || v.phase === 'error' ? ' sys' : ' you'}`} text={line ?? ''} />
             )}
@@ -121,7 +122,7 @@ export function VoiceView() {
 
 /** Pendant que Claude parle : toute la réponse, la phrase entendue en clair et centrée, le texte défile au rythme
  * de la voix (comme dans la bulle du compagnon). */
-function SpokenLines({ lines, speaking }: { lines: { id: string; text: string }[]; speaking: string | null }) {
+function SpokenLines({ lines, speaking, word }: { lines: { id: string; text: string }[]; speaking: string | null; word: number }) {
   const box = useRef<HTMLDivElement>(null)
   const cur = lines.findIndex((l) => l.id === speaking)
   useEffect(() => {
@@ -132,10 +133,17 @@ function SpokenLines({ lines, speaking }: { lines: { id: string; text: string }[
   return (
     <div ref={box} className="v-line v-karaoke">
       {lines.map((l, k) => (
-        <span key={l.id} className={k === cur ? 'k-now' : k < cur ? 'k-past' : 'k-next'}>{l.text} </span>
+        <span key={l.id} className={k === cur ? 'k-now' : k < cur ? 'k-past' : 'k-next'}>{k === cur ? nowWords(l.text, word) : l.text} </span>
       ))}
     </div>
   )
+}
+
+/** Ligne en cours : les deux mots qu'on entend en clair, les mots déjà dits estompés, la suite en retrait. */
+function nowWords(text: string, word: number) {
+  return text.split(/(\s+)/).filter((x) => x.trim()).map((w, i) => (
+    <span key={i} className={i < word ? 'k-past' : i <= word + 1 ? undefined : 'k-next'}>{w} </span>
+  ))
 }
 
 /** Une ligne de texte qui change en douceur : la nouvelle monte en se précisant pendant que l'ancienne s'efface.
@@ -300,14 +308,100 @@ function MicButton() {
   )
 }
 
-/** Pastille quand Claude a montré autre chose : le soleil continue d'écouter en bas de l'écran. */
+/** Nombre de composers vocaux à l'écran : tant qu'il y en a un, la pastille de secours se cache. */
+const useInlineVoice = create<{ n: number }>(() => ({ n: 0 }))
+
+/** Le composer de la session à qui l'on parle devient la zone vocale : on voit sa phrase là où elle part. */
+export function VoiceComposer({ sessionId }: { sessionId: string }) {
+  const v = useVoice()
+  const avatarKind = useVoicePrefs((p) => p.avatar)
+  const session = useStore((s) => s.sessions[sessionId])
+  const go = useStore((s) => s.go)
+  const [typing, setTyping] = useState(false)
+  const [text, setText] = useState('')
+  useEffect(() => {
+    useInlineVoice.setState((s) => ({ n: s.n + 1 }))
+    return () => useInlineVoice.setState((s) => ({ n: s.n - 1 }))
+  }, [])
+
+  const act = session?.status === 'run' ? session.activity : undefined
+  const activity = act ? (act.kind === 'tool' ? `${act.label ?? 'Outil'}…` : act.kind === 'writing' ? 'J’écris' : 'Je réfléchis') : undefined
+  const word =
+    v.micMuted && v.phase === 'listen' ? 'Micro coupé'
+    : v.phase === 'think' ? activity ?? WORD.think
+    : v.phase === 'listen' && v.mute && !v.speech ? 'Mode fantôme'
+    : WORD[v.phase]
+  const line =
+    v.phase === 'error' ? v.error
+    : v.phase === 'waking' ? 'Chargement de la voix et de la transcription…'
+    : v.phase === 'speak' ? v.said
+    : v.phase === 'think' || v.speech ? (v.heard ? `« ${v.heard} »` : '')
+    : ''
+  const hint = v.micMuted ? 'Réactive le micro, ou écris-lui.' : 'Parle, je t’écoute.'
+
+  return (
+    <div className={`composer v-cmp v-cmp-${v.phase}`} role="group" aria-label="Mode voix">
+      <div className="v-cmp-main">
+        <button type="button" className="v-cmp-mark" title="Agrandir le mode voix" onClick={() => withTransition(() => go({ name: 'voice' }))}>
+          <Avatar kind={avatarKind} state={markOf(v.phase, v.speech)} size={52} levels={voiceLevels} />
+        </button>
+        <div className="v-cmp-words" aria-live="polite">
+          <span className="v-cmp-word">{word}</span>
+          {line ? <span className={`v-cmp-line${v.phase === 'error' || v.phase === 'waking' ? ' sys' : ''}`}>{line}</span> : <span className="v-cmp-line hint">{hint}</span>}
+        </div>
+      </div>
+      {typing && (
+        <form
+          className="v-cmp-type"
+          onSubmit={(e) => {
+            e.preventDefault()
+            typeToVoice(text)
+            setText('')
+          }}
+        >
+          <input aria-label="Écrire à Claude" autoFocus placeholder="Écris-lui plutôt… (Entrée envoie)" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setTyping(false)} />
+          <button type="submit" className="cmp-send" aria-label="Envoyer" disabled={!text.trim()}><Icon name="send" size={16} /></button>
+        </form>
+      )}
+      <div className="cmp-bar">
+        <MicIcon />
+        <button type="button" className={`cmp-icon${v.mute ? ' on' : ''}`} aria-pressed={v.mute} title={v.mute ? 'Mode fantôme : Claude ne répond plus à voix haute' : 'Réponses à voix haute'} onClick={() => setMute(!v.mute)}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9.5h3l4.5-4v13L7 14.5H4z" />{v.mute ? <path d="M16 9.5l5 5M21 9.5l-5 5" /> : <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />}</svg>
+        </button>
+        <button type="button" className={`cmp-icon${typing ? ' on' : ''}`} aria-pressed={typing} title="Écrire plutôt que parler" onClick={() => setTyping(!typing)}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2" /><path d="M7 10h1M11 10h1M15 10h1M8 14h8" /></svg>
+        </button>
+        <span style={{ flex: 1 }} />
+        {v.phase === 'error' && <button type="button" className="cmp-icon" title="Réessayer" onClick={() => void startVoice()}><Icon name="restart" size={15} /></button>}
+        <button type="button" className="cmp-icon" title="Quitter le mode voix" onClick={stopVoice}><Icon name="close" size={14} /></button>
+        {v.phase === 'speak' && (
+          <button type="button" className="cmp-send stop" aria-label="Couper Claude (Échap)" title="Couper Claude (Échap)" onClick={hush}>
+            <Icon name="stop" size={15} />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MicIcon() {
+  const muted = useVoice((v) => v.micMuted)
+  return (
+    <button type="button" className={`cmp-icon${muted ? ' on' : ''}`} aria-pressed={muted} title={muted ? 'Micro coupé : clique pour le réactiver' : 'Couper le micro'} onClick={() => setMicMuted(!muted)}>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />{muted && <path d="M4 4l16 16" />}</svg>
+    </button>
+  )
+}
+
+/** Pastille de secours : la session à qui l'on parle n'est pas à l'écran (sinon c'est son composer qui écoute). */
 export function VoiceDock() {
   const v = useVoice()
   const avatarKind = useVoicePrefs((p) => p.avatar)
   const view = useStore((s) => s.view)
   const go = useStore((s) => s.go)
+  const inline = useInlineVoice((s) => s.n > 0)
   // En mode compagnon, Canopy au premier plan cache la bulle : la barre voix reprend sa place ici.
-  if (v.phase === 'off' || view.name === 'voice') return null
+  if (v.phase === 'off' || view.name === 'voice' || inline) return null
   const st = v.phase === 'speak' ? 'Claude parle' : v.phase === 'think' ? 'Je réfléchis' : v.gesture ? 'Montré sans parler' : 'Je t’écoute'
   const txt = v.phase === 'speak' ? v.said : v.heard ? `« ${v.heard} »` : ''
   return (

@@ -6,6 +6,7 @@ import { speakNumbers } from './numbers'
 import { withTransition } from './transition'
 import { gestureChime } from '../uiAgent'
 import { useVoicePrefs, voiceConfig } from './prefs'
+import { useMyVoice } from './myvoice'
 
 // Mode voix (planches 25 et 28) : la fenêtre capte le micro (écho retiré par Chromium) et joue la voix ;
 // le service local (voice/server.py) transcrit et synthétise. On parle à une vraie session de Canopy :
@@ -14,7 +15,9 @@ import { useVoicePrefs, voiceConfig } from './prefs'
 export type VoicePhase = 'off' | 'waking' | 'listen' | 'think' | 'speak' | 'error'
 export const VOICES = [
   { id: 'ana', label: 'Ana' },
-  { id: 'damien', label: 'Damien' }
+  { id: 'damien', label: 'Damien' },
+  { id: 'openai-cedar', label: 'Cedar · OpenAI' },
+  { id: 'openai-marin', label: 'Marin · OpenAI' }
 ] as const
 const VOICE_KEY = 'atelier.voice.name'
 const MUTE_KEY = 'atelier.voice.mute'
@@ -51,6 +54,8 @@ type VoiceState = {
   /** Phrases dites pendant le tour, et celle qu'on entend à l'instant (suivie au rythme de la voix). */
   spoken: { id: string; text: string }[]
   speaking: string | null
+  /** Mot prononcé à l'instant dans la ligne `speaking` (estimé sur l'horloge de lecture). */
+  word: number
   /** Début du passage parlé en cours dans `spoken` : chaque reprise de parole ouvre un nouveau transcript. */
   burst: number
   /** Claude a fait un geste sur l'interface pendant ce tour, sans parler. */
@@ -77,6 +82,7 @@ export const useVoice = create<VoiceState>(() => ({
   written: '',
   spoken: [],
   speaking: null,
+  word: 0,
   burst: 0,
   speech: false,
   heard: '',
@@ -184,9 +190,8 @@ let turn: { start: number; spoken: Map<string, number>; pending: string; ran: bo
 let saysOut = 0
 let unsub: (() => void) | null = null
 let sayId = 0
-/** Phrase en cours de synthèse (son audio arrive) et dernière phrase dont on a programmé la mise en avant. */
+/** Phrase en cours de synthèse (son audio arrive). */
 let genId = ''
-let heardId = ''
 let analyser: AnalyserNode | null = null
 let bins = new Uint8Array(0)
 
@@ -212,7 +217,8 @@ function send(o: object) {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(o))
 }
 
-function say(text: string) {
+/** Texte envoyé à la voix ; `parts` : ses phrases, affichées chacune sur sa ligne (bloc entier des voix OpenAI). */
+function say(text: string, parts?: string[]) {
   const t = text.trim()
   if (!t || !/[\p{L}\p{N}]/u.test(t) || useVoice.getState().mute) return
   if (held) {
@@ -221,8 +227,46 @@ function say(text: string) {
   }
   saysOut++
   const id = String(++sayId)
-  set((v) => ({ spoken: [...v.spoken, { id, text: t }] }))
+  const lines = (parts?.length ? parts : [t]).map((x, k) => ({ id: k ? `${id}.${k}` : id, text: x.trim() }))
+  plays.set(id, { at: -1, dur: 0, done: false, lines })
+  set((v) => ({ spoken: [...v.spoken, ...lines] }))
   send({ type: 'say', id, text: t })
+}
+
+// ---------- mot prononcé (estimé) ----------
+// La voix ne donne pas le minutage des mots : on le déduit de la position de lecture, au prorata de la longueur des
+// mots, sur la durée du son (reçue en entier bien avant la fin de la lecture ; estimée d'ici là).
+type Play = { at: number; dur: number; done: boolean; lines: { id: string; text: string }[] }
+const plays = new Map<string, Play>()
+let secPerChar = 0.055
+let wordTimer: ReturnType<typeof setInterval> | null = null
+
+function stopWordClock() {
+  if (wordTimer) clearInterval(wordTimer)
+  wordTimer = null
+  plays.clear()
+}
+
+function tickWords() {
+  if (!playCtx) return
+  const now = playCtx.currentTime
+  let cur: Play | undefined
+  for (const p of plays.values()) if (p.at >= 0 && p.at <= now) cur = p
+  if (!cur) return
+  const words = cur.lines.map((l) => l.text.split(/\s+/).filter(Boolean))
+  const total = words.flat().reduce((n, w) => n + w.length + 1, 0)
+  const est = cur.done ? cur.dur : Math.max(cur.dur, total * secPerChar)
+  let pos = (Math.min(1, (now - cur.at) / est) || 0) * total
+  for (let k = 0; k < words.length; k++) {
+    for (let w = 0; w < words[k].length; w++) {
+      pos -= words[k][w].length + 1
+      if (pos < 0 || (k === words.length - 1 && w === words[k].length - 1)) {
+        const v = useVoice.getState()
+        if (v.speaking !== cur.lines[k].id || v.word !== w) set({ speaking: cur.lines[k].id, word: w })
+        return
+      }
+    }
+  }
 }
 
 function stopPlayback() {
@@ -234,6 +278,7 @@ function stopPlayback() {
     }
   }
   sources = []
+  stopWordClock()
   playEnd = 0
   saysOut = 0
   minId = sayId + 1
@@ -251,10 +296,12 @@ function play(chunk: ArrayBuffer) {
   src.connect(analyser ?? playCtx.destination)
   const at = Math.max(playEnd, playCtx.currentTime + 0.04)
   src.start(at)
-  // Première note d'une phrase : on la met en avant au moment exact où elle sonne.
-  if (genId && genId !== heardId) {
-    const id = (heardId = genId)
-    setTimeout(() => set({ speaking: id }), Math.max(0, (at - playCtx.currentTime) * 1000))
+  // Le mot mis en avant suit l'horloge de lecture (tickWords) à partir de la première note de la phrase.
+  const p = plays.get(genId)
+  if (p) {
+    if (p.at < 0) p.at = at
+    p.dur += buf.duration
+    wordTimer ??= setInterval(tickWords, 60)
   }
   playEnd = at + buf.duration
   sources.push(src)
@@ -276,6 +323,7 @@ function play(chunk: ArrayBuffer) {
 function maybeEndTurn() {
   if (!turn?.done || saysOut > 0 || sources.length || held) return
   turn = null
+  stopWordClock()
   send({ type: 'listen' })
   set({ phase: 'listen', said: '' })
 }
@@ -297,7 +345,12 @@ function follow() {
   const status = st.sessions[sid]?.status
   if (status === 'run') turn.ran = true
   collectStage(sid, items, turn.start)
+  // Voix OpenAI : un bloc de texte part entier, une fois fini (suivi d'autre chose, ou tour terminé) : une seule
+  // demande, une intonation d'un seul souffle et pas de blanc entre les phrases. Voix locales : phrase par phrase.
+  const whole = useVoice.getState().voice.startsWith('openai-')
+  const last = items[items.length - 1]
   for (const it of items) {
+    if (whole && it === last && status === 'run') continue
     if (it.at < turn.start) continue
     if (it.kind === 'tool' && it.name === 'mcp__atelier__interface') {
       if (!useVoice.getState().gesture) set({ gesture: true })
@@ -309,6 +362,23 @@ function follow() {
     if (it.text.length <= done) continue
     turn.pending += it.text.slice(done)
     turn.spoken.set(it.id, it.text.length)
+    if (whole) {
+      const s = speakable(turn.pending)
+      if (s.trim()) {
+        const parts: string[] = []
+        let rest = s
+        let p: RegExpExecArray | null
+        while ((p = SENTENCE.exec(rest))) {
+          parts.push(p[1])
+          rest = rest.slice(p[0].length)
+        }
+        if (rest.trim()) parts.push(rest)
+        say(s, parts)
+        set((v) => ({ said: s.trim(), written: `${v.written} ${s.trim()}`.trim() }))
+      }
+      turn.pending = ''
+      continue
+    }
     let m: RegExpExecArray | null
     while ((m = SENTENCE.exec(turn.pending))) {
       const s = speakable(m[1])
@@ -553,18 +623,32 @@ function onMessage(ev: MessageEvent) {
   switch (m.type) {
     case 'ready':
       rate = m.rate
+      useMyVoice.setState({ available: !!m.speaker, profile: !!m.profile })
       set({ phase: 'listen', error: '' })
       send({ type: 'config', ...voiceConfig() })
+      // Service déjà lancé avec une autre voix (il survit aux redémarrages) : on lui redonne celle choisie ici.
+      if (m.voice !== useVoice.getState().voice) send({ type: 'voice', name: useVoice.getState().voice })
       resumed = false
       follow()
       void startMic()
+      break
+    case 'not_me':
+      useMyVoice.setState((v) => ({ ignored: v.ignored + 1 }))
+      break
+    case 'enroll_sample':
+      useMyVoice.setState((v) => ({ samples: [...v.samples, { ok: !!m.ok, seconds: m.seconds, same: m.same, reason: m.reason }] }))
+      break
+    case 'enroll_done':
+      useMyVoice.setState((v) => ({ enrolling: false, result: { ok: !!m.ok, n: m.n, error: m.error }, profile: v.profile || !!m.ok }))
       break
     case 'speech':
       // Un bruit bref déclenche parfois la détection : on n'affiche « je t'écoute » que si ça dure (0,35 s) ou si une
       // transcription arrive ; un « fin de parole » avant annule tout.
       if (speechTimer) clearTimeout(speechTimer)
       speechTimer = null
-      if (m.on) speechTimer = setTimeout(() => set({ speech: true, ...(!turn ? { phase: 'listen' as const } : {}) }), voiceConfig().listenDelay)
+      // « Seulement ma voix » : une toux ou une respiration te ressemblent aussi ; on attend les premiers mots
+      // transcrits (« partial ») pour afficher l'écoute.
+      if (m.on && !useVoicePrefs.getState().onlyMe) speechTimer = setTimeout(() => set({ speech: true, ...(!turn ? { phase: 'listen' as const } : {}) }), voiceConfig().listenDelay)
       // Une pause au milieu de ta phrase n'est pas la fin : l'écoute reste affichée jusqu'à ce que le service tranche
       // (« final » : tu as fini ; « noise » : ce n'était pas une phrase). Seul un bruit jamais confirmé s'éteint ici.
       else if (!useVoice.getState().speech) set({ speech: false })
@@ -610,10 +694,18 @@ function onMessage(ev: MessageEvent) {
       accept = Number(m.id) >= minId
       genId = String(m.id)
       break
-    case 'say_end':
+    case 'say_end': {
+      // Son complet : le minutage des mots se cale sur sa vraie durée, et le débit appris sert aux suivants.
+      const p = plays.get(String(m.id))
+      const n = p?.lines.reduce((c, l) => c + l.text.length + 1, 0) ?? 0
+      if (p && p.dur > 0 && n) {
+        p.done = true
+        secPerChar = 0.7 * secPerChar + 0.3 * (p.dur / n)
+      }
       if (Number(m.id) >= minId) saysOut = Math.max(0, saysOut - 1)
       maybeEndTurn()
       break
+    }
   }
 }
 
@@ -624,13 +716,33 @@ async function startMic() {
   // ScriptProcessor : simple et sans module externe (la CSP de la fenêtre interdit les worklets en blob).
   const proc = micCtx.createScriptProcessor(512, 1, 1)
   proc.onaudioprocess = (e) => {
-    if (useVoice.getState().micMuted) return
-    if (ws?.readyState === WebSocket.OPEN) ws.send(new Float32Array(e.inputBuffer.getChannelData(0)).buffer)
+    if (ws?.readyState !== WebSocket.OPEN) return
+    // Micro coupé : on envoie du silence plutôt que rien, pour que la phrase en cours se termine et parte.
+    const n = e.inputBuffer.length
+    ws.send(useVoice.getState().micMuted ? new Float32Array(n).buffer : new Float32Array(e.inputBuffer.getChannelData(0)).buffer)
   }
   const mute = micCtx.createGain()
   mute.gain.value = 0
   srcNode.connect(proc)
   proc.connect(mute).connect(micCtx.destination)
+}
+
+/** Apprendre ta voix : le service écoute les phrases lues sans rien transcrire ni envoyer à Claude. */
+export async function enrollStart() {
+  if (useVoice.getState().phase === 'off' || useVoice.getState().phase === 'error') {
+    await startVoice()
+    // Le service répond « ready » quand il est prêt : on attend qu'il soit à l'écoute.
+    for (let i = 0; i < 300 && useVoice.getState().phase === 'waking'; i++) await new Promise((r) => setTimeout(r, 100))
+  }
+  useMyVoice.setState({ enrolling: true, samples: [], result: null })
+  send({ type: 'enroll', action: 'start' })
+}
+export function enrollCancel() {
+  useMyVoice.setState({ enrolling: false, samples: [] })
+  send({ type: 'enroll', action: 'cancel' })
+}
+export function enrollSave() {
+  send({ type: 'enroll', action: 'save' })
 }
 
 export async function startVoice() {
@@ -737,9 +849,34 @@ useVoice.subscribe((v, p) => {
 // Un réglage change dans les Paramètres : le service voix l'applique tout de suite.
 useVoicePrefs.subscribe(() => send({ type: 'config', ...voiceConfig() }))
 
-/** Couper ou rendre le micro (bouton de la vue voix et de la bulle). */
+/** Deux notes brèves : descendantes quand le micro se coupe, montantes quand il revient. */
+export function micChime(muted: boolean) {
+  try {
+    const ctx = new AudioContext()
+    const now = ctx.currentTime
+    ;(muted ? [660, 440] : [440, 660]).forEach((f, k) => {
+      const o = ctx.createOscillator()
+      const g = ctx.createGain()
+      o.type = 'sine'
+      o.frequency.value = f
+      const t = now + k * 0.09
+      g.gain.setValueAtTime(0, t)
+      g.gain.linearRampToValueAtTime(0.06, t + 0.015)
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22)
+      o.connect(g).connect(ctx.destination)
+      o.start(t)
+      o.stop(t + 0.25)
+    })
+    setTimeout(() => void ctx.close(), 700)
+  } catch {
+    /* audio indisponible */
+  }
+}
+
+/** Couper ou rendre le micro (bouton de la vue voix et de la bulle, Ctrl+Alt+A). */
 export function setMicMuted(muted: boolean) {
+  if (useVoice.getState().micMuted !== muted) micChime(muted)
   if (speechTimer) clearTimeout(speechTimer)
   speechTimer = null
-  set({ micMuted: muted, speech: false, ...(muted ? { heard: '' } : {}) })
+  set({ micMuted: muted, speech: false })
 }

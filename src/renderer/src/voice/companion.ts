@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { CompanionPhase, CompanionState } from '../../../shared/companion'
 import { api, useStore } from '../store'
 import { hush, setMicMuted, startVoice, typeToVoice, useVoice } from './runtime'
+import { notesActive, pauseNotes, useNotes } from '../notes/runtime'
 import { withTransition } from './transition'
 import { useVoicePrefs } from './prefs'
 
@@ -89,6 +90,7 @@ function stateNow(): CompanionState {
       return e?.kind === 'scene' && e.block.type === 'html' && e.block.src ? { src: e.block.src, title: e.block.title, height: Math.min(e.block.height ?? 420, 520) } : undefined
     })(),
     current: phase === 'speak' ? v.spoken.slice(v.burst).findIndex((l) => l.id === v.speaking) : undefined,
+    word: phase === 'speak' ? v.word : undefined,
     project,
     session: s?.title,
     heard: v.heard,
@@ -97,13 +99,20 @@ function stateNow(): CompanionState {
 }
 
 let last = ''
+let restoring = false
 function push() {
   if (!useCompanion.getState().on) return
   const s = stateNow()
   const key = JSON.stringify(s)
   if (key === last) return
   last = key
-  api.companionSet(s)
+  try {
+    api.companionSet(s, restoring)
+  } catch (e) {
+    // Visible plutôt que silencieux : sans ça, le bouton « mode compagnon » semble ne rien faire.
+    console.error('[companion]', e)
+    useVoice.setState({ phase: 'error', error: `Mode compagnon : ${(e as Error).message}` })
+  }
 }
 
 // Fin d'un tour (Claude a fini de travailler ou de parler) : la carte « fini » pendant quelques secondes.
@@ -126,12 +135,19 @@ useVoice.subscribe((v) => {
 useStore.subscribe(push)
 
 /** Entrer en mode compagnon (la voix démarre si besoin) ou en sortir. */
-export function setCompanion(on: boolean) {
+export function setCompanion(on: boolean, restore = false) {
   useCompanion.setState({ on })
   last = ''
   if (on) {
     void startVoice()
+    // Le processus principal peut se croire déjà en mode compagnon (Canopy rechargé, état resté d'avant) :
+    // il ne rangerait alors pas la fenêtre, et la bulle resterait cachée derrière Canopy au premier plan.
+    // On repart de zéro pour que l'entrée soit toujours vue comme une entrée.
+    // Une reprise, elle, ne range pas la fenêtre : Ctrl+R ne doit pas faire disparaître Canopy.
+    if (!restore) api.companionSet(null)
+    restoring = restore
     push()
+    restoring = false
   } else api.companionSet(null)
 }
 
@@ -145,6 +161,7 @@ window.addEventListener('atelier:companion', (e) => {
 api.onCompanionCommand((c) => {
   if (typeof c === 'object') return typeToVoice(c.say)
   if (c === 'hush') return hush()
+  if (c === 'mic' && notesActive()) return pauseNotes(useNotes.getState().status === 'recording')
   if (c === 'mic') return setMicMuted(!useVoice.getState().micMuted)
   setCompanion(false)
   if (c === 'open') withTransition(() => useStore.getState().go({ name: 'voice' }))
@@ -152,11 +169,11 @@ api.onCompanionCommand((c) => {
 
 // Rechargement en plein mode compagnon : on relance la voix et on renvoie l'état tout de suite.
 // Redémarrage automatique de Canopy (code modifié) : le processus principal dit s'il faut reprendre.
-if (saved) setTimeout(() => setCompanion(true), 0)
+if (saved) setTimeout(() => setCompanion(true, true), 0)
 else
   void api
     .companionResume()
-    .then((on) => on && setCompanion(true))
+    .then((on) => on && setCompanion(true, true))
     .catch(() => {})
 
 // L'apparence change dans les Paramètres : la bulle suit.

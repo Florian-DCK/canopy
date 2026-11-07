@@ -30,7 +30,7 @@ function ScrollText({ text, className }: { text: string; className: string }) {
 }
 
 /** Parle : toute la réponse, la phrase qu'on entend en clair et centrée, le texte défile au rythme de la voix. */
-function Karaoke({ lines, current }: { lines: string[]; current: number }) {
+function Karaoke({ lines, current, word }: { lines: string[]; current: number; word: number }) {
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
     // On ne fait défiler que la bulle (scrollIntoView décalerait toute la fenêtre transparente).
@@ -41,10 +41,17 @@ function Karaoke({ lines, current }: { lines: string[]; current: number }) {
   return (
     <div ref={box} className="c-pill c-said c-karaoke" data-hit>
       {lines.map((l, k) => (
-        <span key={k} className={k === current ? 'k-now' : k < current ? 'k-past' : 'k-next'}>{l} </span>
+        <span key={k} className={k === current ? 'k-now' : k < current ? 'k-past' : 'k-next'}>{k === current ? nowWords(l, word) : l} </span>
       ))}
     </div>
   )
+}
+
+/** Ligne en cours : les deux mots qu'on entend en clair, les mots déjà dits estompés, la suite en retrait. */
+function nowWords(text: string, word: number) {
+  return text.split(/(\s+)/).filter((x) => x.trim()).map((w, i) => (
+    <span key={i} className={i < word ? 'k-past' : i <= word + 1 ? undefined : 'k-next'}>{w} </span>
+  ))
 }
 
 /** Écrire au lieu de parler. La fenêtre de la bulle ne prend jamais le focus : on le lui donne au clic dans le champ,
@@ -175,7 +182,7 @@ export function Companion({ c }: { c: CompanionState }) {
           </div>
         )
       case 'speak':
-        return c.lines?.length ? <Karaoke lines={c.lines} current={c.current ?? -1} /> : c.text && <ScrollText className="c-pill c-said" text={c.text} />
+        return c.lines?.length ? <Karaoke lines={c.lines} current={c.current ?? -1} word={c.word ?? 0} /> : c.text && <ScrollText className="c-pill c-said" text={c.text} />
       case 'ask':
         return (
           <div className="c-pill c-ask" data-hit>

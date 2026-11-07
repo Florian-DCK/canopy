@@ -12,6 +12,8 @@ import { Lock } from './session/SecretCard'
 import { detectSecrets, placeholder as secretMark, sanitizeName } from '../secrets'
 import { Thread } from './session/Thread'
 import { MOD, mod, SHIFT } from '../platform'
+import { useVoice } from '../voice/runtime'
+import { VoiceComposer } from '../voice/VoiceView'
 
 // Saisie (planche 3) : la bande d'activité au-dessus du texte, puis la barre — joindre, modèle, mode
 // à gauche ; contexte, fenêtre 5 h et un seul bouton (Envoyer ou Arrêter) à droite.
@@ -284,7 +286,19 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
     setDraft(sessionId, undefined)
     document.getElementById(inputId)?.focus()
   }, [draft, sessionId, inputId, setDraft])
+  const insert = useStore((s) => s.insert[sessionId])
+  const insertDraft = useStore((s) => s.insertDraft)
+  useEffect(() => {
+    if (insert === undefined) return
+    setText((t) => (t.trim() ? `${t.trimEnd()}
+
+${insert}` : insert))
+    insertDraft(sessionId, undefined)
+    document.getElementById(inputId)?.focus()
+  }, [insert, sessionId, inputId, insertDraft])
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  // Mode voix sur cette session : sa zone de saisie devient la zone vocale (planche « mode voix intégré », piste B).
+  const voiceHere = useVoice((v) => v.phase !== 'off' && v.sessionId === sessionId)
   const ac = useAutocomplete({ text, setText, sessionId, projectId: session?.projectId ?? '', inputRef })
   // Secrets (planche 39) : repérés dans le message avant l'envoi, ou glissés à la main (cadenas, Ctrl+Maj+S).
   // Leur valeur part au coffre (chiffrée, écrite dans .env.local) ; Claude ne reçoit que ⟦secret NOM⟧.
@@ -364,6 +378,13 @@ export function Composer({ sessionId, onSent, inputId = 'composer' }: { sessionI
     : running
       ? 'Ajoute une précision, elle sera prise en compte à la suite…'
       : 'Écris ta demande… (@ fichier, / skill, coller une image, glisser un fichier)'
+
+  if (voiceHere)
+    return (
+      <div className="composer-wrap">
+        <VoiceComposer sessionId={sessionId} />
+      </div>
+    )
 
   return (
     <div className="composer-wrap">
