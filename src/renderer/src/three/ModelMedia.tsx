@@ -112,12 +112,14 @@ export function ModelStage({ m, other, look, apiRef, onStats }: { m: MediaItem; 
   const [stats, setStats] = useState<ModelStats | null>(null)
   const [statsA, setStatsA] = useState<ModelStats | null>(null)
   const [time, setTime] = useState<{ t: number; d: number } | null>(null)
+  const [clip, setClip] = useState(0)
   const sync = useMemo(makeSync, [m.id, other?.id])
 
   useEffect(() => {
     setSel(null)
     setHidden({})
     setStats(null)
+    setClip(0)
   }, [m.id])
 
   useEffect(() => {
@@ -168,7 +170,7 @@ export function ModelStage({ m, other, look, apiRef, onStats }: { m: MediaItem; 
       </div>
     )
 
-  const anim = stats?.animations[0]
+  const anim = stats?.animations[clip]
   return (
     <div className="m3">
       <div className="m3-main">
@@ -193,7 +195,24 @@ export function ModelStage({ m, other, look, apiRef, onStats }: { m: MediaItem; 
         {anim && time && (
           <div className="m3-anim">
             <button type="button" aria-label={play ? 'Pause' : 'Lire'} onClick={() => setPlay(!play)}>{play ? '❚❚' : '▶'}</button>
-            <span>{anim.name}</span>
+            {stats.animations.length > 1 ? (
+              <select
+                aria-label="Animation"
+                value={clip}
+                onChange={(e) => {
+                  const i = Number(e.target.value)
+                  setClip(i)
+                  setPlay(true)
+                  apiRef.current?.setClip(i)
+                }}
+              >
+                {stats.animations.map((a, i) => (
+                  <option key={i} value={i}>{a.name}</option>
+                ))}
+              </select>
+            ) : (
+              <span>{anim.name}</span>
+            )}
             <input
               type="range"
               aria-label="Position dans l’animation"

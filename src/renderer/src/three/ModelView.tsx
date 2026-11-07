@@ -11,6 +11,7 @@ export type ModelApi = {
   capture: () => string | null
   time: () => { t: number; d: number } | null
   seek: (t: number) => void
+  setClip: (i: number) => void
 }
 
 /** Caméra partagée entre deux vues (comparaison) : direction et distance relative au cadrage de chacune. */
@@ -52,6 +53,7 @@ type Ctx = {
   sel: THREE.BoxHelper | null
   mixer: THREE.AnimationMixer | null
   action: THREE.AnimationAction | null
+  clips: THREE.AnimationClip[]
   target: THREE.Vector3
   base: number
   r: number
@@ -195,7 +197,7 @@ export function ModelView(p: Props) {
         const base = frameDistance(r, camera.fov, camera.aspect)
         camera.position.copy(target).addScaledVector(VIEWS.troisQuarts.clone().normalize(), base)
         controls.update()
-        ctx.current = { renderer, scene, camera, controls, root, grid, shadow, box, sel: null, mixer, action, target, base, r, orig: new WeakMap(), over: {} }
+        ctx.current = { renderer, scene, camera, controls, root, grid, shadow, box, sel: null, mixer, action, clips, target, base, r, orig: new WeakMap(), over: {} }
         apply()
         setStatus('ready')
         props.current.onReady?.(stats)
@@ -239,6 +241,15 @@ export function ModelView(p: Props) {
           if (!c?.action || !c.mixer) return
           c.action.time = t
           c.mixer.update(0)
+        },
+        setClip: (i) => {
+          const c = ctx.current
+          if (!c?.mixer || !c.clips[i]) return
+          const next = c.mixer.clipAction(c.clips[i])
+          if (next === c.action) return
+          c.mixer.stopAllAction()
+          next.reset().play()
+          c.action = next
         }
       }
 
