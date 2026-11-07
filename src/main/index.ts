@@ -1,12 +1,12 @@
-import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, Menu, type MenuItemConstructorOptions, nativeImage, session, shell } from 'electron'
+import { app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, Menu, type MenuItemConstructorOptions, nativeImage, session, shell } from 'electron'
 import { spawn } from 'node:child_process'
-import { existsSync, rmSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, openSync, readFileSync, readSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { BROWSER_PARTITION, type BrowserResult } from '../shared/browser'
 import type { UiResult } from '../shared/ui'
 import type { CompanionState } from '../shared/companion'
 import { emptyState, reduce, type AppState } from '../shared/state'
-import type { CompanionPrefs, CaptureResult, AppEvent, Item, NotifInfo, NotifSettings, Project, ThemeMode } from '../shared/types'
+import type { CompanionPrefs, CaptureResult, AppEvent, DbPageOpts, Item, NotifInfo, NotifSettings, Project, ThemeMode } from '../shared/types'
 import { capture } from './capture'
 import { captureScreen } from './screen'
 import { runAct, stopActing } from './act'
@@ -15,8 +15,14 @@ import { serveToEnv, validName, vaultDelete, vaultGet, vaultList, vaultStore } f
 import { restoreDuck, setDuck } from './duck'
 import { DaemonClient, type DaemonStatus } from './daemon'
 import { MediaServer, registerMediaScheme } from './media'
+import { page as dbPage, query as dbQuery, summarize as dbSummarize } from '../daemon/db'
+import { pgAllow, pgInfo, pgQuery } from './pg'
+import { convertDoc, convertedPath, docInfo } from './docs'
 import { applySavedTheme, getCompanionAnchor, getCompanionPrefs, setCompanionPrefs, getNotifSettings, getTheme, setCompanionAnchor, setNotifSettings, setTheme, windowBackground } from './settings'
 import { inQuietHours, ToastCenter } from './toasts'
+import { startAgenda } from './agenda'
+import { startNotes } from './agenda/notes'
+import { isHttps } from './agenda/google'
 import { startVoice, stopVoice } from './voice'
 import { createShortcut } from './shortcut'
 import { applyUpdate, checkUpdate, watchUpdates } from './update'
@@ -102,6 +108,17 @@ const toasts = new ToastCenter({
   page: () => (process.env['ELECTRON_RENDERER_URL'] ? { url: `${process.env['ELECTRON_RENDERER_URL']}/toast.html` } : { file: join(__dirname, '../renderer/toast.html') }),
   settings: getNotifSettings,
   act: (t, action) => {
+    if (t.kind === 'meeting') {
+      if (action === 'join' && t.joinUrl && isHttps(t.joinUrl)) void shell.openExternal(t.joinUrl)
+      else if (action === 'open' && win && !win.isDestroyed()) {
+        if (win.isMinimized()) win.restore()
+        win.show()
+        win.focus()
+        toRenderer('atelier:event', { type: 'agenda:open', meetingId: t.meetingId }, 0)
+      }
+      return
+    }
+    if (action === 'join') return
     if (action === 'open') return showSession(t.sessionId)
     if (t.kind === 'question' && t.permId && action.startsWith('opt:')) {
       const item = (mirror.items[t.sessionId] ?? []).find((i) => i.id === t.permId)
@@ -208,13 +225,14 @@ ipcMain.handle('vault:use', async (_e, a: { sessionId: string; itemId: string; p
 ipcMain.handle('vault:decline', (_e, sessionId: string, itemId: string) => daemon.rpc('resolveSecret', sessionId, itemId, { ok: false }))
 ipcMain.handle('vault:list', (_e, projectId?: string) => vaultList(projectId ? projectPathOf(projectId) : undefined))
 ipcMain.handle('vault:delete', (_e, name: string, scope: 'project' | 'global', projectId?: string) => vaultDelete(name, scope, projectId ? projectPathOf(projectId) : undefined))
-ipcMain.on('companion:set', (_e, state: CompanionState | null) => {
+ipcMain.on('companion:set', (_e, state: CompanionState | null, restore?: boolean) => {
   setResume(!!state)
   const entering = !!state && !toasts.companionOn
   const leaving = !state && toasts.companionOn
   toasts.setCompanion(state)
   if (!win || win.isDestroyed()) return
-  if (entering) win.minimize()
+  // Une reprise (Ctrl+R, redémarrage automatique) garde Canopy à l'écran : seul un vrai passage en compagnon le range.
+  if (entering && !restore) win.minimize()
   // En sortant (à la voix, depuis la bulle ou Canopy), Canopy revient.
   if (leaving) {
     if (win.isMinimized()) win.restore()
@@ -394,6 +412,8 @@ function createWindow() {
       sandbox: true,
       // Artefacts claude.ai affichés en direct (session persistante « persist:claude »).
       webviewTag: true,
+      // Visionneuse PDF de Chromium (documents dans le fil, planche 49).
+      plugins: true,
       // Mode voix et compagnon : micro, voix et animations continuent fenêtre réduite.
       backgroundThrottling: false
     }
@@ -559,6 +579,96 @@ ipcMain.handle('media:folder', (_e, id: string) => {
   const f = media.fileOf(id)
   if (f) shell.showItemInFolder(f)
 })
+// Documents (planche 49) : infos lues dans le fichier, et aperçu fidèle converti en PDF sur demande.
+ipcMain.handle('doc:info', async (_e, id: string) => {
+  const f = media.docFile(id)
+  if (!f) return { type: 'pdf', error: 'Document introuvable.' }
+  const info = await docInfo(f)
+  if (/\.pdf$/i.test(f)) return { ...info, pdf: `atelier-media://media/${id}` }
+  try {
+    const c = convertedPath(f)
+    if (existsSync(c)) {
+      media.converted.set(id, c)
+      return { ...info, pdf: `atelier-media://pdf/${id}` }
+    }
+  } catch {
+    /* fichier disparu */
+  }
+  return info
+})
+ipcMain.handle('doc:convert', async (_e, id: string) => {
+  const f = media.docFile(id)
+  if (!f) return { error: 'Document introuvable.' }
+  const r = await convertDoc(f)
+  if (!r.out) return { error: r.error }
+  media.converted.set(id, r.out)
+  return { pdf: `atelier-media://pdf/${id}` }
+})
+
+// Postgres relu sur autorisation (planche 46). L'URL reste dans .env ; le renderer n'en voit que l'hôte masqué.
+ipcMain.handle('pg:info', (_e, sessionId: string, projectId: string, env: string) => {
+  const root = projectPathOf(projectId)
+  return root ? pgInfo(root, sessionId, projectId, env) : { allowed: null, error: 'Projet introuvable.' }
+})
+ipcMain.handle('pg:allow', (_e, sessionId: string, projectId: string, scope: 'session' | 'project' | null) => pgAllow(sessionId, projectId, scope))
+ipcMain.handle('pg:query', (_e, sessionId: string, projectId: string, env: string, sql: string) => {
+  const root = projectPathOf(projectId)
+  return root && typeof sql === 'string' ? pgQuery(root, sessionId, projectId, env, sql) : { columns: [], rows: [], ms: 0, error: 'Projet introuvable.' }
+})
+
+// Rejouer une requête de la session (planche 48) : GET seulement, et seulement vers la machine locale.
+ipcMain.handle('http:replay', async (_e, url: string) => {
+  const fail = (error: string) => ({ status: 0, statusText: '', headers: [], body: '', ms: 0, error })
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return fail('Adresse invalide.')
+  }
+  if (!/^https?:$/.test(u.protocol) || !['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)) return fail('Seules les adresses locales se rejouent.')
+  const t0 = Date.now()
+  try {
+    const r = await fetch(u, { method: 'GET', signal: AbortSignal.timeout(10000) })
+    const body = (await r.text()).slice(0, 200000)
+    return { status: r.status, statusText: r.statusText, headers: [...r.headers.entries()] as [string, string][], body, ms: Date.now() - t0 }
+  } catch (e) {
+    return fail((e as Error).message)
+  }
+})
+
+// Fichiers de données (planche 48) : 4 Mo au plus ; au-delà, la fin du fichier (un journal se lit par la fin).
+ipcMain.handle('data:read', (_e, id: string) => {
+  const f = media.dataFile(id)
+  if (!f) return { text: '', size: 0, truncated: false, error: 'Fichier introuvable.' }
+  try {
+    const size = statSync(f).size
+    const MAX = 4 * 1024 * 1024
+    if (size <= MAX) return { text: readFileSync(f, 'utf8'), size, truncated: false }
+    const fd = openSync(f, 'r')
+    const buf = Buffer.alloc(MAX)
+    readSync(fd, buf, 0, MAX, size - MAX)
+    closeSync(fd)
+    const text = buf.toString('utf8')
+    return { text: text.slice(text.indexOf('\n') + 1), size, truncated: true }
+  } catch (e) {
+    return { text: '', size: 0, truncated: false, error: (e as Error).message }
+  }
+})
+
+// Bases de données de la session (planche 45) : lecture seule, uniquement les fichiers annoncés par le démon.
+const noDb = { columns: [], rows: [], ms: 0, error: 'Base introuvable.' }
+ipcMain.handle('db:summary', (_e, id: string) => {
+  const f = media.dbFile(id)
+  return f ? dbSummarize(f) : { format: 'sqlite', tables: [], at: Date.now(), error: 'Base introuvable.' }
+})
+ipcMain.handle('db:page', (_e, id: string, opts: DbPageOpts) => {
+  const f = media.dbFile(id)
+  return f && opts && typeof opts.table === 'string' ? dbPage(f, opts) : noDb
+})
+ipcMain.handle('db:query', (_e, id: string, sql: string, limit?: number) => {
+  const f = media.dbFile(id)
+  return f && typeof sql === 'string' ? dbQuery(f, sql, limit) : noDb
+})
 
 /** Canaux relayés tels quels au démon : canal IPC → méthode RPC. */
 const RELAY: Record<string, string> = {
@@ -657,7 +767,36 @@ app.whenReady().then(() => {
   media.handleProtocol()
   applySavedTheme()
   createWindow()
+  // Mode voix : Ctrl+Alt+A coupe ou rend le micro, même quand Canopy n'a pas le focus (mode compagnon).
+  // Windows répète le raccourci tant que les touches restent enfoncées : un appui = une bascule.
+  let micKeyAt = 0
+  globalShortcut.register('CommandOrControl+Alt+A', () => {
+    const now = Date.now()
+    const repeat = now - micKeyAt < 600
+    micKeyAt = now
+    if (!repeat) toRenderer('companion:command', 'mic')
+  })
   void daemon.start()
+  startAgenda({
+    projects: () => projects,
+    rpc: (method, ...args) => daemon.rpc(method, ...args),
+    ready: () => daemonStatus.connected,
+    emit: () => toRenderer('atelier:event', { type: 'agenda:changed' }, 0),
+    toast: (t) => toasts.push(t),
+    quiet: () => Date.now() < silenceUntil || inQuietHours(getNotifSettings())
+  })
+  startNotes({
+    projects: () => projects,
+    rpc: (method, ...args) => daemon.rpc(method, ...args),
+    emit: (id) => toRenderer('atelier:event', { type: 'notes:changed', id }, 0)
+  })
+  // Notes de réunion : le renderer demande le son du PC (getDisplayMedia) ; on répond par la boucle audio de l'écran principal (Windows).
+  session.defaultSession.setDisplayMediaRequestHandler((_req, cb) => {
+    desktopCapturer
+      .getSources({ types: ['screen'] })
+      .then((s) => cb({ video: s[0], audio: 'loopback' }))
+      .catch(() => cb({}))
+  })
   setInterval(() => void daemon.checkVersion(), 4000)
 })
 

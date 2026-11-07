@@ -65,6 +65,12 @@ export type Item =
       todos?: { content: string; status: 'pending' | 'in_progress' | 'completed' }[]
       /** Artefact claude.ai publié par cet appel de l'outil Artifact. */
       artifact?: ArtifactRef
+      /** Résultats de tests lus dans la sortie de la commande (planche 49). */
+      tests?: TestReport
+      /** Requête psql de lecture : Canopy peut la relire sur autorisation (planche 46). */
+      pg?: { sql: string; env: string }
+      /** Requête HTTP lancée par la commande (curl, httpie, Invoke-WebRequest) et sa réponse (planche 48). */
+      http?: HttpCall
       at: number
     }
   | {
@@ -240,7 +246,66 @@ export type VaultEntry = { name: string; scope: 'project' | 'global'; project?: 
 
 export type CaptureResult = { ok: boolean; image?: string; info: string }
 
-export type MediaKind = 'image' | 'video' | 'audio' | 'model'
+/** Requête HTTP et sa réponse, telles que la commande les montre (en-têtes sensibles masqués). */
+export type HttpCall = {
+  method: string
+  url: string
+  status?: number
+  statusText?: string
+  headers?: [string, string][]
+  body: string
+  reqHeaders?: [string, string][]
+  reqBody?: string
+}
+
+/** Un test en échec : où, quoi, attendu / reçu. */
+export type TestFailure = { name: string; suite?: string; file?: string; line?: number; message: string; expected?: string; received?: string; snippet?: string }
+export type TestReport = {
+  runner: 'vitest' | 'jest' | 'playwright' | 'pytest' | 'cargo' | 'go'
+  passed: number
+  failed: number
+  skipped: number
+  files?: number
+  duration?: string
+  /** « paquets » pour go test sans -v (les tests réussis ne sont pas listés). */
+  unit?: string
+  failures: TestFailure[]
+}
+
+/** Document (planche 49) : ce qu'on lit d'un PDF ou d'un fichier Office pour la carte et la visionneuse. */
+export type DocInfo = {
+  type: 'pdf' | 'word' | 'powerpoint' | 'excel'
+  title?: string
+  pages?: number
+  words?: number
+  comments?: number
+  headings?: { level: number; text: string }[]
+  slides?: { title: string; text: string; notes?: string }[]
+  sheets?: { name: string; rows: number; cols: number }[]
+  text?: string
+  error?: string
+}
+
+export type MediaKind = 'image' | 'video' | 'audio' | 'model' | 'db' | 'data' | 'doc'
+
+/** Base de données (SQLite ou CSV) : photo du schéma et des comptes, prise quand elle entre dans le fil. */
+export type DbColumn = { name: string; type: string; notnull: boolean; dflt: string | null; pk: number }
+export type DbTable = {
+  name: string
+  /** null : non compté (grosse base). */
+  count: number | null
+  columns: DbColumn[]
+  fks: { from: string; table: string; to: string }[]
+  indexes: { name: string; cols: string; unique: boolean }[]
+  sql?: string
+  /** Petite table avec clé primaire : son contenu, par clé, pour l'avant · après ligne par ligne. */
+  rows?: { cols: string[]; byKey: Record<string, unknown[]> }
+  /** Empreinte du contenu (petites tables) : change même si le nombre de lignes ne change pas. */
+  digest?: string
+}
+export type DbSummary = { format: 'sqlite' | 'csv' | 'xlsx'; tables: DbTable[]; at: number; estimated?: boolean; error?: string; sep?: string }
+export type DbPageOpts = { table: string; offset?: number; limit?: number; order?: string; desc?: boolean; where?: string }
+export type DbRows = { columns: string[]; rows: unknown[][]; total?: number | null; ms: number; truncated?: boolean; error?: string; refused?: boolean }
 export type MediaSource = 'read' | 'screenshot' | 'tool' | 'mention' | 'attach'
 
 export type MediaItem = {
@@ -259,6 +324,14 @@ export type MediaItem = {
   height?: number
   size?: number
   at: number
+  /** Base de données : photo du schéma et des comptes à ce moment-là. */
+  db?: DbSummary
+  /** Requête SELECT lancée par l'agent sur cette base (sqlite3 …) : la carte montre son résultat. */
+  query?: string
+  /** Photo prise avant une commande, pour l'avant · après : pas de carte à elle seule. */
+  baseline?: boolean
+  /** Base du projet trouvée par Canopy dans sa config (ex. prisma/schema.prisma). */
+  foundBy?: string
 }
 
 /** Pièce jointe à un message : un média connu, ou une image capturée (data URL). */
@@ -297,15 +370,25 @@ export type AppEvent =
   | { type: 'browser:request'; id: string; sessionId: string; params: import('./browser').BrowserParams; at: number }
   /** Claude agit sur l'interface de Canopy (outil mcp__atelier__interface). */
   | { type: 'ui:request'; id: string; sessionId: string; params: import('./ui').UiParams; at: number }
+  /** Agenda : l'état a changé (sources relues, brief prêt, lien de projet). Envoyé par le processus principal. */
+  | { type: 'agenda:changed' }
+  /** Notes de réunion : liste ou compte rendu changé (fin de résumé, suppression). */
+  | { type: 'notes:changed'; id?: string }
+  /** Agenda : ouvrir une réunion (clic sur la notification « dans 10 min »). */
+  | { type: 'agenda:open'; meetingId: string }
 
 export type PermissionDecision = 'allow' | 'always' | 'deny'
 
 /** Notifications d'Atelier (planche 9) : nos propres cartes, par-dessus tout, sans voler le focus. */
-export type ToastKind = 'wait' | 'plan' | 'question' | 'done' | 'error'
+export type ToastKind = 'wait' | 'plan' | 'question' | 'done' | 'error' | 'meeting'
 export type Toast = {
   id: string
   kind: ToastKind
+  /** Vide pour une carte qui ne vient pas d'une session (réunion de l'agenda). */
   sessionId: string
+  /** Carte « réunion dans 10 min » : la réunion et son lien Meet ou Teams. */
+  meetingId?: string
+  joinUrl?: string
   /** Demande d'autorisation à laquelle la carte répond (attente, plan). */
   permId?: string
   project: string
@@ -320,7 +403,7 @@ export type Toast = {
   /** Incrémenté à chaque rappel (la carte réagit et rejoue le son). */
   pulse?: number
 }
-export type ToastAction = { type: 'allow' | 'deny' | 'open' | 'dismiss' | 'silence' | 'mute' | 'settings' | `opt:${number}`; id: string }
+export type ToastAction = { type: 'allow' | 'deny' | 'open' | 'dismiss' | 'silence' | 'mute' | 'settings' | 'join' | `opt:${number}`; id: string }
 export type ToastState = { toasts: Toast[]; sound: boolean; corner: NotifSettings['corner']; /** Mode compagnon : la bulle, dans cette même fenêtre. */ companion?: import('./companion').CompanionState | null }
 export type NotifSettings = {
   corner: 'tl' | 'tr' | 'bl' | 'br'
@@ -405,6 +488,22 @@ export type AtelierApi = {
   openMedia(mediaId: string): Promise<void>
   openInEditor(projectId: string, relPath: string, line?: number): Promise<void>
   showMediaInFolder(mediaId: string): Promise<void>
+  /** Fichier de données (JSON, JSONL, log) lu par la session : son texte (la fin pour un gros journal). */
+  /** Postgres (planche 46) : hôte masqué et autorisation ; requête relue en lecture seule si autorisée. */
+  pgInfo(sessionId: string, projectId: string, env: string): Promise<{ host?: string; database?: string; allowed: 'session' | 'project' | null; error?: string }>
+  pgAllow(sessionId: string, projectId: string, scope: 'session' | 'project' | null): Promise<void>
+  pgQuery(sessionId: string, projectId: string, env: string, sql: string): Promise<DbRows>
+  /** Document (PDF, Word, PowerPoint) : texte, titres, diapositives ; miniature système si elle existe. */
+  docInfo(mediaId: string): Promise<DocInfo & { thumb?: string; pdf?: string }>
+  /** Aperçu fidèle d'un Word / PowerPoint : converti en PDF par Office (Windows) ou LibreOffice. */
+  docConvert(mediaId: string): Promise<{ pdf?: string; error?: string }>
+  /** Rejoue une requête GET locale (localhost) et rend sa réponse. */
+  httpReplay(url: string): Promise<{ status: number; statusText: string; headers: [string, string][]; body: string; ms: number; error?: string }>
+  dataRead(mediaId: string): Promise<{ text: string; size: number; truncated: boolean; error?: string }>
+  /** Bases de données (lecture seule) : schéma et comptes actuels, une page de lignes, une requête SELECT. */
+  dbSummary(mediaId: string): Promise<DbSummary>
+  dbPage(mediaId: string, opts: DbPageOpts): Promise<DbRows>
+  dbQuery(mediaId: string, sql: string, limit?: number): Promise<DbRows>
   interrupt(sessionId: string): Promise<void>
   closeSession(sessionId: string): Promise<void>
   setPermissionMode(sessionId: string, mode: PermissionModeUI): Promise<void>
@@ -477,7 +576,8 @@ export type AtelierApi = {
   onUiRequest(cb: (req: { id: string; sessionId: string; params: import('./ui').UiParams }) => void): () => void
   uiResult(id: string, r: import('./ui').UiResult): void
   /** Mode compagnon : état de la bulle (null = quitter) et gestes renvoyés par la bulle. */
-  companionSet(state: import('./companion').CompanionState | null): void
+  /** `restore` : reprise après un rechargement ou un redémarrage, la fenêtre n'est pas rangée. */
+  companionSet(state: import('./companion').CompanionState | null, restore?: boolean): void
   /** Le mode compagnon était actif quand Canopy s'est arrêté sans que tu le fermes (redémarrage automatique) : le reprendre. */
   companionResume(): Promise<boolean>
   /** « Stop » : Claude n'agit plus sur l'écran (quelques secondes), sa main disparaît. */
@@ -494,6 +594,46 @@ export type AtelierApi = {
   /** Mode voix : démarre le service local (Whisper + Pocket TTS) et donne son adresse. */
   voiceStart(voice: string): Promise<{ ok: true; port: number; token: string } | { ok: false; error: string }>
   voiceStop(): Promise<void>
+  /** Agenda (planches 51 à 55). */
+  agendaState(): Promise<import('./agenda').AgendaState>
+  /** Relire Google Agenda et Teamleader maintenant. */
+  agendaRefresh(): Promise<import('./agenda').AgendaState>
+  /** ID client et code secret de l'application de bureau Google (gardés dans le Coffre). */
+  agendaSetGoogleClient(clientId: string, clientSecret: string): Promise<import('./agenda').AgendaState>
+  /** Ouvre le consentement dans le navigateur ; se résout une fois connecté (ou en erreur). */
+  agendaConnect(source: 'google' | 'teamleader'): Promise<{ ok: true } | { ok: false; error: string }>
+  agendaDisconnect(source: 'google' | 'teamleader'): Promise<import('./agenda').AgendaState>
+  /** Relier une réunion à un projet (null : pas de brief). remember : retenu pour la série. */
+  agendaLink(meetingId: string, projectId: string | null, remember: boolean): Promise<import('./agenda').AgendaState>
+  agendaBrief(meetingId: string): Promise<import('./agenda').AgendaBrief | null>
+  /** Ignorer une réunion : cette occurrence, ou toujours (la série, sinon ce titre). */
+  agendaIgnore(meetingId: string, always: boolean): Promise<import('./agenda').AgendaState>
+  /** Réunions ignorées pour de bon : clé → titre. */
+  agendaIgnored(): Promise<Record<string, string>>
+  agendaUnignore(key: string): Promise<Record<string, string>>
+  /** Écrire (ou mettre à jour) le brief maintenant. */
+  agendaMakeBrief(meetingId: string): Promise<void>
+  /** Notes de réunion (étape 2a). */
+  notesList(): Promise<import('./notes').MeetingNoteMeta[]>
+  notesGet(id: string): Promise<import('./notes').MeetingNote | null>
+  /** Nouvelle prise de notes (liée à une réunion de l'agenda si meetingId). */
+  notesStart(p: { title: string; meetingId?: string }): Promise<import('./notes').MeetingNote>
+  /** Ajoute des segments transcrits et met à jour l'état (recording / paused). */
+  notesAppend(id: string, segs: import('./notes').NoteSeg[], state?: 'recording' | 'paused'): Promise<void>
+  /** Termine : Claude écrit le compte rendu (état summarizing, puis done ou error). */
+  notesFinish(id: string): Promise<void>
+  /** Relancer le compte rendu. */
+  notesSummarize(id: string): Promise<void>
+  notesNameSpeaker(id: string, speakerId: string, name: string): Promise<void>
+  notesDelete(id: string): Promise<void>
+  /** Oublier une ligne du transcript. */
+  notesRemoveSeg(id: string, segId: string): Promise<void>
+  /** Renommer une note (titre modifiable après coup). */
+  notesRename(id: string, title: string): Promise<void>
+  /** Ajoute des actions du compte rendu à une checklist du projet (créée au besoin : « Actions de réunion »). */
+  notesToChecklist(id: string, projectId: string, items: string[]): Promise<{ ok: true } | { ok: false; error: string }>
+  getAgendaPrefs(): Promise<import('./agenda').AgendaPrefs>
+  setAgendaPrefs(p: Partial<import('./agenda').AgendaPrefs>): Promise<import('./agenda').AgendaPrefs>
 }
 
 /** API de la fenêtre des notifications (toast.html). */

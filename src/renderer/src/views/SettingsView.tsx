@@ -1,10 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { CompanionPrefs, NotifInfo, NotifSettings, ThemeMode, VaultEntry } from '../../../shared/types'
 import { BG_DELAYS, useBgDelay } from '../bgtasks'
+import { useAgenda } from '../agenda'
+import type { SourceStatus } from '../../../shared/agenda'
 import { api, useStore } from '../store'
 import { useTiles, ZOOM_MAX, ZOOM_MIN } from '../tiles'
 import { useVoicePrefs, type Avatar, type EndMode } from '../voice/prefs'
-import { setMute, setVoiceName, startVoice, stopVoice, useVoice, VOICES } from '../voice/runtime'
+import { enrollCancel, enrollSave, enrollStart, setMute, setVoiceName, startVoice, stopVoice, useVoice, VOICES } from '../voice/runtime'
+import { ENROLL_PHRASES, useMyVoice } from '../voice/myvoice'
 import './settings.css'
 import { MOD } from '../platform'
 import { useSetupGate } from './Setup'
@@ -17,6 +20,7 @@ const SECTIONS = [
   ['companion', 'Compagnon'],
   ['sessions', 'Sessions'],
   ['notif', 'Notifications'],
+  ['agenda', 'Agenda'],
   ['vault', 'Coffre'],
   ['look', 'Apparence'],
   ['install', 'Installation']
@@ -73,7 +77,7 @@ function VoiceSection() {
         <Row title="Apparence" desc="Le soleil Canopée, ou un petit personnage qui écoute, réfléchit et parle avec toi.">
           <Seg<Avatar> label="Apparence" value={p.avatar} options={[['canopy', 'Canopée'], ['esprit', 'Esprit de la forêt'], ['chouette', 'Chouette'], ['gland', 'Gland']] as const} onChange={(avatar) => p.set({ avatar })} />
         </Row>
-        <Row title="Voix" desc="Les deux voix clonées. Le changement s'applique à la phrase suivante.">
+        <Row title="Voix" desc="Les voix clonées, locales, ou les voix d'OpenAI (en ligne, payantes, clé OPENAI_API_KEY). Le changement s'applique à la phrase suivante.">
           <span className="st-voices">
             {VOICES.map((x) => (
               <button key={x.id} type="button" aria-pressed={v.voice === x.id} onClick={() => preview(x.id)}>{x.label}</button>
@@ -106,6 +110,7 @@ function VoiceSection() {
           <span />
         </Row>
       </Card>
+      <MyVoiceCard />
       <Card title="Service voix">
         <Row title="État" desc="Whisper (transcription, sur la puce graphique) et Pocket TTS (voix) tournent sur ton ordinateur. Gardés en mémoire 15 min après la dernière utilisation.">
           <span className="st-inline">
@@ -115,6 +120,61 @@ function VoiceSection() {
         </Row>
       </Card>
     </>
+  )
+}
+
+/** Reconnaître ta voix : apprentissage (six phrases) et filtre « seulement ma voix ». */
+function MyVoiceCard() {
+  const p = useVoicePrefs()
+  const me = useMyVoice()
+  const v = useVoice()
+  const okCount = me.samples.filter((s) => s.ok).length
+  const next = ENROLL_PHRASES[Math.min(okCount, ENROLL_PHRASES.length - 1)]
+  const last = me.samples[me.samples.length - 1]
+  const running = v.phase !== 'off' && v.phase !== 'error'
+  return (
+    <Card title="Ma voix" note="Une empreinte de ta voix, gardée sur ton ordinateur : Claude ne réagit qu’à toi, pas aux vidéos ni aux autres voix.">
+      {me.enrolling ? (
+        <div className="st-enroll" aria-live="polite">
+          <span className="st-enroll-step">Phrase {Math.min(okCount + 1, ENROLL_PHRASES.length)} sur {ENROLL_PHRASES.length} · <b>{next.how}</b></span>
+          <p className="st-enroll-text">« {next.text} »</p>
+          <span className="st-enroll-bar" aria-hidden="true">
+            {ENROLL_PHRASES.map((_, i) => <span key={i} className={i < okCount ? 'done' : i === okCount ? 'cur' : ''} />)}
+          </span>
+          <span className="st-desc">
+            {v.speech ? 'Je t’écoute…' : !last ? 'Lis la phrase à voix haute.' : !last.ok ? 'Trop court : relis la phrase en entier.' : last.same !== undefined && last.same < 0.5 ? 'Cette phrase ressemble peu aux autres (bruit, autre voix ?). Continue, elle comptera moins.' : 'Bien reçu.'}
+          </span>
+          <span className="st-inline">
+            <button type="button" className="st-btn" onClick={enrollCancel}>Annuler</button>
+            <button type="button" className="st-btn primary" disabled={okCount < 3} onClick={enrollSave}>
+              {okCount >= ENROLL_PHRASES.length ? 'Enregistrer ma voix' : okCount >= 3 ? `Enregistrer (${okCount} phrases)` : 'Encore quelques phrases'}
+            </button>
+          </span>
+        </div>
+      ) : (
+        <>
+          <Row
+            title="Empreinte de ta voix"
+            desc={!running ? 'Le service voix démarre le temps de l’apprentissage.' : !me.available ? 'Modèle d’empreinte absent du service voix.' : me.profile ? 'Enregistrée. Réapprends-la si tu changes de micro ou si Claude t’entend moins bien.' : 'Pas encore apprise : six phrases à lire, une minute environ.'}
+          >
+            <span className="st-inline">
+              {me.result && <span className={`st-state ${me.result.ok ? 'ok' : 'err'}`}>{me.result.ok ? `Apprise (${me.result.n} phrases)` : me.result.error}</span>}
+              <button type="button" className="st-btn" disabled={running && !me.available} onClick={() => void enrollStart()}>{me.profile ? 'Réapprendre ma voix' : 'Apprendre ma voix'}</button>
+            </span>
+          </Row>
+          <Row title="Ne répondre qu’à ma voix" desc="Ce qui ne te ressemble pas est ignoré, et une vidéo ne coupe plus la parole à Claude.">
+            <Toggle label="Ne répondre qu’à ma voix" on={p.onlyMe && me.profile} onChange={(onlyMe) => p.set({ onlyMe })} />
+          </Row>
+          <Row title="Exigence" desc={`Plus strict : moins de faux départs, mais il faut parler distinctement.${me.ignored ? ` ${me.ignored} morceau${me.ignored > 1 ? 'x' : ''} écarté${me.ignored > 1 ? 's' : ''} depuis le démarrage.` : ''}`}>
+            <span className="st-inline">
+              <span className="st-desc">Indulgent</span>
+              <input type="range" min={0} max={100} step={5} value={Math.round(p.meStrict * 100)} disabled={!p.onlyMe} onChange={(e) => p.set({ meStrict: Number(e.target.value) / 100 })} aria-label="Exigence de reconnaissance de ta voix" />
+              <span className="st-desc">Strict</span>
+            </span>
+          </Row>
+        </>
+      )}
+    </Card>
   )
 }
 
@@ -184,6 +244,109 @@ function NotifSection() {
           <Toggle label="Heures calmes" on={s.quiet} onChange={(quiet) => set({ quiet })} />
         </span>
       </Row>
+    </Card>
+  )
+}
+
+/** Agenda (planches 51 à 55) : connexions Google et Teamleader, briefs, notes de réunion. */
+function SourceRow({ title, desc, status, source, children }: { title: string; desc?: string; status: SourceStatus; source: 'google' | 'teamleader'; children?: ReactNode }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const connect = async () => {
+    setBusy(true)
+    setErr('')
+    try {
+      const r = await api.agendaConnect(source)
+      if (!r.ok) setErr(r.error)
+    } catch (e) {
+      setErr(String((e as Error)?.message ?? e))
+    } finally {
+      setBusy(false)
+      void useAgenda.getState().load()
+    }
+  }
+  const problem = err || status.error
+  return (
+    <Row title={title} desc={status.connected ? `Connecté${status.account ? ` : ${status.account}` : ''}${status.error ? ` — ${status.error}` : ''}` : busy ? 'Termine la connexion dans ton navigateur…' : (problem ?? desc)}>
+      {status.connected ? (
+        <button type="button" className="st-btn" onClick={() => void api.agendaDisconnect(source).then(() => useAgenda.getState().load())}>Déconnecter</button>
+      ) : (
+        children ?? <button type="button" className="st-btn primary" disabled={busy} onClick={() => void connect()}>{source === 'google' ? 'Se connecter à Google' : 'Connecter'}</button>
+      )}
+    </Row>
+  )
+}
+
+function GoogleClientForm() {
+  const [id, setId] = useState('')
+  const [secret, setSecret] = useState('')
+  return (
+    <span className="st-inline st-client">
+      <input value={id} onChange={(e) => setId(e.target.value)} placeholder="ID client" aria-label="ID client" />
+      <input type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder="Code secret" aria-label="Code secret" />
+      <button type="button" className="st-btn primary" disabled={!id.trim() || !secret.trim()} onClick={() => void api.agendaSetGoogleClient(id.trim(), secret.trim()).then(() => useAgenda.getState().load())}>Enregistrer</button>
+    </span>
+  )
+}
+
+function AgendaSection() {
+  const { state, prefs, setPrefs, load } = useAgenda()
+  useEffect(() => void load(), [load])
+  if (!state || !prefs) return <div className="st-desc">Lecture de l’agenda…</div>
+  return (
+    <>
+      <Card title="Connexions" note="Canopy se connecte lui-même : les connecteurs claude.ai ne servent qu’à Claude dans une session.">
+        <SourceRow
+          title="Google Agenda et Gmail"
+          status={state.google}
+          source="google"
+          desc={state.google.configured ? 'Lecture seule : réunions et mails des participants.' : 'Console Google Cloud › Identifiants › ID client OAuth de type Application de bureau'}
+        >
+          {state.google.configured ? undefined : <GoogleClientForm />}
+        </SourceRow>
+        <SourceRow title="Teamleader Focus" desc="Tes tâches ouvertes. Les accès sont repris de l’outil de feuilles de temps." status={state.teamleader} source="teamleader" />
+      </Card>
+      <Card title="Briefs">
+        <Row title="Préparer un brief pour" desc="Les réunions internes ont un bouton « brief à la demande ».">
+          <Seg label="Préparer un brief pour" value={prefs.briefFor} options={[['external', 'Externes'], ['all', 'Toutes'], ['none', 'Aucune']] as const} onChange={(briefFor) => void setPrefs({ briefFor })} />
+        </Row>
+        <Row title="Mise à jour 30 min avant" desc="Seulement s’il y a du nouveau.">
+          <Toggle label="Mise à jour 30 min avant" on={prefs.refreshBefore} onChange={(refreshBefore) => void setPrefs({ refreshBefore })} />
+        </Row>
+        <Row title="Lire les mails liés à la réunion" desc="Ceux qui parlent du sujet, sinon ceux des participants extérieurs. 60 derniers jours, lecture seule, jamais d’envoi.">
+          <Toggle label="Lire les mails liés à la réunion" on={prefs.useMail} onChange={(useMail) => void setPrefs({ useMail })} />
+        </Row>
+        <Row title="Notification 10 min avant">
+          <Toggle label="Notification 10 min avant" on={prefs.notifyBefore} onChange={(notifyBefore) => void setPrefs({ notifyBefore })} />
+        </Row>
+        <Row title="Rangement">
+          <span className="st-desc">Dans les données de Canopy, jamais dans le dépôt du projet.</span>
+        </Row>
+      </Card>
+      <IgnoredCard />
+      <Card title="Notes de réunion">
+        <Row title="Enregistrer et résumer une réunion" desc="Transcription et compte rendu après la réunion.">
+          <span className="st-state">étape suivante</span>
+        </Row>
+      </Card>
+    </>
+  )
+}
+
+/** Réunions ignorées pour de bon (bouton « Ignorer › Toujours » de l'Agenda), et de quoi les rétablir. */
+function IgnoredCard() {
+  const [ignored, setIgnored] = useState<Record<string, string>>({})
+  const state = useAgenda((s) => s.state)
+  useEffect(() => void api.agendaIgnored().then(setIgnored), [state])
+  const entries = Object.entries(ignored)
+  return (
+    <Card title="Réunions ignorées" note="Ni brief, ni notification, ni place dans l’agenda. Les blocs sans participants ni visio (télétravail, rappels) sont écartés d’office.">
+      {entries.length === 0 && <Row title="Aucune pour l’instant" desc="Bouton « Ignorer » sur une réunion de l’Agenda.">{null}</Row>}
+      {entries.map(([key, title]) => (
+        <Row key={key} title={title} desc={key.startsWith('r:') ? 'Toute la série' : 'Toutes les réunions de ce titre'}>
+          <button type="button" className="st-btn" onClick={() => void api.agendaUnignore(key).then(setIgnored)}>Rétablir</button>
+        </Row>
+      ))}
     </Card>
   )
 }
@@ -315,6 +478,7 @@ export function SettingsView() {
           {sec === 'companion' && <CompanionSection />}
           {sec === 'sessions' && <SessionsSection />}
           {sec === 'notif' && <NotifSection />}
+          {sec === 'agenda' && <AgendaSection />}
           {sec === 'vault' && <VaultSection />}
           {sec === 'look' && <LookSection />}
           {sec === 'install' && <InstallSection />}

@@ -51,7 +51,8 @@ const KIND: Record<Toast['kind'], { icon: IconName; cls: string }> = {
   plan: { icon: 'mode-plan', cls: 'clay' },
   question: { icon: 'wait', cls: 'clay' },
   done: { icon: 'done', cls: 'ok' },
-  error: { icon: 'error', cls: 'err' }
+  error: { icon: 'error', cls: 'err' },
+  meeting: { icon: 'calendar', cls: 'clay' }
 }
 
 /** `now` ne sert qu'à rafraîchir « il y a … ». */
@@ -126,6 +127,13 @@ function Card({ t }: { t: Toast; now: number }) {
         {t.kind === 'plan' && (
           <>
             <button type="button" className="b light" onClick={() => act('open')}>Lire le plan</button>
+            <button type="button" className="b text" onClick={() => act('dismiss')}>Plus tard</button>
+          </>
+        )}
+        {t.kind === 'meeting' && (
+          <>
+            <button type="button" className="b light" onClick={() => act('open')}>Ouvrir le brief</button>
+            {t.joinUrl && <button type="button" className="b clay" onClick={() => act('join')}>Rejoindre</button>}
             <button type="button" className="b text" onClick={() => act('dismiss')}>Plus tard</button>
           </>
         )}

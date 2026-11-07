@@ -13,11 +13,15 @@ type Prefs = {
   duckLevel: number
   /** Apparence de la voix : le soleil Canopée ou un personnage. */
   avatar: Avatar
+  /** Ne répondre qu'à ta voix (empreinte vocale) : les vidéos et les autres voix sont ignorées. */
+  onlyMe: boolean
+  /** 0 = indulgent, 1 = strict (seuil de ressemblance). */
+  meStrict: number
   set: (p: Partial<Omit<Prefs, 'set'>>) => void
 }
 
 const KEY = 'atelier.voice.prefs'
-const DEF = { tolerance: 0.5, end: 'normal' as EndMode, duck: true, duckLevel: 0.3, avatar: 'canopy' as Avatar }
+const DEF = { tolerance: 0.5, end: 'normal' as EndMode, duck: true, duckLevel: 0.3, avatar: 'canopy' as Avatar, onlyMe: false, meStrict: 0.5 }
 
 export const useVoicePrefs = create<Prefs>((set) => ({
   ...DEF,
@@ -32,7 +36,7 @@ export const useVoicePrefs = create<Prefs>((set) => ({
     set((s) => {
       const next = { ...s, ...p }
       try {
-        localStorage.setItem(KEY, JSON.stringify({ tolerance: next.tolerance, end: next.end, duck: next.duck, duckLevel: next.duckLevel, avatar: next.avatar }))
+        localStorage.setItem(KEY, JSON.stringify({ tolerance: next.tolerance, end: next.end, duck: next.duck, duckLevel: next.duckLevel, avatar: next.avatar, onlyMe: next.onlyMe, meStrict: next.meStrict }))
       } catch {
         /* stockage indisponible */
       }
@@ -49,5 +53,5 @@ const END: Record<EndMode, { end: number; end_max: number }> = {
 /** Seuil de détection de voix, attentes de fin de phrase, délai avant d'afficher l'écoute. */
 export function voiceConfig() {
   const p = useVoicePrefs.getState()
-  return { threshold: 0.45 + p.tolerance * 0.35, ...END[p.end], listenDelay: Math.round(350 + p.tolerance * 700) }
+  return { threshold: 0.45 + p.tolerance * 0.35, ...END[p.end], listenDelay: Math.round(350 + p.tolerance * 700), only_me: p.onlyMe, me_min: 0.3 + p.meStrict * 0.3 }
 }

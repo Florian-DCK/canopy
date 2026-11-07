@@ -77,6 +77,7 @@ export type View =
   | { name: 'projects' }
   | { name: 'history' }
   | { name: 'checklists'; id?: string }
+  | { name: 'agenda'; meetingId?: string; tab?: 'meetings' | 'day' | 'notes' }
   | { name: 'tiles' }
   | { name: 'tools' }
   | { name: 'voice' }
@@ -102,6 +103,9 @@ type State = {
   /** Texte à remettre dans la saisie (« Réutiliser »). */
   draft: Record<string, string | undefined>
   setDraft: (sessionId: string, text: string | undefined) => void
+  /** Texte à ajouter à la fin de la saisie (ex. une ligne de base jointe depuis la visionneuse). */
+  insert: Record<string, string | undefined>
+  insertDraft: (sessionId: string, text: string | undefined) => void
   history: HistoryEntry[]
   historyLoading: boolean
   loadHistory: () => Promise<void>
@@ -179,6 +183,8 @@ export const useStore = create<State>((set, get) => ({
   attachments: {},
   draft: {},
   setDraft: (sessionId, text) => set((s) => ({ draft: { ...s.draft, [sessionId]: text } })),
+  insert: {},
+  insertDraft: (sessionId, text) => set((s) => ({ insert: { ...s.insert, [sessionId]: text } })),
   attach: (sessionId, a) => set((s) => ({ attachments: { ...s.attachments, [sessionId]: [...(s.attachments[sessionId] ?? []), a] } })),
   detach: (sessionId, index) =>
     set((s) => ({
@@ -273,6 +279,9 @@ useStore.subscribe((st, prev) => {
 })
 
 api.onEvent((e, seq) => useStore.getState().apply(e, seq))
+api.onEvent((e) => {
+  if (e.type === 'agenda:open') useStore.getState().go({ name: 'agenda', meetingId: e.meetingId })
+})
 api.onSnapshot((snap) => useStore.getState().hydrate(snap))
 api.onDaemon((daemon) => useStore.setState({ daemon }))
 void api.snapshot().then((snap) => useStore.getState().hydrate(snap))

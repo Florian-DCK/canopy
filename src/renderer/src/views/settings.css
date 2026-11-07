@@ -42,3 +42,16 @@
 .st-state.ok::before { background: #3e7c52; }
 .st-state.err { color: #b8433c; }
 .st-state.err::before { background: #b8433c; }
+
+/* Ma voix : apprentissage (six phrases) */
+.st-enroll { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; }
+.st-enroll-step { font-size: 12.5px; color: var(--g600); }
+.st-enroll-step b { font-weight: 600; color: var(--slate); }
+.st-enroll-text { margin: 0; font-family: var(--serif); font-size: 20px; line-height: 1.45; color: var(--slate); }
+.st-enroll-bar { display: flex; gap: 6px; }
+.st-enroll-bar > span { flex: 1; height: 5px; border-radius: 3px; background: var(--g200); }
+.st-enroll-bar > span.done { background: var(--add); }
+.st-enroll-bar > span.cur { background: var(--clay); }
+.st-btn.primary { background: var(--slate); color: var(--ivory); border-color: transparent; }
+.st-btn:disabled { opacity: 0.5; cursor: default; }
+.st-client input { width: 150px; padding: 6px 9px; border-radius: 8px; border: 0.5px solid var(--line-strong); background: var(--white); font: inherit; font-size: 13px; color: var(--slate); }

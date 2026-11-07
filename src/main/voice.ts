@@ -84,6 +84,12 @@ async function running(): Promise<Saved | null> {
   return null
 }
 
+/** Port et jeton du service s'il tourne déjà (sans le lancer). */
+export async function voiceRunning(): Promise<{ port: number; token: string } | null> {
+  const s = await running()
+  return s ? { port: s.port, token: s.token } : null
+}
+
 export function startVoice(voice: string): Promise<VoiceInfo> {
   starting ??= launch(voice).finally(() => (starting = null))
   return starting

@@ -6,7 +6,7 @@ import { useStore, type View } from './store'
 // du plus récent au plus ancien. Un appui bref ramène au précédent (A → B → Ctrl+Tab → A) ; Ctrl tenu, chaque Tab
 // avance (Maj+Tab recule) dans le sélecteur et relâcher Ctrl ouvre l'onglet choisi.
 
-type Slot = 'cockpit' | 'session' | 'tiles' | 'history' | 'projects' | 'checklists' | 'tools' | 'voice' | 'settings'
+type Slot = 'cockpit' | 'session' | 'tiles' | 'history' | 'projects' | 'checklists' | 'agenda' | 'tools' | 'voice' | 'settings'
 const SLOTS: Record<Slot, { label: string; icon: IconName }> = {
   cockpit: { label: 'Cockpit', icon: 'sessions' },
   session: { label: 'Conversation', icon: 'conversation' },
@@ -14,6 +14,7 @@ const SLOTS: Record<Slot, { label: string; icon: IconName }> = {
   history: { label: 'Historique', icon: 'history' },
   projects: { label: 'Projets', icon: 'files' },
   checklists: { label: 'Checklists', icon: 'todo' },
+  agenda: { label: 'Agenda', icon: 'calendar' },
   tools: { label: 'Outils de Claude', icon: 'plug' },
   voice: { label: 'Mode voix', icon: 'audio' },
   settings: { label: 'Paramètres', icon: 'settings' }

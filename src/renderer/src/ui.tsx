@@ -1,13 +1,15 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Project, ThemeMode } from '../../shared/types'
 import { api, useStore, type View } from './store'
 import { NotifButton } from './NotifSettings'
+import { agendaBadge, useAgenda } from './agenda'
 import { lastSeen, useChecklists } from './checklists'
 import { Icon } from './icons'
 import { InTitleBar } from './titlebar'
 import { dropOnTiles, isTileDrag, resolve, useTiles } from './tiles'
 import { fxOfGroup, useFx } from './fx'
 import { CanopyMark } from './voice/CanopyMark'
+import { useNotes } from './notes/runtime'
 import { useVoice } from './voice/runtime'
 import { markOf } from './voice/VoiceView'
 import { MOD } from './platform'
@@ -112,6 +114,15 @@ export function Rail() {
   const sessions = useStore((s) => s.sessions)
   const summaries = useChecklists((s) => s.summaries)
   const fresh = view.name !== 'checklists' && summaries.some((c) => c.updatedAt > lastSeen())
+  const agendaState = useAgenda((s) => s.state)
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 30_000)
+    return () => clearInterval(t)
+  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const agenda = useMemo(() => agendaBadge(agendaState), [agendaState, tick])
+  const recording = useNotes((n) => n.status !== 'idle')
   const waiting = Object.values(sessions).some((s) => s.status === 'wait')
   const tilesWaiting = useTiles((t) => view.name !== 'tiles' && t.cells.some((c) => resolve(c, sessions)?.status === 'wait'))
   const doneFresh = useFx((f) => f.fresh)
@@ -119,7 +130,7 @@ export function Rail() {
   const tilesFx = view.name === 'tiles' ? '' : fxOfGroup(cells.map((c) => resolve(c, sessions)), doneFresh)
   const last = Object.values(sessions).sort((a, b) => b.updatedAt - a.updatedAt)[0]
   const [dropping, setDropping] = useState<'' | 'over' | 'ok'>('')
-  const btn = (label: string, icon: ReactNode, v: View | null, active: boolean, badge = false, blue = false, fx = '', drop?: object) => (
+  const btn = (label: string, icon: ReactNode, v: View | null, active: boolean, badge = false, blue = false, fx = '', drop?: object, rec = false) => (
     <button
       type="button"
       {...drop}
@@ -131,7 +142,7 @@ export function Rail() {
       onClick={() => v && go(v)}
     >
       {icon}
-      {badge && <span className={`badge${blue ? ' blue' : ''}`} />}
+      {badge && <span className={`badge${rec ? ' rec' : blue ? ' blue' : ''}`} />}
     </button>
   )
   return (
@@ -157,6 +168,7 @@ export function Rail() {
       {btn('Historique', Icons.clock, { name: 'history' }, view.name === 'history')}
       {btn('Projets', Icons.folder, { name: 'projects' }, view.name === 'projects')}
       {btn('Checklists', <Icon name="todo" size={20} />, { name: 'checklists' }, view.name === 'checklists', fresh, true)}
+      {btn('Agenda', <Icon name="calendar" size={20} />, { name: 'agenda' }, view.name === 'agenda', recording || !!agenda, agenda === 'blue', '', undefined, recording)}
       {btn('Outils de Claude (skills, MCP, agents)', <Icon name="plug" size={20} />, { name: 'tools' }, view.name === 'tools')}
       {btn('Mode voix', <VoiceRailMark />, { name: 'voice' }, view.name === 'voice')}
       <span style={{ flex: 1 }} />

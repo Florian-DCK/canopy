@@ -10,7 +10,7 @@ const WIDTH = 392
 /** Mode compagnon : la fenêtre s'élargit pour la bulle et sa ligne de texte à côté. */
 const C_WIDTH = 520
 const MARGIN = 14
-const ORDER: Record<Toast['kind'], number> = { wait: 0, question: 0, plan: 1, error: 2, done: 3 }
+const ORDER: Record<Toast['kind'], number> = { wait: 0, question: 0, plan: 1, error: 2, done: 3, meeting: 3 }
 const REMIND_FIRST = 2 * 60_000
 const REMIND_EVERY = 10 * 60_000
 
@@ -19,7 +19,7 @@ type Hooks = {
   page: () => { url: string } | { file: string }
   settings: () => NotifSettings
   /** Autoriser / refuser / ouvrir la session d'une carte. */
-  act: (t: Toast, action: 'allow' | 'deny' | 'open' | `opt:${number}`) => void
+  act: (t: Toast, action: 'allow' | 'deny' | 'open' | 'join' | `opt:${number}`) => void
   silence: (minutes: number) => void
   mute: (sessionId: string) => void
   openSettings: () => void
@@ -139,7 +139,12 @@ export class ToastCenter {
 
   /** Coin bas-droit de la bulle : mémorisé, sinon en bas à droite de l'écran principal. */
   private anchor() {
-    if (!this.anchorPt) this.anchorPt = this.h.anchor()
+    // Position mémorisée ramenée sur un écran présent : elle peut venir d'un écran débranché depuis
+    // (la bulle s'affichait alors hors de l'écran, et le mode compagnon semblait ne rien faire).
+    if (!this.anchorPt) {
+      const saved = this.h.anchor()
+      this.anchorPt = saved ? this.clamp(saved) : null
+    }
     if (!this.anchorPt) {
       const a = screen.getPrimaryDisplay().workArea
       this.anchorPt = { x: a.x + a.width - 24, y: a.y + a.height - 24 }
@@ -158,8 +163,8 @@ export class ToastCenter {
   }
 
   push(t: Omit<Toast, 'id' | 'at'>) {
-    // Une seule carte par demande d'autorisation, et une seule « terminé / erreur » par session.
-    this.list = this.list.filter((x) => !(t.permId && x.permId === t.permId) && !(t.kind !== 'wait' && t.kind !== 'plan' && t.kind !== 'question' && x.sessionId === t.sessionId && x.kind === t.kind))
+    // Une seule carte par demande d'autorisation, une seule « terminé / erreur » par session, une par réunion.
+    this.list = this.list.filter((x) => !(t.permId && x.permId === t.permId) && !(t.kind === 'meeting' ? x.kind === 'meeting' && x.meetingId === t.meetingId : t.kind !== 'wait' && t.kind !== 'plan' && t.kind !== 'question' && x.sessionId === t.sessionId && x.kind === t.kind))
     this.list.push({ ...t, id: randomUUID(), at: Date.now() })
     this.list.sort((a, b) => ORDER[a.kind] - ORDER[b.kind] || a.at - b.at)
     this.sync()
@@ -183,9 +188,9 @@ export class ToastCenter {
     if (a.type === 'settings') return this.h.openSettings()
     if (!t) return
     if (a.type === 'mute') return this.h.mute(t.sessionId)
-    if (a.type === 'allow' || a.type === 'deny' || a.type === 'open' || a.type.startsWith('opt:')) this.h.act(t, a.type as 'open')
+    if (a.type === 'allow' || a.type === 'deny' || a.type === 'open' || a.type === 'join' || a.type.startsWith('opt:')) this.h.act(t, a.type as 'open')
     // Autoriser / refuser : la carte part quand la demande est résolue (événement du démon) ; sinon tout de suite.
-    if (a.type === 'dismiss' || a.type === 'open') this.remove((x) => x.id === t.id)
+    if (a.type === 'dismiss' || a.type === 'open' || a.type === 'join') this.remove((x) => x.id === t.id)
   }
 
   /** Rappel doux : 2 min après l'arrivée d'une attente, puis toutes les 10 min. */

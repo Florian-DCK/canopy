@@ -2,6 +2,7 @@ import '../cockpit.css'
 import { useEffect, useMemo, useState } from 'react'
 import type { ExternalSession, HistoryEntry, SessionMeta } from '../../../shared/types'
 import { ago, type Tree } from '../derive'
+import { upcoming, useAgenda } from '../agenda'
 import { Icon } from '../icons'
 import { thumbUrl } from '../media'
 import { addProjectDialog, api, openExternal, openSession, resumeFromHistory, useStore } from '../store'
@@ -87,6 +88,64 @@ const stateOf = (e: Entry): { word: string; cls: string } =>
       ? { word: 'Fermée', cls: 'past' }
       : { word: e.s.status === 'wait' ? 'T’attend' : e.s.status === 'run' ? 'Au travail' : e.s.status === 'error' ? 'Erreur' : 'Terminée', cls: e.s.status }
 
+const hhmm = (t: number) => new Date(t).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/** Bandeau « Aujourd’hui » : réunions qui restent et tâches Teamleader du jour (ou en retard). */
+function TodayBand() {
+  const state = useAgenda((s) => s.state)
+  const go = useStore((s) => s.go)
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(t)
+  }, [])
+  if (!state?.google.connected) return null
+  const endOfDay = new Date(now)
+  endOfDay.setHours(24, 0, 0, 0)
+  const meetings = upcoming(state, now).filter((m) => m.start < endOfDay.getTime())
+  const today = ymd(new Date(now))
+  const tasks = state.tasks.filter((t) => !t.done && t.due && t.due <= today)
+  if (!meetings.length && !tasks.length) return null
+  const next = meetings[0]
+  const mins = next ? Math.round((next.start - now) / 60_000) : 0
+  const when = !next ? '' : mins <= 0 ? 'en cours' : mins > 180 ? `à ${hhmm(next.start)}` : `dans ${mins >= 60 ? `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')}` : `${mins} min`}`
+  const brief = next?.brief.state
+  return (
+    <section className="ck-today" aria-label="Aujourd’hui">
+      <div className="ck-today-head">
+        <Icon name="calendar" size={16} />
+        <span className="ck-today-label">Aujourd’hui</span>
+        {next && (
+          <span className="ck-today-next">
+            <b>{next.title}</b> {when}
+          </span>
+        )}
+        {brief === 'ready' && <span className="ck-today-pill ok">brief prêt</span>}
+        {(brief === 'pending' || brief === 'working') && <span className="ck-today-pill">brief en préparation</span>}
+        <span style={{ flex: 1 }} />
+        <button type="button" className="ck-today-link" onClick={() => go({ name: 'agenda', tab: 'day' })}>Voir la journée</button>
+      </div>
+      <div className="ck-today-chips">
+        {meetings.map((m) => (
+          <button key={m.id} type="button" className="ck-today-chip" onClick={() => go({ name: 'agenda', meetingId: m.id })}>
+            <i className="meet" aria-hidden="true" />
+            <span className="t">{m.title}</span>
+            <span className="muted">{hhmm(m.start)}</span>
+          </button>
+        ))}
+        {tasks.map((t) => (
+          <button key={t.id} type="button" className="ck-today-chip" onClick={() => go(t.projectId ? { name: 'project', projectId: t.projectId } : { name: 'agenda' })}>
+            <i className="task" aria-hidden="true" />
+            <span className="t">{t.title}</span>
+            <span className="muted">échéance {t.due}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export function Cockpit() {
   const projects = useStore((s) => s.projects)
   const sessions = useStore((s) => s.sessions)
@@ -158,6 +217,8 @@ export function Cockpit() {
             <button type="button" className="btn primary" onClick={() => void addProjectDialog()}>{Icons.plus}Projet</button>
           </div>
           <p className="small muted ck-hint">Glisse une session sur l’icône Mosaïque de la barre de gauche (ou {MOD}+clic) pour l’ajouter à la mosaïque sans quitter cette page.</p>
+
+          <TodayBand />
 
           {projects.length === 0 && (
             <div className="band" style={{ padding: 28, flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>

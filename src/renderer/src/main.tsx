@@ -14,6 +14,7 @@ import { startUiAgent } from './uiAgent'
 import { Icon } from './icons'
 import { TitleBar } from './titlebar'
 import { Rail } from './ui'
+import { AgendaView } from './views/AgendaView'
 import { ChecklistsView } from './views/ChecklistsView'
 import { Cockpit } from './views/Cockpit'
 import { HistoryView } from './views/HistoryView'
@@ -56,6 +57,7 @@ function App() {
         {view.name === 'projects' && <ProjectsView />}
         {view.name === 'history' && <HistoryView />}
         {view.name === 'checklists' && <ChecklistsView id={view.id} />}
+        {view.name === 'agenda' && <AgendaView meetingId={view.meetingId} tab={view.tab} />}
         {view.name === 'tiles' && <TilesView />}
         {view.name === 'tools' && <ToolsView />}
         {view.name === 'voice' && <VoiceView />}

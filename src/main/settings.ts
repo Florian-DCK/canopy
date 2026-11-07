@@ -1,11 +1,12 @@
 import { app, nativeTheme } from 'electron'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { AGENDA_PREFS_DEFAULT, type AgendaPrefs } from '../shared/agenda'
 import type { CompanionPrefs, NotifSettings, SetupFeatures, ThemeMode } from '../shared/types'
 
 export type SetupState = { done: boolean; legacy?: boolean; at?: number; features?: SetupFeatures }
 
-type Settings = { theme: ThemeMode; /** Premier lancement. */ setup?: SetupState; notif?: Partial<NotifSettings>; /** Mode compagnon : coin bas-droit de la bulle. */ companionAnchor?: { x: number; y: number } | null; /** Ce que Claude peut faire sur l'ordinateur. */ companion?: Partial<CompanionPrefs> }
+type Settings = { theme: ThemeMode; /** Premier lancement. */ setup?: SetupState; notif?: Partial<NotifSettings>; /** Mode compagnon : coin bas-droit de la bulle. */ companionAnchor?: { x: number; y: number } | null; /** Ce que Claude peut faire sur l'ordinateur. */ companion?: Partial<CompanionPrefs>; /** Projets dont Canopy peut relire les requêtes Postgres (planche 46). */ pgProjects?: string[]; /** Agenda (planches 51 à 55) : réglages et projets retenus par réunion. */ agenda?: Partial<AgendaPrefs>; agendaLinks?: Record<string, string | null>; /** Réunions ignorées pour de bon (série ou titre). */ agendaIgnored?: Record<string, string> }
 
 export const NOTIF_DEFAULT: NotifSettings = { corner: 'br', overFullscreen: true, sound: true, quiet: false, quietFrom: '22:00', quietTo: '08:00' }
 
@@ -55,6 +56,33 @@ export function setCompanionAnchor(p: { x: number; y: number } | null) {
   writeFileSync(file(), JSON.stringify({ ...read(), companionAnchor: p }, null, 2), 'utf8')
 }
 
+export function getPgProjects(): string[] {
+  return read().pgProjects ?? []
+}
+
+export function setPgProjects(pgProjects: string[]) {
+  writeFileSync(file(), JSON.stringify({ ...read(), pgProjects }, null, 2), 'utf8')
+}
+
+export function getAgendaPrefs(): AgendaPrefs {
+  return { ...AGENDA_PREFS_DEFAULT, ...read().agenda }
+}
+
+export function setAgendaPrefs(patch: Partial<AgendaPrefs>): AgendaPrefs {
+  const cur = read()
+  const agenda = { ...AGENDA_PREFS_DEFAULT, ...cur.agenda, ...patch }
+  writeFileSync(file(), JSON.stringify({ ...cur, agenda }, null, 2), 'utf8')
+  return agenda
+}
+
+export function getAgendaLinks(): Record<string, string | null> {
+  return read().agendaLinks ?? {}
+}
+
+export function setAgendaLinks(agendaLinks: Record<string, string | null>) {
+  writeFileSync(file(), JSON.stringify({ ...read(), agendaLinks }, null, 2), 'utf8')
+}
+
 export function getSetup(): SetupState | undefined {
   return read().setup
 }
@@ -74,4 +102,13 @@ export function setCompanionPrefs(patch: Partial<CompanionPrefs>): CompanionPref
   const companion = { ...COMPANION_DEFAULT, ...cur.companion, ...patch }
   writeFileSync(file(), JSON.stringify({ ...cur, companion }, null, 2), 'utf8')
   return companion
+}
+
+/** Réunions ignorées pour de bon : clé (série « r: » ou titre « t: ») → titre lisible. */
+export function getAgendaIgnored(): Record<string, string> {
+  return read().agendaIgnored ?? {}
+}
+
+export function setAgendaIgnored(agendaIgnored: Record<string, string>) {
+  writeFileSync(file(), JSON.stringify({ ...read(), agendaIgnored }, null, 2), 'utf8')
 }
