@@ -21,13 +21,17 @@ const INSPECT_JS = (selector: string) => `(() => {
     text: (e.innerText || '').slice(0, 400), styles, before: before && before !== 'none' ? before : undefined }
 })()`
 
-const RECT_JS = (selector: string) => `(() => {
+// Défilement instantané (le fil défile en douceur), puis deux images avant de mesurer : sinon la position
+// est lue en plein défilement et le cadrage tombe à côté pour un élément loin dans le fil.
+const RECT_JS = (selector: string) => `new Promise((res) => {
   const e = document.querySelector(${JSON.stringify(selector)})
-  if (!e) return null
-  e.scrollIntoView({ block: 'nearest' })
-  const r = e.getBoundingClientRect()
-  return { x: Math.max(0, Math.floor(r.x) - 8), y: Math.max(0, Math.floor(r.y) - 8), width: Math.ceil(r.width) + 16, height: Math.ceil(r.height) + 16 }
-})()`
+  if (!e) return res(null)
+  e.scrollIntoView({ block: 'nearest', behavior: 'instant' })
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const r = e.getBoundingClientRect()
+    res({ x: Math.max(0, Math.floor(r.x) - 8), y: Math.max(0, Math.floor(r.y) - 8), width: Math.ceil(r.width) + 16, height: Math.ceil(r.height) + 16 })
+  }))
+})`
 
 const READY_JS = `new Promise((res) => {
   const t0 = Date.now()
