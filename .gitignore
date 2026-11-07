@@ -8,3 +8,6 @@ spike/node_modules/
 __pycache__/
 dev-2.log
 .env.local
+
+# Playwright MCP session logs
+.playwright-mcp/
