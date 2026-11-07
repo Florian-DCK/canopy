@@ -1,4 +1,4 @@
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -23,11 +23,17 @@ import type { ActParams, MarkParams,
 import type { BrowserParams, BrowserResult } from '../shared/browser'
 import type { UiParams, UiResult } from '../shared/ui'
 import type { SceneBlock } from '../shared/scene'
-import { findMediaPaths, type MediaStore } from './media'
+import { signature as dbSignature } from './db'
+import { findProjectDbs, touchesDb } from './projectdb'
+import { parseTests } from './testreport'
+import { parseHttp } from './httpcall'
+import { psqlSelect } from './psql'
+import { dataFilesInCommand, findMediaPaths, isDataFile, kindOf, type MediaStore } from './media'
 import { z } from 'zod'
 import { findChecklist, runChecklistTool, type Checklists, type ChecklistToolArgs } from './checklists'
 import { HARNESS } from './harness'
 import { defaultPermissionMode, getProject } from './projects'
+import { agendaLine } from './agenda'
 import { disabledMcp, disabledSkills, setMcpDisabled } from './tooling'
 import { ownSessions, rememberOwnSession } from './own'
 
@@ -99,6 +105,16 @@ function normalizeQuestions(raw: unknown): AskQuestion[] {
   }))
 }
 
+/** `sqlite3 <base> "select …"` : la base et la requête, si c'est une lecture. */
+export function sqliteSelect(cmd: string): { file: string; sql: string } | null {
+  const m = /\bsqlite3(?:\.exe)?(?:\s+-[\w-]+)*\s+("[^"]+"|'[^']+'|[^\s"'|;&]+)\s+("(?:[^"\\]|\\.)*"|'[^']*')/.exec(cmd)
+  if (!m) return null
+  const unq = (x: string) => x.slice(1, -1)
+  const file = /^["']/.test(m[1]) ? unq(m[1]) : m[1]
+  const sql = m[2].startsWith('"') ? unq(m[2]).replace(/\\(["\\$`])/g, '$1') : unq(m[2])
+  return /^\s*(select|with)\b/i.test(sql) && !/;\s*\S/.test(sql.trim().replace(/;+$/, '')) ? { file, sql: sql.trim() } : null
+}
+
 /** Question sans attente encore ouverte : Claude continue ; sans choix par défaut, il attendra en fin de tour. */
 type OpenAsk = { questions: AskQuestion[]; fallback?: string; waiting: boolean }
 
@@ -114,6 +130,8 @@ type Live = {
   pending: Map<string, Pending>
   tools: Map<string, { name: string; parent: string | null; input?: any }>
   mentioned: Set<string>
+  /** Bases de données vues dans la session : dernière photo par chemin (pour montrer ce qu'une commande a changé). */
+  dbs?: Map<string, MediaItem>
   toolsDone: Set<string>
   /** Reprise en copie (forkSession) : nouvelle conversation qui part de l'historique. */
   fork?: boolean
@@ -472,8 +490,101 @@ export class SessionManager {
       if (m) {
         s.mentioned.add(key)
         s.mentioned.add(m.path.toLowerCase())
+        if (m.kind === 'db') (s.dbs ??= new Map()).set(m.path.toLowerCase(), m)
         this.emitMedia(m)
       }
+    }
+  }
+
+  /** JSON, JSONL ou journal lu par Read ou par une commande (cat, tail, Get-Content…) : une carte (planche 48). */
+  private dataAfterTool(s: Live, toolUseId: string, root: string) {
+    const tool = s.tools.get(toolUseId)
+    if (!tool) return
+    // PDF, Word ou PowerPoint lu par Read : carte de document (planche 49), une fois par fichier.
+    if (tool.name === 'Read' && typeof tool.input?.file_path === 'string' && kindOf(tool.input.file_path) === 'doc') {
+      const key = resolve(root, tool.input.file_path).toLowerCase()
+      if (!s.mentioned.has(key)) {
+        const m = this.media.fromPath(tool.input.file_path, root, { sessionId: s.meta.id, itemId: toolUseId })
+        if (m) {
+          s.mentioned.add(key)
+          this.emitMedia(m)
+        }
+      }
+      return
+    }
+    const files =
+      tool.name === 'Read' && typeof tool.input?.file_path === 'string' && isDataFile(tool.input.file_path)
+        ? [tool.input.file_path as string]
+        : /^(Bash|PowerShell)$/.test(tool.name)
+          ? dataFilesInCommand(String(tool.input?.command ?? ''))
+          : []
+    for (const f of [...new Set(files)].slice(0, 3)) this.emitMedia(this.media.fromData(resolve(root, f), { sessionId: s.meta.id, itemId: toolUseId }))
+  }
+
+  /** Avant une commande qui touche la base du projet : photo de référence (sans carte), si elle a changé depuis la dernière. */
+  private dbBeforeTool(s: Live, toolUseId: string, cmd: string, root: string) {
+    if (!toolUseId || !touchesDb(cmd)) return
+    const dbs = (s.dbs ??= new Map())
+    for (const { file, foundBy } of findProjectDbs(root)) {
+      const key = file.toLowerCase()
+      const prev = dbs.get(key)
+      const m = this.media.fromDb(file, { sessionId: s.meta.id, itemId: toolUseId, source: 'tool', baseline: true, foundBy })
+      if (!m?.db || m.db.error) continue
+      if (prev?.db && dbSignature(prev.db) === dbSignature(m.db)) continue
+      dbs.set(key, m)
+      this.emitMedia(m)
+    }
+  }
+
+  /**
+   * Après une commande (Bash, PowerShell) : une base qu'elle vise entre dans le fil, un SELECT lancé par
+   * sqlite3 devient une carte de résultat, et une base déjà vue qui a changé (migration, seed) a une
+   * nouvelle photo, rattachée à cette commande.
+   */
+  private dbAfterTool(s: Live, toolUseId: string, root: string) {
+    const tool = s.tools.get(toolUseId)
+    if (!tool || !/^(Bash|PowerShell)$/.test(tool.name)) return
+    const cmd = String(tool.input?.command ?? '')
+    const dbs = (s.dbs ??= new Map())
+    const meta = { sessionId: s.meta.id, itemId: toolUseId }
+    const fresh = new Set<string>()
+    const sel = sqliteSelect(cmd)
+    const selKey = sel && resolve(root, sel.file).toLowerCase()
+    for (const p of findMediaPaths(cmd)) {
+      const file = resolve(root, p)
+      const key = file.toLowerCase()
+      if (dbs.has(key) || kindOf(file) !== 'db') continue
+      const m = this.media.fromDb(file, { ...meta, source: 'tool' })
+      if (!m) continue
+      dbs.set(key, m)
+      fresh.add(key)
+      s.mentioned.add(key)
+      s.mentioned.add(p.toLowerCase())
+      // Un SELECT sur une base nouvelle : la carte du résultat suffit.
+      if (key !== selKey) this.emitMedia(m)
+    }
+    if (sel) {
+      const file = resolve(root, sel.file)
+      const m = this.media.fromDb(file, { ...meta, source: 'tool', query: sel.sql })
+      if (m) this.emitMedia({ ...m, db: undefined })
+    }
+    // Base du projet créée par la commande (première migration) : elle entre dans le fil.
+    if (touchesDb(cmd))
+      for (const { file, foundBy } of findProjectDbs(root)) {
+        const key = file.toLowerCase()
+        if (dbs.has(key)) continue
+        const m = this.media.fromDb(file, { ...meta, source: 'tool', foundBy })
+        if (!m) continue
+        dbs.set(key, m)
+        fresh.add(key)
+        this.emitMedia(m)
+      }
+    for (const [key, prev] of dbs) {
+      if (fresh.has(key)) continue
+      const m = this.media.fromDb(prev.path, { ...meta, source: 'tool', foundBy: prev.foundBy })
+      if (!m?.db || m.db.error || dbSignature(m.db) === dbSignature(prev.db!)) continue
+      dbs.set(key, m)
+      this.emitMedia(m)
     }
   }
 
@@ -694,6 +805,15 @@ export class SessionManager {
       // Fichier quelconque (zip, pdf, code…) : Claude le lit lui-même à son emplacement.
       if ('path' in a) {
         files.push(a.path)
+        // Base glissée (planche 46) : Canopy l'affiche dans ton message ; Claude ne reçoit que son chemin.
+        if (kindOf(a.path) === 'db') {
+          const m = this.media.fromDb(a.path, { sessionId: s.meta.id, itemId: userId, source: 'attach' })
+          if (m) {
+            ;(s.dbs ??= new Map()).set(m.path.toLowerCase(), m)
+            s.mentioned.add(m.path.toLowerCase())
+            this.emitMedia(m)
+          }
+        }
         continue
       }
       const img =
@@ -752,7 +872,7 @@ export class SessionManager {
         resume: s.meta.sdkSessionId,
         forkSession: s.fork || undefined,
         // Prompt de Claude Code + consignes de Canopy (mise en forme, artefacts, médias…).
-        systemPrompt: { type: 'preset', preset: 'claude_code', append: HARNESS },
+        systemPrompt: { type: 'preset', preset: 'claude_code', append: HARNESS + (agendaLine(s.meta.projectId) ? '\n\n# Agenda\n' + agendaLine(s.meta.projectId) : '') },
         settingSources: ['user', 'project', 'local'],
         // Coffre : les fichiers où Canopy écrit les secrets ne se lisent pas (Claude n'en connaît que les noms).
         disallowedTools: ['Read(**/.env)', 'Read(**/.env.local)', 'Read(**/.env.*.local)'],
@@ -765,7 +885,25 @@ export class SessionManager {
               allowedTools: [...(this.capture ? ['mcp__atelier__capture'] : []), ...(this.checklists ? ['mcp__atelier__checklist'] : []), 'mcp__atelier__question', 'mcp__atelier__secret', ...(this.ui ? ['mcp__atelier__interface', 'mcp__atelier__scene'] : []), ...(this.capture ? ['mcp__atelier__screen', 'mcp__atelier__act', 'mcp__atelier__mark'] : [])]
             }
           : {}),
-        canUseTool: (toolName, input, opts) => this.ask(s, toolName, input, opts)
+        canUseTool: (toolName, input, opts) => this.ask(s, toolName, input, opts),
+        // Photo de la base du projet juste avant une commande qui la modifie (planche 46).
+        hooks: {
+          PreToolUse: [
+            {
+              matcher: 'Bash|PowerShell',
+              hooks: [
+                async (input: any) => {
+                  try {
+                    this.dbBeforeTool(s, String(input?.tool_use_id ?? ''), String(input?.tool_input?.command ?? ''), project.path)
+                  } catch (e) {
+                    console.error('[atelier] photo de base', e)
+                  }
+                  return {}
+                }
+              ]
+            }
+          ]
+        }
       }
     })
     s.query = q
@@ -906,10 +1044,24 @@ export class SessionManager {
           if (c.type === 'tool_result' && s.tools.has(c.tool_use_id)) {
             s.toolsDone.add(c.tool_use_id)
             this.mediaFromToolResult(s, c.tool_use_id, c.content)
+            if (!replay && !c.is_error) {
+              this.dbAfterTool(s, c.tool_use_id, root)
+              this.dataAfterTool(s, c.tool_use_id, root)
+            }
             const full = resultText(c.content)
+            const used = s.tools.get(c.tool_use_id)
+            const isCmd = /^(Bash|PowerShell)$/.test(used?.name ?? '')
+            // Sortie de la commande seule : sans les notes que Claude Code ajoute à la fin (« Shell cwd was reset… »).
+            const out = isCmd ? full.replace(/\n*(Shell cwd was reset to [^\n]*|Session cwd remains [^\n]*)\s*$/g, '') : full
+            const tests = isCmd ? parseTests(String(used?.input?.command ?? ''), out) : undefined
+            const http = isCmd && !tests ? parseHttp(String(used?.input?.command ?? ''), out) : undefined
+            const pgq = isCmd ? psqlSelect(String(used?.input?.command ?? '')) : null
             this.patchItem(s, c.tool_use_id, {
               status: c.is_error ? 'error' : 'ok',
               result: short(full, 600),
+              ...(tests ? { tests } : {}),
+              ...(http ? { http } : {}),
+              ...(pgq && !c.is_error ? { pg: pgq } : {}),
               ...(c.is_error ? {} : artifactOf(s.tools.get(c.tool_use_id), full))
             } as Partial<Item>)
           }

@@ -47,6 +47,24 @@ export class MediaServer {
     return existsSync(m.path) ? m.path : m.file
   }
 
+  /** PDF produits pour l'aperçu fidèle d'un Word / PowerPoint, servis sur atelier-media://pdf/<id>. */
+  converted = new Map<string, string>()
+
+  /** Document (PDF, Word, PowerPoint) annoncé par le démon. */
+  docFile(id: string): string | undefined {
+    return this.known.get(id)?.kind === 'doc' ? this.fileOf(id) : undefined
+  }
+
+  /** Fichier de données (JSON, JSONL, log) annoncé par le démon. */
+  dataFile(id: string): string | undefined {
+    return this.known.get(id)?.kind === 'data' ? this.fileOf(id) : undefined
+  }
+
+  /** Fichier d'une base de données annoncée par le démon (rien d'autre n'est lu par les canaux db:*). */
+  dbFile(id: string): string | undefined {
+    return this.known.get(id)?.kind === 'db' ? this.fileOf(id) : undefined
+  }
+
   addPage(html: string): string {
     const id = randomUUID()
     this.pages.set(id, html)
@@ -69,6 +87,11 @@ export class MediaServer {
           }
         })
       }
+      if (u.host === 'pdf') {
+        const f = this.converted.get(id)
+        if (!f || !existsSync(f)) return new Response('introuvable', { status: 404 })
+        return withType(await net.fetch(pathToFileURL(f).toString(), { headers: req.headers }), 'application/pdf')
+      }
       // media/<id>/<nom> : un modèle 3D et ses fichiers voisins (textures d'un .gltf, .mtl d'un .obj), pris dans son dossier.
       const [mid, ...rest] = id.split('/')
       const m = this.known.get(mid)
@@ -82,6 +105,7 @@ export class MediaServer {
       }
       const file = u.host === 'thumb' ? this.thumb(m) : m.file
       const res = await net.fetch(pathToFileURL(file).toString(), { headers: req.headers })
+      if (m.kind === 'doc' && /\.pdf$/i.test(m.file)) return withType(res, 'application/pdf')
       return m.kind === 'model' ? withCors(res) : res
     })
   }
@@ -107,6 +131,14 @@ html,body{margin:0;background:#1F1E1D;color:#E3E1D8;font:14px/1.5 'Segoe UI',sys
 body{padding:22px 24px}h1,h2,h3{font-family:Georgia,'Source Serif 4',serif;font-weight:400;color:#F5F4EE;margin:0 0 .5em}
 a{color:#8BBCF5}:root{--clay:#D57151;--ivory:#FAF9F5;--slate:#141413;--muted:#8F8D86}
 </style></head><body>${html}</body></html>`
+}
+
+/** Un PDF doit être servi comme tel pour que la visionneuse PDF de Chromium l'ouvre (et que pdf.js le lise). */
+function withType(res: Response, type: string): Response {
+  const h = new Headers(res.headers)
+  h.set('content-type', type)
+  h.set('access-control-allow-origin', '*')
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h })
 }
 
 /** Les modèles 3D sont lus par fetch() depuis la page (origine http://localhost en dev) : il faut l'en-tête CORS. */

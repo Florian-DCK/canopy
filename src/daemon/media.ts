@@ -1,16 +1,18 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { basename, extname, isAbsolute, join, resolve } from 'node:path'
+import { basename, extname, join, resolve } from 'node:path'
 import type { MediaItem, MediaKind, MediaSource } from '../shared/types'
+import { DB_EXT, isDbFile, summarize } from './db'
 import { DATA } from './paths'
 
 // Médias des sessions (côté démon) : images lues par l'agent (copie figée, car le fichier peut être
-// réécrit), captures d'outils, fichiers image/vidéo cités. Electron les sert ensuite via atelier-media://.
+// réécrit), captures d'outils, fichiers image/vidéo/3D cités, bases de données (photo du schéma). Electron les sert ensuite via atelier-media://.
 
 const IMAGE_EXT = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg']
 const VIDEO_EXT = ['.mp4', '.webm', '.mov', '.m4v']
 const AUDIO_EXT = ['.wav', '.mp3', '.ogg', '.m4a', '.flac', '.opus', '.aac']
 const MODEL_EXT = ['.glb', '.gltf', '.obj', '.stl', '.fbx']
+const DOC_EXT = ['.pdf', '.docx', '.pptx']
 const MIME: Record<string, string> = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp' }
 
 export function kindOf(path: string): MediaKind | null {
@@ -19,6 +21,8 @@ export function kindOf(path: string): MediaKind | null {
   if (VIDEO_EXT.includes(e)) return 'video'
   if (AUDIO_EXT.includes(e)) return 'audio'
   if (MODEL_EXT.includes(e)) return 'model'
+  if (DB_EXT.includes(e)) return 'db'
+  if (DOC_EXT.includes(e)) return 'doc'
   return null
 }
 
@@ -68,13 +72,31 @@ export class MediaStore {
     const kind = kindOf(raw)
     if (!kind) return null
     const p = raw.startsWith('file:///') ? decodeURIComponent(raw.slice(IS_POSIX && !/^file:\/\/\/[A-Za-z]:/.test(raw) ? 7 : 8)) : raw
-    const file = isAbsolute(p) ? p : resolve(cwd, p)
+    // resolve() aussi pour un chemin absolu : C:/a/b et C:\a\b deviennent le même fichier (une seule photo par base).
+    const file = resolve(cwd, p)
     try {
       if (!statSync(file).isFile()) return null
     } catch {
       return null
     }
+    if (kind === 'db') return this.fromDb(file, { ...meta, source: 'mention' })
     return this.add(file, kind, { ...meta, source: 'mention', name: basename(file), path: file, at: Date.now() })
+  }
+
+  /** Fichier de données lu par l'agent (JSON, JSONL, log) : la carte lit son contenu à l'affichage. */
+  fromData(file: string, meta: { sessionId: string; itemId: string }): MediaItem | null {
+    try {
+      if (!statSync(file).isFile()) return null
+    } catch {
+      return null
+    }
+    return this.add(file, 'data', { ...meta, source: 'read', name: basename(file), path: file, at: Date.now() })
+  }
+
+  /** Base de données (SQLite, CSV) : avec la photo de son schéma et de ses comptes ; `query` = SELECT lancé par l'agent. */
+  fromDb(file: string, meta: { sessionId: string; itemId: string; source: MediaSource; query?: string; baseline?: boolean; foundBy?: string }): MediaItem | null {
+    if (!isDbFile(file)) return null
+    return this.add(file, 'db', { ...meta, name: basename(file), path: file, at: Date.now(), db: summarize(file) })
   }
 
   /** Contenu d'une image pour l'envoyer à Claude (pièce jointe). */
@@ -92,7 +114,7 @@ const IS_POSIX = process.platform !== 'win32'
 
 /** Chemins / URL file:// de médias cités dans un texte (Windows, absolus POSIX hors Windows, ou relatifs). */
 export function findMediaPaths(text: string, posix = IS_POSIX): string[] {
-  const ext = 'png|jpe?g|gif|webp|bmp|svg|mp4|webm|mov|m4v|wav|mp3|ogg|m4a|flac|opus|aac|glb|gltf|obj|stl|fbx'
+  const ext = 'png|jpe?g|gif|webp|bmp|svg|mp4|webm|mov|m4v|wav|mp3|ogg|m4a|flac|opus|aac|glb|gltf|obj|stl|fbx|sqlite3?|db|csv|tsv|xlsx|pdf|docx|pptx'
   // Absolu POSIX (/Users/x/a.png) : pas au milieu d'un autre chemin ni d'une URL (https://…).
   const posixAlt = posix ? String.raw`|(?<![\w:.\/~-])\/[^\s"'<>|*?\`]+?` : ''
   const re = new RegExp(
@@ -106,4 +128,22 @@ export function findMediaPaths(text: string, posix = IS_POSIX): string[] {
   for (const m of text.matchAll(quoted)) out.add(m[1])
   for (const m of text.matchAll(re)) if (![...out].some((q) => q.endsWith(m[0]) && q !== m[0])) out.add(m[0].replace(/^[(\[`'"]+/, ''))
   return [...out]
+}
+
+/** JSON, JSONL ou journal qui mérite une carte (pas les fichiers de config que l'agent lit tout le temps). */
+export function isDataFile(path: string): boolean {
+  const p = path.replace(/\\/g, '/').toLowerCase()
+  if (/\/(node_modules|\.git|\.vscode|\.idea|\.claude|\.canopy|dist|out|build)\//.test(p)) return false
+  const name = p.split('/').pop() ?? ''
+  if (/\.(jsonl|ndjson|log)$/.test(name)) return true
+  if (!name.endsWith('.json')) return false
+  return !/^(package(-lock)?|tsconfig.*|jsconfig|composer(-lock)?|manifest|launch|tasks|settings(\.local)?|components|vercel|netlify|turbo|lerna|nx|project|app|angular|deno|biome|renovate|\.?eslintrc|\.?prettierrc|\.?babelrc|.*\.config|.*-lock)\.json$/.test(name)
+}
+
+/** Fichiers de données lus par une commande (cat, type, Get-Content, tail, head, jq, less…). */
+export function dataFilesInCommand(cmd: string): string[] {
+  if (!/\b(cat|type|gc|get-content|tail|head|jq|less|more|bat)\b/i.test(cmd)) return []
+  const out: string[] = []
+  for (const m of cmd.matchAll(/(?:"([^"]+\.(?:json|jsonl|ndjson|log))"|'([^']+\.(?:json|jsonl|ndjson|log))'|([^\s"'|;&<>]+\.(?:json|jsonl|ndjson|log)))(?![\w.])/gi)) out.push(m[1] ?? m[2] ?? m[3])
+  return out.filter(isDataFile)
 }

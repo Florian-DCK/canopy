@@ -10,6 +10,9 @@ import * as reg from '../../browser/registry'
 import { hostOf, localUrlIn, useBrowser } from '../../browser/store'
 import { api, useStore } from '../../store'
 import { ArtifactCard } from '../Artifacts'
+import { TestCard } from '../../outputs/TestCard'
+import { HttpCard } from '../../outputs/HttpCard'
+import { PgCard } from '../../outputs/PgCard'
 import { AttachedMedia, InlineMedia } from '../Media'
 import { MsgActions } from './Nav'
 import { CodeBlock, ToolOutput } from './Code'
@@ -186,6 +189,9 @@ function ActionGroup({ tools, sessionId }: { tools: Tool[]; sessionId: string })
         <InlineMedia key={t.id} sessionId={sessionId} itemId={t.id} />
       ))}
       {tools.map((t) => t.artifact && <ArtifactCard key={`a-${t.id}`} t={t} sessionId={sessionId} />)}
+      {tools.map((t) => t.tests && <TestCard key={`t-${t.id}`} t={t} sessionId={sessionId} />)}
+      {tools.map((t) => t.http && <HttpCard key={`h-${t.id}`} t={t} />)}
+      {tools.map((t) => t.pg && <PgCard key={`p-${t.id}`} t={t} sessionId={sessionId} />)}
       <ServerCard sessionId={sessionId} tools={tools} />
     </div>
   )

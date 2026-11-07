@@ -14,6 +14,9 @@ import { emptyState, reduce, type AppState } from '../shared/state'
 import type { BrowserResult } from '../shared/browser'
 import type { UiResult } from '../shared/ui'
 import type { AppEvent, CaptureResult, SessionMeta } from '../shared/types'
+import type { BriefInput } from '../shared/agenda'
+import type { NotesSummaryInput } from '../shared/notes'
+import { makeBrief, makeNotesSummary, setAgendaLines } from './agenda'
 import { Checklists } from './checklists'
 import { MediaStore } from './media'
 import { dataFile } from './paths'
@@ -261,6 +264,9 @@ const rpc: Record<string, (...a: any[]) => unknown> = {
   listHistory: () => sessions.history(listProjects()),
   listFiles: (projectId: string) => listFiles(projectId, getProject(projectId)?.path),
   listChecklists: () => checklists.list(),
+  makeBrief: (input: BriefInput) => makeBrief(input),
+  makeNotesSummary: (input: NotesSummaryInput) => makeNotesSummary(input),
+  setAgendaLines: (l: Record<string, string>) => setAgendaLines(l),
   getChecklist: (id: string) => checklists.get(id),
   createChecklist: (projectId: string, title: string, items?: string[], sessionId?: string) => checklists.create(projectId, title, items, sessionId),
   updateChecklist: (id: string, ops: any[]) => checklists.apply(id, ops, 'user').checklist,

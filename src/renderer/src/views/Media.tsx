@@ -6,6 +6,10 @@ import { api, useStore, type ViewerMode } from '../store'
 import { LookSeg, ModelCard, ModelSnap, ModelStage, statsLine } from '../three/ModelMedia'
 import type { Look, ModelStats } from '../three/model'
 import type { ModelApi } from '../three/ModelView'
+import { DbAttach, DbCard } from '../db/DbMedia'
+import { DataCard } from '../outputs/DataCard'
+import { DocCard, DocViewer } from '../outputs/DocCard'
+import { DbViewer } from '../db/DbViewer'
 
 // Références stables pour les sélecteurs zustand (un nouveau [] à chaque rendu boucle).
 const NO_MEDIA: MediaItem[] = []
@@ -38,6 +42,12 @@ export function Thumb({ m, w, h, label = true }: { m: MediaItem; w: number; h: n
         <ModelSnap m={m} w={w} h={h} />
       ) : m.kind === 'audio' ? (
         <span className="thumb-audio" aria-hidden="true"><Icon name="audio" size={Math.min(34, h * 0.4)} /></span>
+      ) : m.kind === 'db' ? (
+        <span className="thumb-audio" aria-hidden="true"><Icon name="database" size={Math.min(30, h * 0.4)} /></span>
+      ) : m.kind === 'doc' ? (
+        <span className="thumb-audio mono" aria-hidden="true" style={{ fontSize: Math.min(14, h * 0.25), fontWeight: 700 }}>{m.name.split('.').pop()!.toUpperCase()}</span>
+      ) : m.kind === 'data' ? (
+        <span className="thumb-audio mono" aria-hidden="true" style={{ fontSize: Math.min(18, h * 0.3) }}>{m.name.endsWith('.json') ? '{ }' : '≡'}</span>
       ) : (
         <>
           <video src={`${mediaUrl(m.id)}#t=0.1`} preload="metadata" muted />
@@ -55,6 +65,18 @@ export function AttachedMedia({ sessionId, itemId, names }: { sessionId: string;
   const mine = useMemo(() => all.filter((m) => m.itemId === itemId), [all, itemId])
   if (!mine.length)
     return names?.length ? <div className="msg-att">{names.map((n) => <span key={n}><Icon name="attach" size={13} />{n}</span>)}</div> : null
+  const dbs = mine.filter((m) => m.kind === 'db')
+  if (dbs.length)
+    return (
+      <>
+        {dbs.map((m) => <DbAttach key={m.id} m={m} />)}
+        {mine.length > dbs.length && <AttachedThumbs list={mine.filter((m) => m.kind !== 'db')} />}
+      </>
+    )
+  return <AttachedThumbs list={mine} />
+}
+
+function AttachedThumbs({ list: mine }: { list: MediaItem[] }) {
   return (
     <div className="msg-thumbs">
       {mine.map((m) => (
@@ -64,11 +86,25 @@ export function AttachedMedia({ sessionId, itemId, names }: { sessionId: string;
   )
 }
 
-/** Médias rattachés à un élément du fil (outil ou texte). */
+/** Médias rattachés à un élément du fil (outil ou texte) ; les bases de données ont leur propre carte. */
 export function InlineMedia({ sessionId, itemId }: { sessionId: string; itemId: string }) {
   const all = useSessionMedia(sessionId)
+  // Une photo de référence (baseline) n'a pas de carte : elle sert seulement à l'avant · après qui suit.
+  const mine = useMemo(() => all.filter((m) => m.itemId === itemId && !m.baseline), [all, itemId])
+  const ownKind = (m: MediaItem) => m.kind === 'db' || m.kind === 'data' || m.kind === 'doc'
+  const own = mine.filter(ownKind)
+  if (!own.length) return <MediaOf sessionId={sessionId} all={all} mine={mine} />
+  const rest = mine.filter((m) => !ownKind(m))
+  return (
+    <>
+      {own.map((m) => (m.kind === 'db' ? <DbCard key={m.id} m={m} all={all} /> : m.kind === 'doc' ? <DocCard key={m.id} m={m} /> : <DataCard key={m.id} m={m} />))}
+      {rest.length > 0 && <MediaOf sessionId={sessionId} all={all} mine={rest} />}
+    </>
+  )
+}
+
+function MediaOf({ sessionId, all, mine }: { sessionId: string; all: MediaItem[]; mine: MediaItem[] }) {
   const open = useStore((s) => s.openViewer)
-  const mine = useMemo(() => all.filter((m) => m.itemId === itemId), [all, itemId])
   if (!mine.length) return null
 
   // Plusieurs médias cités ensemble : grille.
@@ -164,9 +200,9 @@ const seriesLabelOf = (m: MediaItem) => groupSeries([m])[0].label
 export function MediaPanel({ sessionId }: { sessionId: string }) {
   const all = useSessionMedia(sessionId)
   const open = useStore((s) => s.openViewer)
-  const groups = useMemo(() => groupSeries(all).reverse(), [all])
+  const groups = useMemo(() => groupSeries(all.filter((m) => !m.baseline)).reverse(), [all])
   if (!all.length)
-    return <div className="empty">Les images, vidéos et modèles 3D que la session lit, produit ou cite apparaîtront ici.</div>
+    return <div className="empty">Les images, vidéos, modèles 3D et bases de données que la session lit, produit ou cite apparaîtront ici.</div>
   return (
     <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 18 }}>
       {groups.map((g) => (
@@ -225,7 +261,7 @@ export function ViewerOverlay() {
 
   const cur = all.find((m) => m.id === v?.mediaId)
   const series = cur ? seriesOf(cur, all) : []
-  const strip = series.length > 1 ? series : all
+  const strip = series.length > 1 ? series : all.filter((m) => !m.baseline)
   const idx = strip.findIndex((m) => m.id === cur?.id)
   const other = v?.compareId ? all.find((m) => m.id === v.compareId) : undefined
   const isModel = cur?.kind === 'model'
@@ -234,6 +270,8 @@ export function ViewerOverlay() {
   useEffect(() => {
     if (!v) return
     const onKey = (e: KeyboardEvent) => {
+      // Visionneuse de base : les flèches servent dans les champs (filtre, SQL), seule Échap ferme.
+      if ((cur?.kind === 'db' || cur?.kind === 'doc') && e.key !== 'Escape') return
       if (e.key === 'Escape') close()
       else if (e.key === 'ArrowRight' && idx < strip.length - 1) go(strip[idx + 1])
       else if (e.key === 'ArrowLeft' && idx > 0) go(strip[idx - 1])
@@ -247,6 +285,8 @@ export function ViewerOverlay() {
   }, [v?.mediaId])
 
   if (!v || !cur) return null
+  if (cur.kind === 'db') return <DbViewer key={cur.id} m={cur} all={all} compareId={v.compareId} readOnly={readOnly} onClose={close} />
+  if (cur.kind === 'doc') return <DocViewer key={cur.id} m={cur} onClose={close} />
 
   function go(m: MediaItem, withShift = false) {
     if (!v) return
@@ -372,7 +412,7 @@ export function ViewerOverlay() {
               className={m.id === cur.id ? 'on' : m.id === other?.id && comparing ? 'a' : ''}
               onClick={(e) => go(m, e.shiftKey)}
             >
-              {m.kind === 'image' ? <img src={thumbUrl(m.id)} alt="" loading="lazy" /> : m.kind === 'model' ? <ModelSnap m={m} w={76} h={50} /> : m.kind === 'audio' ? <Icon name="audio" size={20} /> : <PlayBadge size={22} />}
+              {m.kind === 'image' ? <img src={thumbUrl(m.id)} alt="" loading="lazy" /> : m.kind === 'model' ? <ModelSnap m={m} w={76} h={50} /> : m.kind === 'audio' ? <Icon name="audio" size={20} /> : m.kind === 'db' ? <Icon name="database" size={20} /> : <PlayBadge size={22} />}
             </button>
           ))}
         </div>
